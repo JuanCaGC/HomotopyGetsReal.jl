@@ -1,4 +1,4 @@
-module parser
+module parserModule
 
 export  parse_directory_name,
         parse_decomposition,
@@ -7,17 +7,17 @@ export  parse_directory_name,
 
 function parse_directory_name(directory_name)
     
-    if not isfile(directory_name)
+    if !isfile(directory_name)
         println("The File does not exist")
-        return 
+        return nothing
     end
 
     open(directory_name, "r") do f
         directory = chomp(readline(f))
         MPtype = chomp(readline(f))
         dimension = chomp(readline(f))
+        return [String(directory), String(MPtype), String(dimension)]
     end
-    return [directory, MPtype, dimension]
 end
 
 function parse_decomposition(directory::String)
@@ -47,33 +47,37 @@ function parse_decomposition(directory::String)
         num_variables_and_dimension = split(chomp(readline(f)), " ")
         num_variables = parse(Int, num_variables_and_dimension[1])
         dimension = parse(Int, num_variables_and_dimension[2])
-
-        pi = [[0, 0] for i in 1:(num_variables - 1)]
+        
+        pi = [[0.0, 0.0] for i in 1:(num_variables-1)]
+        
         for ii in 1:dimension
             numVars = readline(f)
-            while numVars == "\n"
+            
+            while strip(numVars) == ""
                 numVars = readline(f)
             end
             numVars = parse(Int, chomp(numVars))
             for jj in 1:numVars
                 pi_nums = split(chomp(readline(f)), " ")
+                
                 if jj == 1
                     continue
                 end
                 pi[jj - 1][ii] = parse(Float64, pi_nums[1]) + parse(Float64, pi_nums[2]) * im
             end
         end
-
+    
         num_patches = readline(f)
-        while num_patches == "\n"
+        
+        while strip(num_patches) == ""
             num_patches = readline(f)
         end
-        num_patches = parse(Int, chomp(readline(f)))
-
+        num_patches = parse(Int, chomp(num_patches))
+        patch_vectors = []
         for ii in 1:num_patches
             push!(patch_vectors, [])
             patch_size = readline(f)
-            while patch_size == "\n"
+            while strip(patch_size) == ""
                 patch_size = readline(f)
             end
             patch_size = parse(Int, chomp(patch_size))
@@ -82,35 +86,35 @@ function parse_decomposition(directory::String)
                 push!(patch_vectors[ii], parse(Float64, patch_vectors_data[1]) + parse(Float64, patch_vectors_data[2]) * im)
             end
         end
-
+    
         radius = readline(f)
-        while radius == "\n"
+        while strip(radius) == ""
             radius = readline(f)
         end
-        radius = parse(Float64,split(chomp(readline(f)), " ")[1])
-
+        radius = parse(Float64,split(chomp(radius), " ")[1])
+    
         centerSize = readline(f)
-        while centerSize == "\n"
+        while strip(centerSize) == ""
             centerSize = readline(f)
         end
-        centerSize = parse(Int, chomp(readline(f)))
-
+        centerSize = parse(Int64, chomp(centerSize))
+        center = []
         for ii in 1:centerSize
             center_data = split(chomp(readline(f)), " ")
             push!(center, parse(Float64, center_data[1]))
         end
+        dicio =  Dict(
+            "input file name" => inputFileName,
+            "pi info" => pi,
+            "patch vectors" => patch_vectors,
+            "radius" =>  radius,
+            "center" => center,
+            "num patches" => num_patches,
+            "num_variables" => num_variables - 1,
+            "dimension" => dimension
+        )
+        return dicio
     end
-
-    return Dict(
-        "input file name" => inputFileName,
-        "pi info" => pi,
-        "patch vectors" => patch_vectors,
-        "radius" => parse(Float64, radius),
-        "center" => center,
-        "num patches" => num_patches,
-        "num_variables" => num_variables - 1,
-        "dimension" => dimension
-    )
 end
 
 function parse_edges(directory)
@@ -122,52 +126,56 @@ function parse_edges(directory)
         println("E.edge file not found in current directory: ", pwd())
         return Dict("number of edges" => 0, "edges" => [])
     end
+    curves = Dict()
     open(joinpath(directory, "E.edge"), "r") do f
-        curves = Dict()
+        
         curves["number of edges"] = parse(Int, chomp(readline(f)))
+        
         curves["edges"] = zeros(Int, curves["number of edges"], 3)
-
             for ii in 1:curves["number of edges"]
                 edges = readline(f)
-                while edges == "\n"
+                while strip(edges) == ""
                     edges = readline(f)
                 end
-                edges = split(chomp(readline(f)), " ")
+                edges = split(chomp(edges), " ")
                 for jj in 1:3
                     curves["edges"][ii, jj] = parse(Int, edges[jj])
                 end
             end
+        
     end
-
     return curves
 end
 
 function parse_curve_samples(directory)
-    """ Parse and store curve samples data
-
-        :param directory: Directory of the curve folder
     """
-    if !isfile(joinpath(directory, "samp.curvesamp"))
-        throw(FileNotFoundError("no samples found for this surface"))
+    Parse and store curve samples data
+
+    :param directory: Directory of the curve folder
+    """
+    filename = joinpath(directory, "samp.curvesamp")
+    if !isfile(filename)
+        error("no samples found for this surface")
     end
 
-    sampler_data = []
-    open(joinpath(directory, "samp.curvesamp"), "r") do f
-        num_edges = parse(Int, chomp(readline(f)))
+    open(filename, "r") do f
+        num_edges = parse(Int, readline(f))
         readline(f)  # read blank line.
+        sampler_data = []
+
         for ii in 1:num_edges
-            num_samples = parse(Int,  chomp(readline(f)))
+            num_samples = parse(Int, readline(f))
             temp = []
-            thing  = parse(Int, split(chomp(readline(f)), " "))
+            thing = split(readline(f))
             for jj in thing
-                push!(temp, jj)
+                push!(temp, parse(Int, jj))
             end
             push!(sampler_data, temp)
             readline(f)  # read blank line.
         end
-    end
 
-    return sampler_data
+        return sampler_data
+    end
 end
 
 

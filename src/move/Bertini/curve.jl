@@ -6,23 +6,32 @@ function main(V::VertexSet, W_curve::WitnessSet, projections::Array{MPVec}, prog
     dim_str = "_dim_$(W_curve.dimension())_comp_$(W_curve.component_number())_deflated"
     temp_path *= dim_str
     zeroonly = Set([0])
+    # TODO write_dehomogenized_coordinates
     write_dehomogenized_coordinates(W_curve, "witness_points_dehomogenized", zeroonly)
+    # TODO isosingular_deflation
     num_deflations, deflation_sequence = isosingular_deflation(program_options, W_curve.input_filename(), "witness_points_dehomogenized", temp_path, program_options.max_deflations())
+    # TODO free
     free(deflation_sequence)
-
+    # TODO set_input_deflated_filename
     program_options.set_input_deflated_filename(temp_path)
+    # TODO set_input_filename
     W_curve.set_input_filename(temp_path)
+    # TODO Decomposition::copy_data_from_witness_set
     copy_data_from_witness_set(W_curve)
 
-    # Parse Input
+    # TODO parse_input_file
     parse_input_file(W_curve.input_filename())
+    # TODO preproc_data_clear
     preproc_data_clear(solve_options.PPD)
+    # TODO parse_preproc_data
     parse_preproc_data("preproc_data", solve_options.PPD)
 
     self_conjugate = true
     if W_curve.num_synth_vars() == 0
         println("checking if component is self-conjugate")
+        # TODO checkSelfConjugate
         self_conjugate = checkSelfConjugate(W_curve.point(1), program_options, program_options.input_filename())
+        # TODO verify_projection_ok
         if verify_projection_ok(W_curve, projections, solve_options) == 1
             println("verified projection is ok")
         else
@@ -30,16 +39,19 @@ function main(V::VertexSet, W_curve::WitnessSet, projections::Array{MPVec}, prog
             br_exit(196)
         end
     end
-
+    # TODO user_sphere
     if program_options.user_sphere()
+        # TODO read_sphere
         read_sphere(program_options.bounding_sphere_filename())
     end
-
+    # TODO add_projection
     add_projection(projections[1])
 
     if !self_conjugate
+        # TODO computeCurveNotSelfConj
         computeCurveNotSelfConj(W_curve, V, num_variables(), program_options, solve_options)
     else
+        # TODO computeCurveSelfConj
         computeCurveSelfConj(W_curve, projections, V, program_options, solve_options)
     end
 end

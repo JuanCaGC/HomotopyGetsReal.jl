@@ -1,8 +1,11 @@
-include("parser.jl")
-using .parser
-
-module decomposition
+module decompositionModule
     export Decomposition, parse_decomp, read_input, extract_points
+
+include("parser.jl")
+using .parserModule
+
+include("data.jl")
+using .dataModule 
 
 mutable struct Decomposition
     directory::String
@@ -14,15 +17,17 @@ mutable struct Decomposition
     num_variables::Int
     pi::Array{Any, 1}
     num_patches::Int
-    patch::Dict{Any, Any}
+    patch::Array{Any, 1}
     radius::Float64
     center_size::Int
     center::Array{Float64, 1}
     dimension::Int
 
     _memoized_data::Dict{String, Any}
+    vertices::Array{Any, 1}
+    filenames::Array{Any, 1}
 
-    function Decomposition(directory::String; is_embedded::Bool=false, embedded_into::Union{Nothing, Decomposition}=nothing)
+    function Decomposition(directory::String ; is_embedded::Bool=false, embedded_into::Union{Nothing, Decomposition}=nothing)
         decomp = new()
 
         decomp.directory = directory
@@ -34,13 +39,11 @@ mutable struct Decomposition
         decomp.num_variables = 0
         decomp.pi = []
         decomp.num_patches = 0
-        decomp.patch = Dict()
+        decomp.patch = []
         decomp.radius = 0
         decomp.center_size = 0
         decomp.center = []
         decomp.dimension = 0
-
-        decomp.br_version = 1
 
         parse_decomp(decomp, directory)
         read_input(decomp, directory)
@@ -48,12 +51,13 @@ mutable struct Decomposition
         decomp._memoized_data = Dict()
 
         if !decomp.is_embedded
-            # TODO
-            decomp.vertices, decomp.filenames = BertiniReal.data.gather_vertices(directory)
+           
+            decomp.vertices, decomp.filenames = gather_vertices(directory)
         else
             if decomp.embedded_into === nothing
                 throw(EmbeddedIssue("parameter `embedded_into` cannot be unset if the decomposition is embedded"))
             end
+            
             decomp.vertices = decomp.embedded_into.vertices
         end
 
@@ -61,9 +65,9 @@ mutable struct Decomposition
     end
 end
 
-function parse_decomp(decomp::Decomposition, directory::String)
-    # TODO
-    decomposition_data = parser.parse_decomposition(directory)
+function parse_decomp(decomp, directory::String)
+    
+    decomposition_data = parse_decomposition(directory)
     decomp.inputfilename = decomposition_data["input file name"]
     decomp.pi = decomposition_data["pi info"]
     decomp.patch = decomposition_data["patch vectors"]
@@ -74,16 +78,16 @@ function parse_decomp(decomp::Decomposition, directory::String)
     decomp.dimension = decomposition_data["dimension"]
 end
 
-function read_input(decomp::Decomposition, directory::String)
+function read_input(decomp, directory::String)
     filename = joinpath(directory, decomp.inputfilename)
     if !isfile(filename)
-        @printf("Could not find input file in current directory: %s\n", directory)
+        println("Could not find input file in current directory: %s\n", directory)
     else
         decomp.input = read(filename, String)
     end
 end
 
-function extract_points(decomp::Decomposition; indices::Union{Nothing, Vector{Int}}=nothing)
+function extract_points(decomp; indices::Union{Nothing, Vector{Int}}=nothing)
     if indices === nothing
         indices = 1:length(decomp.vertices)
     end
@@ -92,7 +96,7 @@ function extract_points(decomp::Decomposition; indices::Union{Nothing, Vector{In
         return decomp.embedded_into.extract_points()
     end
 
-    if "_memoized_data" in keys(decomp) && "points" in keys(decomp._memoized_data)
+    if  "points" in keys(decomp._memoized_data)
         return decomp._memoized_data["points"]
     end
 

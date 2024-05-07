@@ -1,0 +1,11 @@
+CONFIG
+tracktype: 1;
+imagthreshold: 1e-5;
+TrackType: 3;
+DeleteTempFiles: 0;
+END;
+INPUT
+variable_group X1,X2;
+function f1;
+f1=(X1^2+X2^2-1)^3+27*X1^2*X2^2;
+END;

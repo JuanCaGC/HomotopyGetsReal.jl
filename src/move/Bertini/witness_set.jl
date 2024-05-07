@@ -1,4 +1,5 @@
-
+module WitnessSetModule
+export WitnessSet
 abstract type Holder end
 
 mutable struct PointHolder <: Holder
@@ -17,11 +18,11 @@ mutable struct NameHolder <: Holder
     names::Vector{String}
 end
 
-struct Function
+mutable struct Function
     func::String
 end
 
-mutable struct WitnessSet <: PatchHolder, LinearHolder, PointHolder, NameHolder
+mutable struct WitnessSet 
     dim::Int
     comp_num::Int
     incid_num::Int
@@ -169,10 +170,5 @@ function write_dehomogenized_coordinates(ws::WitnessSet, filename, indices)
     # implementar según sea necesario
 end
 
-function send(ws::WitnessSet, mpi_config, target)
-    # implementar según sea necesario
-end
 
-function receive!(ws::WitnessSet, source, mpi_config)
-    # implementar según sea necesario
 end

@@ -1,3 +1,7 @@
+module cellModule
+
+export Cell
+
 struct Cell
     """
     the base type for other cells: vertices, edges, faces, ...
@@ -7,4 +11,5 @@ struct Cell
     function Cell(dimension)
         new(dimension)
     end
+end
 end

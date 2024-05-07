@@ -1,166 +1,134 @@
+module curveModule
+export Curve
 include("parser.jl")
-using .parser
+using .parserModule
 
 include("decomposition.jl")
-using .decomposition : Decomposition
+using .decompositionModule
 
-module curve
+struct CurvePiece
+    curve
+    edge_indices
+    directed_edges
 
-
-struct DirectedEdge
-    edge_index::Int
-    direction::Int
-end
-
-@enum EdgeDirection forward=1 backward=0
-
-mutable struct CurvePiece
-    curve::Curve
-    edge_indices::Vector{Int}
-    directed_edges::Vector{DirectedEdge}
-end
-
-function CurvePiece(curve::Curve, edges::Vector{Int}, directed_edges::Vector{DirectedEdge})
-    return CurvePiece(curve, edges, directed_edges)
-end
-
-function inputfilename(piece::CurvePiece)
-    return piece.curve.inputfilename
-end
-
-function Base.repr(piece::CurvePiece)
-    return "CurvePiece on curve $(piece.curve.inputfilename), indices $(piece.edge_indices), directed_edges $(piece.directed_edges)\n"
-end
-
-Base.show(io::IO, piece::CurvePiece) = print(io, repr(piece))
-
-function to_points(piece::CurvePiece)
-    if isempty(piece.directed_edges)
-        throw(NotImplementedError("Insert code memoizing / computing the directed edges"))
+    function CurvePiece(curve, edges, directed_edges)
+        new(curve, edges, directed_edges)
     end
-    
-    vertices = piece.curve.vertices
-    c = piece.curve
-    
-    points = zeros(Float64, 0, 3)
-    prev_point_index = -1
-    
-    for (edge_index, direction) in piece.directed_edges
-        if is_edge_degenerate(c.edges[edge_index])
-            continue
+
+    function __repr__(self)
+        s = "CurvePiece on curve $(self.curve.inputfilename), indices $(self.edge_indices), directed_edges $(self.directed_edges)\n"
+        return s
+    end
+
+    function __str__(self)
+        return __repr__(self)
+    end
+
+    function to_points(self)
+        if isempty(self.directed_edges)
+            error("Insert code memoizing / computing the directed edges")
         end
-        
-        point_indices = isempty(c.sampler_data) ? c.edges[edge_index] : c.sampler_data[edge_index]
-        if direction == 0 # backward
-            point_indices = reverse(point_indices)
-        end
-        
-        list_of_points = []
-        for ii in point_indices
-            if ii != prev_point_index
-                push!(list_of_points, real(vertices[ii].point))
-                prev_point_index = ii
+
+        vertices = self.curve.vertices
+        points = Array{Float64}(undef, 0, 3)
+
+        prev_point_index = -1
+        for direct_edge in self.directed_edges
+            edge_index = direct_edge.edge_index
+            direction = direct_edge.direction
+            edge = self.curve.edges[edge_index]
+            if is_edge_degenerate(edge)
+                continue
             end
-        end
-        
-        points_this_edge = vcat(list_of_points...)
-        points = vcat(points, points_this_edge)
-    end
-    
-    return points
-end
 
-function is_edge_degenerate(e::Vector{Int})
-    return (e[1] == e[2]) || (e[2] == e[3])
-end
+            point_indices = length(self.curve.sampler_data) > 0 ? self.curve.sampler_data[edge_index] : edge
 
-struct Curve <: Decomposition
-    directory::String
-    is_embedded::Bool
-    embedded_into::Union{Nothing, Curve}
-    num_edges::Int
-    edges::Vector{Vector{Int}}
-    sampler_data::Union{Nothing, Vector{Vector{Int}}}
-    
-    function Curve(directory::String; is_embedded::Bool=false, embedded_into::Union{Nothing, Curve}=nothing)
-        num_edges = 0
-        edges = []
-        sampler_data = nothing
-        new(directory, is_embedded, embedded_into, num_edges, edges, sampler_data)
-    end
-end
+            if direction == EdgeDirection(backward)
+                reverse!(point_indices)
+            end
 
-function Curve(directory::String, is_embedded::Bool=false, embedded_into::Union{Nothing, Curve}=nothing)
-    curve = Curve(directory, is_embedded, embedded_into)
-    parse_edge(curve, directory)
-    try
-        parse_curve_samples(curve, directory)
-    catch e
-        if !curve.is_embedded
-            println("no samples to gather")
-        end
-    end
-    return curve
-end
-
-function break_into_pieces(curve::Curve, edge_indices::Union{Nothing, Vector{Int}}=nothing)
-    unsorted_edges = deepcopy(edge_indices)
-    list_of_pieces = Vector{CurvePiece}()
-
-    while !isempty(unsorted_edges)
-        directed_edges = [DirectedEdge(popfirst!(unsorted_edges), EdgeDirection.forward)]
-        added_edge_indicator = true
-
-        while added_edge_indicator
-            added_edge_indicator = false
-            first_edge = curve.edges[directed_edges[1].edge_index]
-            first_edge_direction = directed_edges[1].direction
-            first_point_index = first_edge[first_edge_direction == EdgeDirection.forward ? 1 : end]
-
-            last_edge = curve.edges[directed_edges[end].edge_index]
-            last_edge_direction = directed_edges[end].direction
-            last_point_index = last_edge[last_edge_direction == EdgeDirection.forward ? end : 1]
-
-            used_edges_this = Set{Int}()
-
-            for edge_ind in unsorted_edges
-                if curve.edges[edge_ind][1] == last_point_index
-                    push!(used_edges_this, edge_ind)
-                    push!(directed_edges, DirectedEdge(edge_ind, EdgeDirection.forward))
-                elseif curve.edges[edge_ind][1] == first_point_index
-                    push!(used_edges_this, edge_ind)
-                    unshift!(directed_edges, DirectedEdge(edge_ind, EdgeDirection.backward))
-                elseif curve.edges[edge_ind][end] == last_point_index
-                    push!(used_edges_this, edge_ind)
-                    push!(directed_edges, DirectedEdge(edge_ind, EdgeDirection.backward))
-                elseif curve.edges[edge_ind][end] == first_point_index
-                    push!(used_edges_this, edge_ind)
-                    unshift!(directed_edges, DirectedEdge(edge_ind, EdgeDirection.forward))
+            list_of_points = []
+            for ii in point_indices
+                if ii != prev_point_index
+                    push!(list_of_points, vertices[ii].point)
+                    prev_point_index = ii
                 end
             end
 
-            added_edge_indicator = !isempty(used_edges_this)
-            unsorted_edges = setdiff(unsorted_edges, used_edges_this)
+            points_this_edge = hcat(list_of_points...)'  # Transpose to match dimensions
+            points = vcat(points, points_this_edge)
         end
 
-        push!(list_of_pieces, CurvePiece(curve, [e.edge_index for e in directed_edges], directed_edges))
+        return points
     end
-
-    return list_of_pieces
 end
 
-function parse_edge(curve::Curve, directory::String)
-    edge_data = bertini_real.parse_edges(directory)
+function EdgeDirection(direction)
+    if direction == "forward"
+        return 1
+    elseif  direction == "backward"
+        return 0
+    else 
+        return -1
+    end
+end
+
+struct DirectedEdge
+    edge_index
+    direction
+
+    function DirectedEdge(edge_index, direction)
+        new(edge_index, direction)
+    end
+end
+
+function is_edge_degenerate(e)
+    return (e[1] == e[2]) || (e[2] == e[3])
+end
+
+mutable struct Curve 
+    decomposition :: Decomposition
+    directory::String
+    is_embedded::Bool
+    embedded_into::Union{Nothing, Decomposition}
+
+    num_edges::Int
+    edges
+    sampler_data
+
+    function Curve(directory; is_embedded=false, embedded_into=nothing)
+        c = new()
+        c.directory = directory
+        c.is_embedded = is_embedded
+        c.embedded_into = embedded_into
+        c.num_edges = 0
+        c.edges = []
+        c.sampler_data = nothing
+
+        c.decomposition = Decomposition(directory; is_embedded, embedded_into)
+        parse_edge(c, directory)
+        try
+            parse_curve_sample(c, directory)
+        catch e
+            if occursin("no samples found for this surface", e.msg) && !c.is_embedded
+                println("No samples to gather")
+            else
+                rethrow(e)
+            end
+        end
+
+        return c
+    end
+end
+
+function parse_edge(curve, directory)
+    edge_data = parse_edges(directory)  
     curve.num_edges = edge_data["number of edges"]
     curve.edges = edge_data["edges"]
 end
 
-function parse_curve_samples(curve::Curve, directory::String)
-    curve.sampler_data = bertini_real.parse_curve_samples(directory)
+function parse_curve_sample(curve, directory)
+    curve.sampler_data = parse_curve_samples(directory)
 end
 
-function Base.show(io::IO, curve::Curve)
-    println(io, "curve with:")
-    println(io, curve.num_edges, " edges")
-end
 end

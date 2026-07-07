@@ -14,3 +14,7 @@ test/output/
 
 # C++/Python reference implementation (kept locally only)
 codigo_cplusplus/
+
+# Third-party manuals (kept locally only; Homotopy gets real.pdf is author-owned and tracked)
+referencias_academicas/BertiniUsersManual.pdf
+referencias_academicas/bertini_real_manual.pdf

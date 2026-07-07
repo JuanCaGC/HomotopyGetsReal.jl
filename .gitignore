@@ -11,3 +11,6 @@ test/output/
 
 # VS Code / editor settings (machine-local paths)
 .vscode/
+
+# C++/Python reference implementation (kept locally only)
+codigo_cplusplus/

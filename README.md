@@ -4,13 +4,22 @@ Julia reimplementation of **Homotopy gets real** — numerical algebraic geometr
 
 ## Install
 
+Not yet registered in Julia’s General registry. Install from GitHub:
+
+```julia
+using Pkg
+Pkg.add(url = "https://github.com/JuanCaGC/HomotopyGetsReal.jl")
+```
+
+Or develop a local clone:
+
 ```julia
 using Pkg
 Pkg.activate("/path/to/HomotopyGetsReal")  # or `] dev /path/to/HomotopyGetsReal`
 Pkg.instantiate()
 ```
 
-Requires Julia 1.10+ (developed on 1.12).
+Requires **Julia 1.12+** (enforced by `Project.toml` compat on `julia` / `LinearAlgebra` / `Statistics`). Licensed under the MIT License (see `LICENSE`).
 
 ## Quick start — unit sphere end-to-end
 

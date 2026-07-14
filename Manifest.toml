@@ -2,7 +2,7 @@
 
 julia_version = "1.12.4"
 manifest_format = "2.0"
-project_hash = "66f3262b1d932a26ca12b39c1fc6485e45b719ac"
+project_hash = "5c078dd4342e90061952d31fe3d47aedd838de70"
 
 [[deps.ADTypes]]
 git-tree-sha1 = "f7304359109c768cf32dc5fa2d371565bb63b68a"
@@ -709,7 +709,7 @@ uuid = "f213a82b-91d6-5c5d-acf7-10f1c761b327"
 version = "2.17.2"
 
 [[deps.HomotopyGetsReal]]
-deps = ["GLMakie", "GenericLinearAlgebra", "GeometryBasics", "HomotopyContinuation", "LinearAlgebra", "Parameters"]
+deps = ["GLMakie", "GenericLinearAlgebra", "GeometryBasics", "HomotopyContinuation", "LinearAlgebra", "Parameters", "Statistics"]
 path = "."
 uuid = "4051f461-4a5e-492e-9237-10b01d865883"
 version = "0.1.0"

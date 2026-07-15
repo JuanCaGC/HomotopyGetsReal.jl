@@ -1,0 +1,7 @@
+[deps]
+Documenter = "e30172f5-a6a5-5a46-863b-614d45cd2de4"
+HomotopyGetsReal = "4051f461-4a5e-492e-9237-10b01d865883"
+
+[compat]
+Documenter = "1"
+julia = "1.12"

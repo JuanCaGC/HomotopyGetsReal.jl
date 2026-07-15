@@ -19,7 +19,7 @@ Pkg.activate("/path/to/HomotopyGetsReal")  # or `] dev /path/to/HomotopyGetsReal
 Pkg.instantiate()
 ```
 
-Requires **Julia 1.12+** (enforced by `Project.toml` compat on `julia` / `LinearAlgebra` / `Statistics`). Licensed under the MIT License (see `LICENSE`).
+Requires **Julia 1.12+** (enforced by `Project.toml` compat on `julia` / `LinearAlgebra`). Licensed under the MIT License (see `LICENSE`).
 
 ## Quick start — unit sphere end-to-end
 
@@ -78,4 +78,4 @@ Historical validation scripts from the Phases 1–6 rebuild live under `dev/scra
 | `src/` | Package source (flat module) |
 | `test/` | Formal `Test.jl` suite |
 | `dev/scratch/` | Archived scratch-phase validation scripts |
-| `docs/` | Minimal docs pointer (API lives in docstrings) |
+| `docs/` | Documenter.jl site (`docs/make.jl`) |

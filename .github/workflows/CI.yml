@@ -1,0 +1,85 @@
+# Standard Julia package CI. GLMakie loads at package import, so Linux
+# jobs reuse the same xvfb / OpenGL pattern as Documentation.yml
+# (Makie headless CI: https://docs.makie.org/stable/explanations/headless).
+name: CI
+
+on:
+  push:
+    branches: [main]
+    tags: [v*]
+  pull_request:
+  # Optional full suite (Taubin + slow visuals); not on every push.
+  workflow_dispatch:
+  schedule:
+    - cron: "0 6 * * 1" # Mondays 06:00 UTC
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.ref_name != 'main' }}
+
+jobs:
+  test:
+    name: Julia ${{ matrix.version }} - ${{ matrix.os }} - fast
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 60
+    strategy:
+      fail-fast: false
+      matrix:
+        version: ["1.12"] # Project.toml [compat] julia = "1.12"
+        os: [ubuntu-latest]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: julia-actions/setup-julia@v2
+        with:
+          version: ${{ matrix.version }}
+      - uses: julia-actions/cache@v2
+      - name: Install OpenGL / xvfb system packages
+        run: >
+          sudo apt-get update && sudo apt-get install -y
+          xorg-dev mesa-utils xvfb libgl1 freeglut3-dev
+          libxrandr-dev libxinerama-dev libxcursor-dev libxi-dev libxext-dev
+      # GLMakie precompilation needs a display (same rationale as docs CI).
+      - name: Build package
+        run: >
+          DISPLAY=:0 xvfb-run -s '-screen 0 1024x768x24'
+          julia --color=yes -e
+          'using Pkg; Pkg.develop(PackageSpec(path=pwd())); Pkg.instantiate(); Pkg.precompile()'
+      - uses: julia-actions/julia-runtest@v1
+        env:
+          # Explicit fast suite: never enable Taubin / slow visuals here.
+          HOMOTOPYGETSREAL_RUN_SLOW_TESTS: "0"
+        with:
+          prefix: xvfb-run -s '-screen 0 1024x768x24'
+
+  test-slow:
+    name: Julia ${{ matrix.version }} - ${{ matrix.os }} - slow
+    # Full suite (~135s local): only on schedule or manual dispatch.
+    if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 90
+    strategy:
+      fail-fast: false
+      matrix:
+        version: ["1.12"]
+        os: [ubuntu-latest]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: julia-actions/setup-julia@v2
+        with:
+          version: ${{ matrix.version }}
+      - uses: julia-actions/cache@v2
+      - name: Install OpenGL / xvfb system packages
+        run: >
+          sudo apt-get update && sudo apt-get install -y
+          xorg-dev mesa-utils xvfb libgl1 freeglut3-dev
+          libxrandr-dev libxinerama-dev libxcursor-dev libxi-dev libxext-dev
+      - name: Build package
+        run: >
+          DISPLAY=:0 xvfb-run -s '-screen 0 1024x768x24'
+          julia --color=yes -e
+          'using Pkg; Pkg.develop(PackageSpec(path=pwd())); Pkg.instantiate(); Pkg.precompile()'
+      - uses: julia-actions/julia-runtest@v1
+        env:
+          HOMOTOPYGETSREAL_RUN_SLOW_TESTS: "1"
+        with:
+          prefix: xvfb-run -s '-screen 0 1024x768x24'

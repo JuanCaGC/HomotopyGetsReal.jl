@@ -21,36 +21,11 @@ using LinearAlgebra
     cluster_vertices(vertices::Vector{NativeVertex{T}}, tol::T) where {T<:AbstractFloat}
         -> Vector{NativeVertex{T}}
 
-Partitions `vertices` into clusters by transitive closure of the
-relation "within `tol` of each other" (i.e. connected components of the
-graph where an edge connects any two vertices whose Euclidean
-coordinate distance is `<= tol`), and returns one representative
-`NativeVertex{T}` per cluster.
+Cluster nearby vertices and return one representative per component.
 
-This is a general clustering *primitive*: it does not know anything
-about `Critical`/`Boundary`/`Singular` classification semantics beyond
-the conflict-resolution rule documented below, so it is safe for both
-Phase 2's straightforward dedup use and for a future, more elaborate
-`Merge`/`GetMergeCandidates` step (6-step framework, step 5) to build on
-top of.
-
-# Representative construction
-For each cluster:
-- `id`: the smallest `id` among cluster members (deterministic and
-  stable regardless of input order).
-- `coordinates`: the componentwise centroid (arithmetic mean) of all
-  member coordinates.
-- `v_type`: `Singular` if *any* member is `Singular` (a numerically
-  detected singularity is never allowed to be "averaged away" by
-  merging with a nearby regular point); else the common `v_type` if all
-  members agree; else `Artificial` to flag that this vertex is a
-  synthetic merge of members with genuinely different classifications.
-- `metadata`: built by [`merge_metadata`](@ref) — see its docstring for
-  the exact merge rule. Nothing from any member is discarded.
-
-Distance is computed with `LinearAlgebra.norm` on the (complex)
-coordinate difference, so this works uniformly for `T = Float64` and
-`T = BigFloat`.
+Form connected components under Euclidean distance `≤ tol` on complex
+coordinates, then merge each cluster into a single [`NativeVertex`](@ref).
+Representatives are sorted by `id`.
 """
 function cluster_vertices(vertices::Vector{NativeVertex{T}}, tol::T) where {T<:AbstractFloat}
     n = length(vertices)
@@ -93,6 +68,8 @@ end
 function _merge_cluster(vertices::Vector{NativeVertex{T}}, member_idxs::Vector{Int}) where {T<:AbstractFloat}
     members = @view vertices[member_idxs]
 
+    # Representative rules: smallest id; coordinate centroid; Singular wins over other types,
+    # else common v_type, else Artificial; metadata via merge_metadata (nothing discarded).
     rep_id = minimum(v.id for v in members)
 
     centroid = sum(v.coordinates for v in members) ./ T(length(members))
@@ -201,34 +178,16 @@ end
     cluster_scalars(xs::Vector{T}, tol::T) where {T<:AbstractFloat}
         -> Vector{T}
 
-Sibling primitive to [`cluster_vertices`](@ref), for the Phase 3
-"which x-values are actually distinct" problem: same union-find-by-
-tolerance idea as `cluster_vertices`, collapsed to 1D (an edge connects
-`x_i` and `x_j` iff `abs(x_i - x_j) <= tol`), returning one
-representative (arithmetic mean) per connected component, **sorted**
-ascending.
+Cluster nearby scalar values and return sorted cluster centroids.
 
-# Why a simple sorted adjacent-chain scan is enough (not O(n^2) union-find)
-For 1D data, if `a <= b <= c` and `abs(a - c) <= tol`, then necessarily
-`abs(a - b) <= tol` and `abs(b - c) <= tol` too (since `b` lies between
-`a` and `c`). So any edge between two non-adjacent elements of the
-*sorted* sequence already implies edges between every intermediate
-adjacent pair. Consequently the connected components of the full
-"within `tol`" graph are exactly the maximal runs of the sorted sequence
-whose consecutive gaps are all `<= tol` -- an `O(n log n)` sort plus a
-single `O(n)` scan, with no loss of generality relative to a full
-pairwise union-find (which is what [`cluster_vertices`](@ref) must use
-instead, since that equivalence does not hold in 2+ dimensions).
-
-This is exactly the fix for the naive-adjacency counterexample: given
-the nodal cubic's boundary vertices at `x ≈ 2.2268` (once at `y = -4`,
-once at `y = +4`), `cluster_scalars` collapses them into a single
-x-slot *before* `decompose_1d_curve` decides which intervals need a
-`compute_midslice` call, so the pipeline never mistakes "same x" for
-"same vertex" (that finer distinction is left to
-`connect_the_dots!`'s full `(x, y)` coordinate matching).
+Sort `xs`, merge consecutive values within `tol`, and return the
+arithmetic mean of each run in ascending order.
 """
 function cluster_scalars(xs::Vector{T}, tol::T) where {T<:AbstractFloat}
+    # 1D transitive closure reduces to adjacent runs after sorting: if a ≤ b ≤ c and
+    # |a-c| ≤ tol, then |a-b| and |b-c| ≤ tol too. O(n log n) sort + O(n) scan suffices
+    # (unlike cluster_vertices in 2+ dimensions). Collapses duplicate x-slots before
+    # decompose_1d_curve; finer (x,y) matching is left to connect_the_dots!.
     n = length(xs)
     n == 0 && return T[]
 
@@ -254,37 +213,16 @@ end
     cluster_points_indexed(points::Vector{Vector{T}}, tol::T) where {T<:AbstractFloat}
         -> (representatives::Vector{Vector{T}}, membership::Vector{Int})
 
-Phase 5 primitive, needed by `SurfaceDecomposition.weld_mesh` for a job
-neither [`cluster_vertices`](@ref) nor [`cluster_scalars`](@ref) can do:
-`cluster_vertices` operates on `NativeVertex{T}`'s `Complex{T}`
-coordinates (mesh vertices are plain real `T`-valued rows of a
-`Face.mesh_vertices` matrix, not `NativeVertex`), and -- more
-fundamentally -- it returns only deduplicated *representatives*, never
-the mapping from each original input to the cluster it merged into.
-`weld_mesh` needs exactly that mapping to remap every face's
-`mesh_topology` (local row indices) into a single global vertex
-numbering (the mesh-index analogue of Phase 3's cross-source id
-renumbering, see `SurfaceDecomposition.weld_mesh`'s own docstring).
+Cluster nearby points and return representatives plus a membership map.
 
-Same tolerance-indexed union-find-by-Euclidean-distance idea as
-`cluster_vertices` (an edge connects `points[i]` and `points[j]` iff
-`norm(points[i] .- points[j]) <= tol`, `O(n^2)` pairwise, exactly like
-`cluster_vertices` -- no `NativeVertex`-specific metadata/`v_type`
-merge logic is needed here, so this is a strictly simpler sibling, not
-a generalization of `cluster_vertices`), but reports full provenance
-instead of discarding it:
-
-- `representatives[k]` is the componentwise centroid (arithmetic mean)
-  of every `points[i]` in cluster `k`, in the order clusters are first
-  encountered while scanning `1:n` (deterministic given input order,
-  unlike `cluster_vertices`'s id-based sort -- there is no id concept
-  for raw points).
-- `membership[i]` is the index into `representatives` that `points[i]`
-  merged into, for every `i` in `1:length(points)`, so callers can
-  translate any original per-point reference (e.g. a local mesh-grid
-  row index) into the deduplicated global numbering.
+Apply tolerance-based union-find on real coordinate vectors (same distance
+rule as [`cluster_vertices`](@ref)). Return centroid representatives and
+`membership[i]`, the cluster index for each input point.
 """
 function cluster_points_indexed(points::Vector{Vector{T}}, tol::T) where {T<:AbstractFloat}
+    # Used by SurfaceDecomposition.weld_mesh: unlike cluster_vertices, operates on raw
+    # Vector{Vector{T}} mesh rows and returns membership so mesh_topology indices can be
+    # remapped to a global vertex numbering. Representatives ordered by first encounter.
     n = length(points)
     n == 0 && return Vector{T}[], Int[]
 

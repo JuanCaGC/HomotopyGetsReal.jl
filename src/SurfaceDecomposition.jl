@@ -32,28 +32,18 @@
     compute_critical_z_slices(F::System, cfg::HomotopyConfig{T}) where {T<:AbstractFloat}
         -> Vector{T}
 
-Finds the z-values at which the surface `F` cannot be locally expressed
-as a smooth graph `z = g(x,y)` -- i.e. where `∂f/∂x = ∂f/∂y = 0` along
-with `f = 0` -- via `Solver.compute_critical_points`'s existing
-3-variable branch (`src/Solver.jl`, `ne == 1 && nv == 3`), which already
-builds exactly this augmented system internally. No new solver logic.
+Find critical z-values where the surface cannot be written as z = g(x, y).
 
-**`F.variables` must be ordered `[x_var, y_var, z_var]`, z LAST** --
-`compute_critical_points`'s 3-variable branch destructures `x, y, _ =
-F.variables` and differentiates w.r.t. the first two, so getting this
-order backwards silently computes critical points of the wrong
-projection with no error thrown. This is the same requirement
-[`build_patch_system`](@ref) has, and both must agree on the same `F`.
+`F` must be one equation in three variables ordered `[x, y, z]` (z last).
+Delegates to [`compute_critical_points`](@ref) and clusters the resulting
+z-coordinates with `cfg.vertex_match_tol`.
 
-Deduplicates the resulting critical points' z-coordinates via
-`Clustering.cluster_scalars(z_values, cfg.vertex_match_tol)` -- reusing
-the exact same primitive and tolerance
-[`Topology.decompose_1d_curve`](@ref) already uses for its own "which
-x-values are actually distinct" problem, rather than reintroducing the
-old prototype's bare `cluster_points_1d(z_values, 1e-5)` literal
-(`prototipo_viejo_julia/Solver.jl:86`).
+# Arguments
+- `F::System`: surface system.
+- `cfg::HomotopyConfig{T}`: tolerances for solving and clustering.
 
-Returns a sorted `Vector{T}` of distinct z-values.
+# Returns
+Sorted `Vector{T}` of distinct z-values.
 """
 function compute_critical_z_slices(F::System, cfg::HomotopyConfig{T}) where {T<:AbstractFloat}
     length(F.variables) == 3 && length(F.expressions) == 1 || throw(ArgumentError(
@@ -61,8 +51,11 @@ function compute_critical_z_slices(F::System, cfg::HomotopyConfig{T}) where {T<:
         "(a raw surface, variables ordered [x_var, y_var, z_var] -- z LAST); " *
         "got $(length(F.expressions)) equation(s) in $(length(F.variables)) variable(s).",
     ))
+    # compute_critical_points differentiates w.r.t. the first two variables only;
+    # z must be last (same convention as build_patch_system).
     crit_vertices = compute_critical_points(F, cfg)
     z_values = T[real(v.coordinates[3]) for v in crit_vertices]
+    # Same cluster_scalars / vertex_match_tol as decompose_1d_curve uses for x-values.
     return cluster_scalars(z_values, cfg.vertex_match_tol)
 end
 
@@ -70,25 +63,20 @@ end
     slice_at_z(F::System, z_val::T, cfg::HomotopyConfig{T}) where {T<:AbstractFloat}
         -> (vertices_3d::Vector{NativeVertex{T}}, edges_3d::Vector{Edge{T}})
 
-Substitutes `z_var => Float64(z_val)` into the raw surface `F` to get a
-2-variable curve, then calls [`Topology.decompose_1d_curve`](@ref)
-**as-is** (confirmed in the Phase 5 investigation: `decompose_1d_curve`'s
-own signature already accepts exactly this shape, zero Phase 3 changes
-needed), and lifts the resulting 2D vertices/edges into 3-space by
-appending `z_val` as a third coordinate to every `NativeVertex`
-coordinate and every `Edge` sampled point.
+Decompose the plane curve f(x, y, z_val) = 0 and lift it to 3D at fixed z.
 
-This lifting is possible with zero `Types.jl` changes because
-`NativeVertex{T}.coordinates`/`Edge{T}.sampled_points` were already
-built length-generic in Phase 1 (confirmed: their keyword constructors
-just do `Vector{Complex{T}}(undef, length(coordinates))`/`collect(p)`,
-no hardcoded length-2 assumption).
+Substitutes `z => z_val`, runs [`decompose_1d_curve`](@ref) on the resulting
+2-variable system, and appends `z_val` as the third coordinate of every vertex
+and edge sample. Vertex and edge ids are local to this call; renumber before
+combining slices (as [`decompose_3d_surface`](@ref) does).
 
-Note: the returned vertex/edge `id`s are LOCAL to this one call (Phase
-3's `decompose_1d_curve` restarts its own id counters near 1 every
-call) -- callers concatenating results across multiple `slice_at_z`
-calls (i.e. [`decompose_3d_surface`](@ref)) MUST renumber past the
-running max before combining, exactly as `decompose_3d_surface` does.
+# Arguments
+- `F::System`: surface system (`length(F.expressions) == 1`, `nvariables(F) == 3`).
+- `z_val::T`: slice height.
+- `cfg::HomotopyConfig{T}`: curve decomposition settings.
+
+# Returns
+A tuple of 3D vertices and edges at the given z.
 """
 function slice_at_z(F::System, z_val::T, cfg::HomotopyConfig{T}) where {T<:AbstractFloat}
     length(F.variables) == 3 && length(F.expressions) == 1 || throw(ArgumentError(
@@ -97,11 +85,13 @@ function slice_at_z(F::System, z_val::T, cfg::HomotopyConfig{T}) where {T<:Abstr
     ))
     x_var, y_var, z_var = F.variables
     f = F.expressions[1]
+    # Float64 substitution matches compute_midslice (HC polyhedral start has no Complex{BigFloat} path).
     f_2d = subs(f, z_var => Float64(z_val))
     F_2d = System([f_2d], variables = [x_var, y_var])
 
     vertices_2d, edges_2d = decompose_1d_curve(F_2d, cfg)
 
+    # decompose_1d_curve restarts ids near 1 each call; callers must offset before concatenating.
     vertices_3d = NativeVertex{T}[
         NativeVertex{T}(
             id = v.id,
@@ -380,65 +370,23 @@ end
     weld_mesh(faces::Vector{Face{T}}, patch::NamedTuple, cfg::HomotopyConfig{T}) where {T<:AbstractFloat}
         -> GeometryBasics.Mesh
 
-Final assembly step: merges coincident vertices across every `Face`'s
-own, independently-numbered `mesh_vertices`/`mesh_topology` into one
-watertight mesh. Each `Face.mesh_topology` holds indices LOCAL to that
-face's own `mesh_vertices` -- adjacent slabs' faces genuinely share
-their boundary row (one slab's `z_top` sweep and the next slab's
-`z_bottom` sweep both land on the same physical curve), so unlike
-[`decompose_3d_surface`](@ref)'s vertex/edge id collision (a pure
-namespace problem, fixed by renumbering, since no two slabs' curve
-vertices are ever the same physical point), this genuinely needs
-POSITION-BASED clustering, not just an offset.
+Merge per-face meshes into one watertight `GeometryBasics.Mesh`.
 
-# Explicit four-step procedure
-1. **Flatten with provenance.** Every face's `mesh_vertices` rows are
-   pushed into one flat `all_points::Vector{Vector{T}}`, recording
-   `provenance[k] = (face_idx, local_row)` for each flattened point.
-2. **Cluster globally.** `reps, membership =
-   Clustering.cluster_points_indexed(all_points, cfg.vertex_match_tol)`
-   -- `reps` becomes the merged mesh's global vertex list; `membership`
-   maps each flattened point to its global index.
-3. **Build the `(face_idx, local_row) -> global_idx` lookup** from
-   `provenance` + `membership`.
-4. **Remap every face's `mesh_topology`** through the lookup, dropping
-   any triangle whose three remapped indices are not all distinct
-   (legitimate: a swept grid can pinch to a point at a pole/tip, exactly
-   as the old prototype already guards against at
-   `prototipo_viejo_julia/SurfaceTopology.jl:217-224`).
+Collects every face's `mesh_vertices` and `mesh_topology`, clusters coincident
+vertices across face boundaries with `cfg.vertex_match_tol`, remaps triangle
+indices, drops degenerate triangles, and flips winding so normals align with
+`∇f`.
 
-# Winding-order normalization
-Done HERE, globally, after remapping and degenerate-triangle filtering
-(deliberately NOT in `FaceTracking.track_face`, which only emits the
-fixed `(v1,v2,v3)`/`(v1,v3,v4)` diagonal split with no orientation
-guarantee -- different edges are discovered independently by Phase 3's
-midslice-first algorithm with no shared global orientation convention,
-so a per-face fix could not guarantee cross-face consistency). For each
-surviving triangle `(g1,g2,g3)`, computes the raw normal
-`n = (p2-p1) x (p3-p1)` and the surface gradient `∇f = (fx,fy,fz)`
-evaluated at `p1` (this specific vertex was chosen, not the centroid,
-per the confirmed resolution: `p1` is already at hand from the cross
-product computation, and a well-resolved mesh makes any one corner
-equally representative of the local gradient direction for a pure sign
-check). If `n . ∇f < 0`, the triangle is emitted as `(g1,g3,g2)`
-(swapped winding); otherwise as `(g1,g2,g3)`. This gives every triangle
-in the finished mesh a normal consistently aligned with `+∇f` (an
-arbitrary but globally fixed convention).
+# Arguments
+- `faces::Vector{Face{T}}`: swept faces with local mesh data.
+- `patch::NamedTuple`: surface patch system (for gradient-based winding).
+- `cfg::HomotopyConfig{T}`: vertex-matching tolerance.
 
-Welds at genuine `T`-precision (see this file's module docstring for
-why, contrasting with the old prototype's `Float32` truncation before
-its own dedup decision); only narrows to `Float32`/`Point3f` for the
-final `GeometryBasics.Mesh` container.
-
-Not `@inferred`-clean -- but for a different reason than
-[`build_face_tracker`](@ref)'s documented `Union`: `GeometryBasics.Mesh`'s
-own constructor return type carries an existential `where _A` type
-parameter (its internal view-storage type), which `Core.Compiler` cannot
-resolve away regardless of how concretely-typed `weld_mesh`'s own inputs
-are. Confirmed via `Base.return_types` in `scratch_phase5_check.jl`; an
-upstream `GeometryBasics.jl` property, not something fixable here.
+# Returns
+A welded `GeometryBasics.Mesh` with `Point3f` vertices.
 """
 function weld_mesh(faces::Vector{Face{T}}, patch::NamedTuple, cfg::HomotopyConfig{T}) where {T<:AbstractFloat}
+    # Adjacent faces share boundary geometry (position-based merge, not id offset).
     all_points = Vector{T}[]
     provenance = Tuple{Int,Int}[]
     for (fi, face) in enumerate(faces)
@@ -460,10 +408,12 @@ function weld_mesh(faces::Vector{Face{T}}, patch::NamedTuple, cfg::HomotopyConfi
         for row in 1:size(face.mesh_topology, 1)
             i1, i2, i3 = face.mesh_topology[row, 1], face.mesh_topology[row, 2], face.mesh_topology[row, 3]
             g1, g2, g3 = lookup[(fi, i1)], lookup[(fi, i2)], lookup[(fi, i3)]
+            # Drop pinched triangles (e.g. pole/tip where three indices collapse).
             g1 != g2 && g2 != g3 && g3 != g1 && push!(global_triangles, (g1, g2, g3))
         end
     end
 
+    # Global winding fix: track_face emits no orientation guarantee; align each normal with +∇f.
     fixed_triangles = NTuple{3,Int}[]
     for (g1, g2, g3) in global_triangles
         p1, p2, p3 = reps[g1], reps[g2], reps[g3]
@@ -472,6 +422,7 @@ function weld_mesh(faces::Vector{Face{T}}, patch::NamedTuple, cfg::HomotopyConfi
         push!(fixed_triangles, dot(n, T[gx, gy, gz]) < 0 ? (g1, g3, g2) : (g1, g2, g3))
     end
 
+    # Cluster at T-precision; narrow to Float32 only for the GeometryBasics.Mesh container.
     points3 = [GeometryBasics.Point3f(Float32(p[1]), Float32(p[2]), Float32(p[3])) for p in reps]
     tris = [GeometryBasics.TriangleFace{Int}(t[1], t[2], t[3]) for t in fixed_triangles]
     return GeometryBasics.Mesh(points3, tris)
@@ -479,66 +430,23 @@ end
 
 """
     decompose_3d_surface(F::System, cfg::HomotopyConfig{T}) where {T<:AbstractFloat}
-        -> (vertices::Vector{NativeVertex{T}}, edges::Vector{Edge{T}}, faces::Vector{Face{T}}, mesh::GeometryBasics.Mesh)
+        -> (vertices, edges, faces, mesh)
 
-Top-level Phase 5 orchestrator, the 3D analogue of
-[`Topology.decompose_1d_curve`](@ref): computes critical z-slices, slices
-+ decomposes + sweeps each resulting slab, and welds the result into a
-single mesh -- running every pipeline step including the final weld, so
-callers never need a manual follow-up call, mirroring
-`decompose_1d_curve`'s own precedent of calling `sample_edge` internally
-before returning.
+Decompose a real algebraic surface into vertices, edges, faces, and a welded mesh.
 
-**`F.variables` must be ordered `[x_var, y_var, z_var]`, z LAST** (see
-[`compute_critical_z_slices`](@ref)/[`build_patch_system`](@ref)).
+`F` must be a single equation in three variables ordered `[x, y, z]` (z last).
+The pipeline finds critical z-slices inside `cfg.bbox_z`, decomposes a mid-z
+curve in each slab, sweeps faces between slab bounds, and welds everything into
+one `GeometryBasics.Mesh`. This is the 3D analogue of [`decompose_1d_curve`](@ref).
 
-1. `z_crits = compute_critical_z_slices(F, cfg)`, filtered to
-   `cfg.bbox_z`'s own range (a critical z-value outside the configured
-   bounding box is not a slab boundary this decomposition should ever
-   visit).
-2. `z_bounds = sort(unique([cfg.bbox_z[1]; z_crits; cfg.bbox_z[2]]))`.
-3. `patch = build_patch_system(F)` -- ONCE for the whole surface, passed
-   both to [`_robust_slice_at_z`](@ref) (which reuses
-   [`FaceTracking.patch_direction`](@ref) for its gradient-magnitude gate
-   -- see that function's own docstring) and to
-   [`FaceTracking.track_face`](@ref) below.
-4. For each adjacent `(z_bottom, z_top)` pair: [`_robust_slice_at_z`](@ref)
-   at the exact midpoint `(z_bottom + z_top) / 2` (matching
-   [`Topology.compute_midslice`](@ref)'s own convention -- the old
-   prototype's `0.4137` skew
-   (`prototipo_viejo_julia/SurfaceTopology.jl:132`) is deliberately
-   dropped, not ported to a new config field), falling back to a nearby
-   perturbed `z_mid` only if the exact midpoint's slice comes back
-   untrustworthy by either its vertex-type or gradient-magnitude gate
-   (see [`_robust_slice_at_z`](@ref)'s own docstring for when/why), then
-   renumber that slab's vertex/edge ids past the running max (see below)
-   before calling [`FaceTracking.track_face`](@ref) once per resulting
-   edge, using the SAME `z_mid` that `_robust_slice_at_z` actually used
-   (not blindly re-deriving `(z_bottom+z_top)/2`), so the z-value sliced
-   and the z-value swept-from always agree even when a retry fired.
-5. [`weld_mesh`](@ref) over every produced `Face`.
+# Arguments
+- `F::System`: surface system (`length(F.expressions) == 1`, `nvariables(F) == 3`).
+- `cfg::HomotopyConfig{T}`: tolerances, bounding box, and sampling densities.
 
-# Vertex/edge id renumbering across slabs (explicit, not implied)
-Every [`slice_at_z`](@ref) call restarts `decompose_1d_curve`'s own id
-counters near 1, so simply concatenating each slab's `vertices_2d`/
-`edges_2d` WOULD produce colliding ids across DIFFERENT slabs -- not a
-"these are really the same point" merge candidate the way Phase 3's
-`crit_vertices`/`bnd_vertices` were (every slab's `z_mid` is distinct,
-so no two slabs' vertices are ever the same physical point), but a pure
-NAMESPACE collision that would break any downstream `findfirst(v -> v.id
-== ..., vertices)` lookup (the pattern `Topology.jl` itself uses
-throughout) against the concatenated list. Fixed by offsetting BOTH id
-namespaces independently past their own running max before
-concatenating -- vertex ids and edge ids are tracked as two separate
-counters, exactly as `decompose_1d_curve` itself already keeps them
-separate within one call -- and shifting `left_vertex_id`/
-`right_vertex_id` by the SAME vertex offset so they stay consistent with
-the renumbered vertices. `Face.boundary_edges` is populated from the
-already-renumbered edge, so it dereferences correctly against the
-returned `edges`. This is the exact structural analogue of Phase 3's own
-`offset = maximum(v.id for v in crit_vertices)` pattern
-(`src/Topology.jl:358`), applied across slab calls instead of within one
-call, and applied to two namespaces instead of one.
+# Returns
+A 4-tuple `(vertices, edges, faces, mesh)` of types
+`Vector{NativeVertex{T}}`, `Vector{Edge{T}}`, `Vector{Face{T}}`, and
+`GeometryBasics.Mesh`.
 """
 function decompose_3d_surface(F::System, cfg::HomotopyConfig{T}) where {T<:AbstractFloat}
     length(F.variables) == 3 && length(F.expressions) == 1 || throw(ArgumentError(
@@ -549,9 +457,12 @@ function decompose_3d_surface(F::System, cfg::HomotopyConfig{T}) where {T<:Abstr
 
     z_bottom_bound, z_top_bound = cfg.bbox_z
     z_crits_raw = compute_critical_z_slices(F, cfg)
+    # Critical z outside bbox_z is not a slab boundary for this decomposition.
     z_crits = filter(z -> z_bottom_bound <= z <= z_top_bound, z_crits_raw)
     z_bounds = sort(unique(vcat(T[z_bottom_bound], z_crits, T[z_top_bound])))
 
+    # One patch for the whole surface: reused by _robust_slice_at_z (gradient
+    # gate via FaceTracking.patch_direction) and by FaceTracking.track_face.
     patch = build_patch_system(F)
 
     all_vertices = NativeVertex{T}[]
@@ -561,8 +472,19 @@ function decompose_3d_surface(F::System, cfg::HomotopyConfig{T}) where {T<:Abstr
 
     for i in 1:(length(z_bounds) - 1)
         z_bottom, z_top = z_bounds[i], z_bounds[i+1]
+        # Exact midpoint (same convention as Topology.compute_midslice). The old
+        # prototype's 0.4137 skew (prototipo_viejo_julia/SurfaceTopology.jl:132)
+        # is deliberately dropped, not ported to HomotopyConfig. _robust_slice_at_z
+        # may return a nearby z_mid if the midpoint slice fails its gates; track_face
+        # must use that same z_mid, not re-derive (z_bottom+z_top)/2.
         vertices_2d, edges_2d, z_mid = _robust_slice_at_z(F, patch, z_bottom, z_top, cfg)
 
+        # Each slice_at_z / decompose_1d_curve restarts ids near 1. Concatenating
+        # slabs without offsets would collide namespaces (not geometric merges —
+        # each slab has a distinct z_mid). Offset vertex and edge ids independently
+        # (same separation decompose_1d_curve keeps within one call); shift
+        # left/right_vertex_id by the vertex offset. Analogue of Topology.jl's
+        # `offset = maximum(v.id for v in crit_vertices)` pattern, across slabs.
         v_offset = isempty(all_vertices) ? 0 : maximum(v.id for v in all_vertices)
         e_offset = isempty(all_edges) ? 0 : maximum(e.id for e in all_edges)
 
@@ -585,6 +507,7 @@ function decompose_3d_surface(F::System, cfg::HomotopyConfig{T}) where {T<:Abstr
         append!(all_edges, edges_renumbered)
 
         for edge in edges_renumbered
+            # Face.boundary_edges come from already-renumbered edges.
             face = track_face(F, patch, edge, z_mid, z_bottom, z_top, next_face_id, cfg)
             push!(all_faces, face)
             next_face_id += 1

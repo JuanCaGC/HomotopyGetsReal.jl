@@ -113,38 +113,22 @@ function _plot_vertices_by_type!(ax, vertices::Vector{NativeVertex{T}}) where {T
 end
 
 """
-    plot_curve_decomposition(
-        vertices::Vector{NativeVertex{T}},
-        edges::Vector{Edge{T}};
-        cfg::Union{Nothing,HomotopyConfig} = nothing,
-        show_vertices::Bool = true,
-        show_labels::Bool = false,
-        edge_color_by::Symbol = :cell,
-        edge_color = :steelblue,
-        colormap = :viridis,
-    ) where {T<:AbstractFloat}
-        -> Makie.Figure
+    plot_curve_decomposition(vertices, edges; kwargs...) -> Figure
 
-Renders a 2D curve decomposition -- the direct output of
-[`Topology.decompose_1d_curve`](@ref) or [`SurfaceDecomposition.slice_at_z`](@ref)
-(both already return exactly `(vertices, edges)` in this shape; no
-adapter needed).
+Plot a 2D curve decomposition.
 
-- `cfg`, if given, sets axis limits from `cfg.bbox_x`/`cfg.bbox_y` rather
-  than Makie's auto-fit-to-data, mirroring BertiniReal's own
-  `_adjust_axis_bounds` (itself derived from the same kind of
-  known-bounding-region config the decomposition was computed against).
-- `edge_color_by`: `:cell` (default, BertiniReal's `BY_CELL`) gives every
-  edge its own color cycled from `colormap`; `:mono` uses a flat
-  `edge_color` for every edge.
-- `show_vertices`: one legended `scatter!` per [`VertexType`](@ref)
-  present, via [`_plot_vertices_by_type!`](@ref).
-- `show_labels`: annotates each vertex with its `id` via `text!`.
+Draws resampled edges as polylines and, optionally, vertices colored and
+marked by [`VertexType`](@ref).
 
-Returns the `Figure` WITHOUT calling `display` on it -- composable with
-a caller's own layout, or `save(path, fig)`, without forcing a window
-open. Contrast [`interactive_3d_viewer`](@ref), whose entire contract IS
-opening a window.
+# Keyword arguments
+- `cfg`: if given, set axis limits from `cfg.bbox_x` and `cfg.bbox_y`.
+- `show_vertices`: scatter vertices by type (default `true`).
+- `show_labels`: annotate vertex ids (default `false`).
+- `edge_color_by`: `:cell` gives each edge a distinct color; `:mono` uses
+  `edge_color`.
+- `edge_color`, `colormap`: styling for mono or per-edge coloring.
+
+Returns a `Figure` without calling `display`.
 """
 function plot_curve_decomposition(
     vertices::Vector{NativeVertex{T}},
@@ -156,6 +140,7 @@ function plot_curve_decomposition(
     edge_color = :steelblue,
     colormap = :viridis,
 ) where {T<:AbstractFloat}
+    # Accepts output of decompose_1d_curve or slice_at_z directly.
     edge_color_by in (:cell, :mono) || throw(ArgumentError(
         "plot_curve_decomposition: edge_color_by must be :cell or :mono, got $(edge_color_by)",
     ))
@@ -247,48 +232,21 @@ function _near_constant_colorrange(colorvals::Vector{Float64})
 end
 
 """
-    plot_surface_decomposition(
-        mesh::GeometryBasics.Mesh;
-        color_by::Union{Symbol,Function} = :z,
-        colormap = :viridis,
-        show_wireframe::Bool = false,
-        show_colorbar::Bool = true,
-        vertices::Union{Nothing,Vector{<:NativeVertex}} = nothing,
-        cfg::Union{Nothing,HomotopyConfig} = nothing,
-    ) -> Makie.Figure
+    plot_surface_decomposition(mesh; kwargs...) -> Figure
 
-PRIMARY 3D surface plotting method: takes the ALREADY-WELDED,
-ALREADY-correctly-wound `mesh` [`SurfaceDecomposition.decompose_3d_surface`](@ref)
-returns (via [`SurfaceDecomposition.weld_mesh`](@ref)) -- not `faces`
-alone. See this file's header for why the winding correction makes
-`mesh` the right primary input; the `faces::Vector{Face{T}}` method
-below is the explicitly-flagged secondary path.
+Plot a welded 3D surface mesh.
 
-- `color_by`: `:x`/`:y`/`:z` extract that coordinate per mesh point
-  (`:z`, the default, matches the roadmap's own sketch); a `Function`
-  `(x,y,z) -> Real` generalizes this to BertiniReal's `BY_FUNCTION`
-  (e.g. distance from origin, or any other diagnostic of interest) at
-  negligible extra cost.
-- `show_colorbar`: adds a `Colorbar` for the (continuous) `color_by`
-  scale.
-- `show_wireframe`: overlays the mesh's own triangle edges.
-- `vertices`: optional overlay (e.g. the surface's own critical/singular
-  points from `decompose_3d_surface`'s first return value) via the SAME
-  [`_plot_vertices_by_type!`](@ref) helper `plot_curve_decomposition`
-  uses -- the 3D analogue of BertiniReal overlaying `critical_curve`/
-  `singular_curves` on a raw surface.
-- `cfg`, if given, sets axis limits from `cfg.bbox_x`/`cfg.bbox_y`/
-  `cfg.bbox_z`, mirroring `plot_curve_decomposition`'s own convention.
+Preferred method for output from [`decompose_3d_surface`](@ref).
 
-If `color_by`'s range across `mesh` is near-constant relative to its own
-magnitude (see [`_near_constant_colorrange`](@ref)), a fixed `colorrange`
-is used instead of Makie's default auto-scaling, and a one-shot `@warn` is
-emitted -- prevents floating-point round-off on an otherwise-correct mesh
-from rendering as misleading full-spectrum speckle (see this file's own
-Phase 6 follow-up investigation for the motivating case).
+# Keyword arguments
+- `color_by`: `:x`, `:y`, `:z`, or `f(x, y, z) -> Real` for vertex colors.
+- `colormap`: color map for the mesh (default `:viridis`).
+- `show_wireframe`: overlay triangle edges (default `false`).
+- `show_colorbar`: show a color bar (default `true`).
+- `vertices`: optional vertex overlay, colored by [`VertexType`](@ref).
+- `cfg`: if given, set axis limits from bounding box fields.
 
-Returns the `Figure` without calling `display` (see
-[`plot_curve_decomposition`](@ref)'s docstring for why).
+Returns a `Figure` without calling `display`.
 """
 function plot_surface_decomposition(
     mesh::GeometryBasics.Mesh;
@@ -299,6 +257,7 @@ function plot_surface_decomposition(
     vertices::Union{Nothing,Vector{<:NativeVertex}} = nothing,
     cfg::Union{Nothing,HomotopyConfig} = nothing,
 )
+    # Uses weld_mesh output with global winding correction applied.
     pts = GeometryBasics.coordinates(mesh)
 
     colorvals = if color_by isa Function
@@ -344,33 +303,20 @@ end
 const _FACES_WINDING_WARNED = Ref(false)
 
 """
-    plot_surface_decomposition(
-        faces::Vector{Face{T}};
-        colormap = :viridis,
-        show_wireframe::Bool = false,
-        cfg::Union{Nothing,HomotopyConfig} = nothing,
-    ) where {T<:AbstractFloat} -> Makie.Figure
+    plot_surface_decomposition(faces; kwargs...) -> Figure
 
-SECONDARY 3D surface plotting method (multiple dispatch on the same
-exported name, not a keyword flag -- see this file's header): BertiniReal's
-"color by cell" view, one solid, distinct color per `Face` (cycled from
-`colormap` via `Makie.cgrad(colormap, n; categorical = true)`, exactly
-like [`plot_curve_decomposition`](@ref)'s `edge_color_by = :cell`
-default), useful for visually distinguishing which triangles belong to
-which topological cell -- information [`weld_mesh`](@ref)'s globally-welded
-output has already discarded.
+Plot individual face meshes with one color per face.
 
-**Known, deliberately-flagged limitation**: unlike the `mesh` method
-above, this path builds each face's local mesh directly from
-`face.mesh_vertices`/`face.mesh_topology` and does NOT reproduce
-`weld_mesh`'s gradient-based winding correction (that correction needs
-`patch`/`F`, which this method never receives -- see this file's
-header). Some faces may therefore render with inverted/inward-facing
-normals under directional lighting. This is flagged via an explicit,
-one-time `@warn` on first call (not merely a docstring note, and not a
-per-call warning either -- a module-level `Ref{Bool}` latch), since a
-visually-inverted face could otherwise look like a rendering bug rather
-than a known, documented limitation of this specific path.
+Useful for inspecting per-cell topology before welding. Does not apply
+`weld_mesh`'s global winding correction; some faces may look inverted
+under directional lighting.
+
+# Keyword arguments
+- `colormap`: categorical colors cycled over faces.
+- `show_wireframe`: overlay triangle edges (default `false`).
+- `cfg`: if given, set axis limits from bounding box fields.
+
+Emits a one-time warning about winding on first call.
 """
 function plot_surface_decomposition(
     faces::Vector{Face{T}};
@@ -378,6 +324,7 @@ function plot_surface_decomposition(
     show_wireframe::Bool = false,
     cfg::Union{Nothing,HomotopyConfig} = nothing,
 ) where {T<:AbstractFloat}
+    # Per-cell coloring path; winding correction requires patch/F from weld_mesh.
     if !_FACES_WINDING_WARNED[]
         @warn "plot_surface_decomposition(::Vector{Face}) does not apply weld_mesh's " *
               "gradient-based winding correction -- some faces may render with inverted/" *
@@ -420,33 +367,12 @@ function plot_surface_decomposition(
 end
 
 """
-    interactive_3d_viewer(
-        mesh::GeometryBasics.Mesh;
-        color_by::Union{Symbol,Function} = :z,
-        colormap = :viridis,
-        show_wireframe::Bool = false,
-        show_colorbar::Bool = true,
-        vertices::Union{Nothing,Vector{<:NativeVertex}} = nothing,
-        cfg::Union{Nothing,HomotopyConfig} = nothing,
-    ) -> Makie.Figure
+    interactive_3d_viewer(mesh; kwargs...) -> Figure
 
-Thin wrapper around [`plot_surface_decomposition`](@ref)'s `mesh` method
-(reused internally, not duplicated) that activates the `GLMakie` backend
-and `display`s the resulting `Figure` before returning it -- unlike
-[`plot_surface_decomposition`](@ref)/[`plot_curve_decomposition`](@ref),
-whose entire contract is composability (return a `Figure`, never force a
-window), THIS function's entire contract is "open an interactive
-window", so forcing `display` here is a deliberate, documented asymmetry.
+Open an interactive 3D viewer for a surface mesh.
 
-Rotation/zoom come for free from `GLMakie`'s default `Axis3` camera --
-no custom trackball code needed (unlike BertiniReal's separate,
-hand-written `glumpy`/OpenGL viewer, which duplicates its own matplotlib
-renderer's data-extraction logic just to get free camera controls).
-
-A live/interactive re-slicing control (dragging a z-value to recompute a
-NEW cross-section on the fly) is explicitly OUT of scope here -- see this
-file's header; BertiniReal's own "slice exploration" only toggles
-visibility of already-computed curves, never recomputes one.
+Activates `GLMakie`, builds the figure with [`plot_surface_decomposition`](@ref),
+and displays it. Keyword arguments match that method.
 """
 function interactive_3d_viewer(
     mesh::GeometryBasics.Mesh;
@@ -457,6 +383,7 @@ function interactive_3d_viewer(
     vertices::Union{Nothing,Vector{<:NativeVertex}} = nothing,
     cfg::Union{Nothing,HomotopyConfig} = nothing,
 )
+    # Unlike plot_surface_decomposition, this opens a window; no live re-slicing.
     GLMakie.activate!()
     fig = plot_surface_decomposition(
         mesh;

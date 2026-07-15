@@ -86,40 +86,22 @@
 """
     build_patch_system(F::System)
 
-Phase 5 entry point for the patch machinery: one-time, per-surface,
-purely SYMBOLIC preparation -- takes only the raw surface, **no anchor
-point** (evaluating the gradient at a specific anchor is a separate,
-per-anchor responsibility, see [`patch_direction`](@ref)/
-[`_gradient_at`](@ref)).
+Prepare symbolic data for face tracking from a raw surface system.
 
-`F` must be a raw surface: `length(F.variables) == 3 &&
-length(F.expressions) == 1`, with **`F.variables` ordered
-`[x_var, y_var, z_var]`** (z LAST) -- the same convention
-[`compute_critical_z_slices`](@ref)/`Solver.compute_critical_points`'s
-3-variable branch already requires (`x, y, _ = F.variables`), since
-getting this order backwards silently computes critical points of the
-wrong projection with no error thrown.
+`F` must be a single implicit surface with variables ordered `[x, y, z]`
+(z last), matching [`compute_critical_z_slices`](@ref). Differentiates
+`f` once and builds `F_for_tracking` with variables reordered to
+`[z, x, y]` so z can be swept as a homotopy parameter.
 
-Computes `∂f/∂x`, `∂f/∂y`, `∂f/∂z` once via `differentiate` (cheap,
-symbolic, not per-anchor), and also builds `F_for_tracking` -- the SAME
-expression `f`, but wrapped in a *second* `System` with variables
-reordered to `[z_var, x_var, y_var]` (z FIRST). This second ordering is
-required purely so that [`PathTracking._track_path_segment!`](@ref)'s
-hardcoded `point = vcat(ComplexF64(x1), y1)` convention (swept parameter
-first, then state -- exactly mirroring the plane-curve case where
-`x_var` IS `F.variables[1]`) lines up correctly when the swept parameter
-is `z` and the state is `(x,y)`. This is entirely independent from, and
-does not change, the `[x_var,y_var,z_var]` order `F` itself must keep
-for `compute_critical_z_slices`'s own augmentation convention -- the two
-`System`s serve different, non-interacting purposes (`F_for_tracking` is
-used *only* by [`is_near_singular`](@ref)'s rank check on the genuine
-surface, via [`track_dense_path`](@ref); the per-anchor `H_sys` built by
-[`build_face_tracker`](@ref) is what's actually numerically tracked).
-
-Returns a `NamedTuple` with fields `f, fx, fy, fz, x_var, y_var, z_var,
-F_for_tracking`.
+# Returns
+A `NamedTuple` with fields `f`, `fx`, `fy`, `fz`, `x_var`, `y_var`,
+`z_var`, and `F_for_tracking`.
 """
 function build_patch_system(F::System)
+    # One-time symbolic prep per surface (no anchor). F_for_tracking reorders
+    # variables to [z, x, y] so PathTracking's swept-parameter-first convention
+    # matches z-sweeps; F itself keeps [x, y, z] for critical-slice computation.
+    # F_for_tracking is used only for is_near_singular rank checks during tracking.
     length(F.variables) == 3 && length(F.expressions) == 1 || throw(ArgumentError(
         "build_patch_system: expected F with exactly 1 equation in exactly 3 variables " *
         "(a raw surface, variables ordered [x_var, y_var, z_var] -- z LAST); " *
@@ -250,45 +232,34 @@ function _project_to_slice(patch::NamedTuple, x0::T, y0::T, z_val::T, cfg::Homot
 end
 
 """
-    patch_direction(patch::NamedTuple, x0::T, y0::T, z0::T, cfg::HomotopyConfig{T}) where {T<:AbstractFloat}
-        -> (a::T, b::T)
+    patch_direction(patch, x0, y0, z0, cfg)
 
-Confirmed decision: the per-anchor patch equation `a*(x-x0) + b*(y-y0) =
-0` uses the LOCAL SURFACE GRADIENT direction `(a,b) = (f_y(x0,y0,z0),
--f_x(x0,y0,z0))` at the anchor -- i.e. the line through the anchor
-orthogonal to `(f_x,f_y)`'s in-plane component -- rather than the old
-prototype's origin-radial line `x*y0 - y*x0 = 0`
-(`prototipo_viejo_julia/SurfaceTopology.jl:39`), which degenerates for
-curves not centered on the origin. This is the standard "coordinate
-patch" trick from numerical algebraic geometry (Sommese-Wampler-style
-witness-point tracking): a transversal line through the anchor is
-guaranteed valid at the anchor itself by construction (the patch
-equation is tautologically satisfied there), and the gradient direction
-maximizes the local intersection angle with the curve, minimizing the
-chance the patch itself introduces spurious near-tangency.
+Return patch line coefficients `(a, b)` at anchor `(x0, y0, z0)`.
+
+The patch equation is `a*(x - x0) + b*(y - y0) = 0`, with
+`(a, b) = (f_y, -f_x)` from the surface gradient at the anchor.
 """
 function patch_direction(patch::NamedTuple, x0::T, y0::T, z0::T, cfg::HomotopyConfig{T}) where {T<:AbstractFloat}
+    # Gradient-based patch (not origin-radial): transversal at the anchor and
+    # valid for curves not centered on the origin.
     fx_val, fy_val, _ = _gradient_at(patch, x0, y0, z0, cfg)
     return fy_val, -fx_val
 end
 
 """
-    build_face_tracker(patch::NamedTuple, x0::T, y0::T, z0::T, cfg::HomotopyConfig{T}) where {T<:AbstractFloat}
-        -> (H_sys::System, ph::ParameterHomotopy, tracker::Tracker)
+    build_face_tracker(patch, x0, y0, z0, cfg)
 
-Option B (confirmed): builds a FRESH, per-anchor `System` with
-`x0,y0,a,b` baked in as LITERAL `Float64` coefficients (`a,b` from
-[`patch_direction`](@ref) at `(x0,y0,z0)`), leaving only `z_var` as the
-system's `ParameterHomotopy` parameter -- so this requires no changes to
-`PathTracking.jl`'s existing scalar `x_start`/`x_target` contract.
-Constructed via `build_tracker(...; compile = :none)`
-(`src/PathTracking.jl`'s Phase 5 addition): per the benchmark documented
-on `build_tracker`, baking literals per-anchor (rather than threading
-`x0,y0,a,b` as extra homotopy parameters and building once) is only
-feasible with `compile = :none`, since this function is called once per
-anchor point (potentially hundreds to thousands of times per surface).
+Build a per-anchor homotopy tracker for sweeping a slice point in z.
+
+Constructs a two-equation system from the surface and a literal patch
+line at `(x0, y0, z0)`, with only `z` as the homotopy parameter.
+
+# Returns
+`(H_sys, ph, tracker)` ready for [`track_dense_path`](@ref).
 """
 function build_face_tracker(patch::NamedTuple, x0::T, y0::T, z0::T, cfg::HomotopyConfig{T}) where {T<:AbstractFloat}
+    # Literal x0, y0, a, b coefficients per anchor (compile = :none); called
+    # once per anchor, potentially hundreds of times per surface.
     a, b = patch_direction(patch, x0, y0, z0, cfg)
     x0_64, y0_64, a_64, b_64 = Float64(x0), Float64(y0), Float64(a), Float64(b)
     patch_eq = a_64 * (patch.x_var - x0_64) + b_64 * (patch.y_var - y0_64)
@@ -298,36 +269,20 @@ function build_face_tracker(patch::NamedTuple, x0::T, y0::T, z0::T, cfg::Homotop
 end
 
 """
-    track_dense_path(
-        F::System, ph::ParameterHomotopy, tracker::Tracker,
-        y_start::Vector{ComplexF64}, param_start::Float64, param_targets::Vector{Float64},
-        max_steps_per_hop::Int, rank_tol::Float64, sv_thresh::Float64, poor_acc_tol::Float64, min_width::Float64,
-    ) -> (y_final::Vector{ComplexF64}, dense_path::Vector{Vector{Float64}})
+    track_dense_path(F, ph, tracker, y_start, param_start, param_targets, ...)
 
-New sibling to [`PathTracking.track_path`](@ref) (see this file's module
-docstring for why `track_path` itself is unsuited to mesh-building):
-walks `param_targets` IN ORDER, calling
-[`PathTracking._track_path_segment!`](@ref) once per consecutive pair
-`(param_start_or_previous_target, param_targets[i])` into a FRESH,
-per-hop scratch buffer -- reusing the EXACT SAME adaptive
-retry-on-poor-quality/`is_near_singular` bisection `track_path` uses,
-just applied between many small hops instead of once across the whole
-interval. Regardless of how much intra-hop bisection fires, the LAST
-point `_track_path_segment!` ever pushes for a given hop is always
-exactly at that hop's own target (bisection only ever inserts EARLIER
-points before the final landing, never changes what the final landing
-value is computed at) -- so `track_dense_path` keeps only that final
-per-hop point, guaranteeing `dense_path` has **exactly**
-`length(param_targets)` entries, one per requested target, unlike
-`track_path`'s endpoint-only accumulation (which may produce anywhere
-from 1 point up to the full recursion depth for a single interval).
+Track a path through a sequence of parameter values, keeping one point per target.
 
-`F` is the *raw surface's* Jacobian-check system (i.e.
-`patch.F_for_tracking` from [`build_patch_system`](@ref), NOT the
-per-anchor augmented `H_sys` from [`build_face_tracker`](@ref)) --
-`is_near_singular` checks genuine surface singularity, deliberately
-decoupled from whether the artificial patch equation happens to be
-poorly conditioned at some intermediate point.
+Walks `param_targets` in order, calling `_track_path_segment!` between
+consecutive targets with adaptive bisection on poor quality or
+near-singular steps.
+
+`F` should be `patch.F_for_tracking` (the raw surface Jacobian system),
+not the per-anchor augmented system.
+
+# Returns
+`(y_final, dense_path)` where `dense_path` has exactly
+`length(param_targets)` entries, each `[param, x, y]`.
 """
 function track_dense_path(
     F::System,
@@ -342,6 +297,9 @@ function track_dense_path(
     poor_acc_tol::Float64,
     min_width::Float64,
 )
+    # Endpoint-oriented track_path can return too few points for mesh building;
+    # this keeps one accepted landing per requested target. F checks genuine
+    # surface singularity, decoupled from patch conditioning.
     expected_rank = length(F.expressions)
     y_cur = y_start
     p_cur = param_start
@@ -560,50 +518,16 @@ function _sweep_direction(
 end
 
 """
-    sweep_face_bidirectional(
-        F::System, patch::NamedTuple,
-        x0::T, y0::T, z_mid::T, z_bottom::T, z_top::T,
-        cfg::HomotopyConfig{T},
-    ) where {T<:AbstractFloat}
-        -> (dense_path_down::Vector{Vector{Float64}}, dense_path_up::Vector{Vector{Float64}})
+    sweep_face_bidirectional(F, patch, x0, y0, z_mid, z_bottom, z_top, cfg)
 
-The z-sweep analogue of [`PathTracking.track_bidirectional`](@ref):
-sweeps ONE anchor `(x0,y0)` from `z_mid` toward `z_bottom` and toward
-`z_top`, each via [`_sweep_direction`](@ref) with
-`cfg.midslice_sample_density` intermediate targets EXCLUDING the shared
-start (`z_mid`) and INCLUDING the far end (`z_bottom`/`z_top`
-respectively, tracked directly, no artificial pullback margin -- see
-`sweep_face_bidirectional`'s dropped-epsilon rationale below).
+Bidirectionally sweep one anchor from `z_mid` toward `z_bottom` and `z_top`.
 
-Each direction independently starts from the SAME anchor `(x0,y0,z_mid)`
-and may adaptively re-anchor partway through its own sweep (see
-[`_sweep_direction`](@ref)) -- the two directions never share a tracker
-instance (each calls [`build_face_tracker`](@ref) freshly), so there is
-no stale-state carryover between them.
+Uses `cfg.midslice_sample_density` intermediate targets per direction,
+excluding the shared start at `z_mid` and including the endpoint. Each
+direction builds its own tracker and may re-anchor during the sweep.
 
-`_sweep_direction`'s internal re-anchoring calls
-[`build_face_tracker`](@ref) (hence `build_tracker(...; compile =
-:none)`) an adaptive, usually-small number of times per direction --
-confirmed empirically fully `@inferred`-clean end-to-end in
-`scratch_phase5_check.jl` despite this, for the same union-splitting
-reason documented on `build_tracker` itself.
-
-**No `ε` pullback from `z_bottom`/`z_top`.** Phase 3's
-`connect_the_dots!`/`track_bidirectional` already track directly to
-genuinely critical/singular target values with no pullback (e.g.
-`scratch_phase4_check.jl` tracks directly to a real node at `x=0` and
-converges), relying entirely on `is_near_singular`'s bisection retry.
-`z_bottom`/`z_top` play exactly the same role here (each is, by
-construction, either a genuine z-critical value from
-[`compute_critical_z_slices`](@ref) or a `cfg.bbox_z` boundary) -- there
-is no principled reason the z-sweep needs a safety margin the
-already-proven 1D engine doesn't, and introducing one would reintroduce
-exactly the kind of unconfigured, ad-hoc literal
-(`prototipo_viejo_julia/SurfaceTopology.jl:46`'s `ε = 1e-4`) this
-rebuild exists to eliminate. [`_sweep_direction`](@ref)'s adaptive
-re-anchoring is the mechanism that makes tracking all the way to a
-genuine limiting point (like a pole) actually work on general surfaces,
-rather than merely failing gracefully.
+# Returns
+`(dense_path_down, dense_path_up)`, each a vector of `[z, x, y]` points.
 """
 function sweep_face_bidirectional(
     F::System,
@@ -615,6 +539,9 @@ function sweep_face_bidirectional(
     z_top::T,
     cfg::HomotopyConfig{T},
 ) where {T<:AbstractFloat}
+    # Tracks directly to z_bottom/z_top (no epsilon pullback). Directions do not
+    # share a tracker; adaptive re-anchoring in _sweep_direction handles
+    # transversality drift on general surfaces.
     n_side = cfg.midslice_sample_density
     z_mid64 = Float64(z_mid)
 
@@ -628,54 +555,24 @@ function sweep_face_bidirectional(
 end
 
 """
-    track_face(
-        F::System, patch::NamedTuple, edge::Edge{T},
-        z_mid::T, z_bottom::T, z_top::T, face_id::Int, cfg::HomotopyConfig{T},
-    ) where {T<:AbstractFloat}
-        -> Face{T}
+    track_face(F, patch, edge, z_mid, z_bottom, z_top, face_id, cfg)
 
-Sweeps an entire `Edge{T}` (already resampled to `cfg.edge_sample_density`
-points by Phase 3's `sample_edge`) across the full slab `[z_bottom,
-z_top]`, assembling one `Face{T}` whose `mesh_vertices` is a
-`(2*cfg.midslice_sample_density + 1) x cfg.edge_sample_density` grid of
-points all lying on the surface (`f ≈ 0` by construction, since every
-row comes from a tracked point of `patch.f`).
+Sweep an edge across z and assemble one `Face` mesh.
 
-# Row/column indexing convention (fixed, see architecture resolution)
-- Columns `c = 1..edge_sample_density` index `edge.sampled_points`
-  (curve arclength order, unchanged from Phase 3).
-- Rows `r = 1..n_z` index the combined z-sweep, `n_z = 2*n_side + 1`
-  where `n_side = cfg.midslice_sample_density`: row 1 is `z_bottom`, row
-  `n_side+1` is the EXACT `z_mid` anchor (not a tracked value -- the
-  anchor coordinates themselves), row `n_z` is `z_top`, built as
-  `reverse(dense_path_down) ++ [mid_row] ++ dense_path_up` -- the direct
-  z-axis analogue of `track_bidirectional`'s own
-  `reverse(path_left) ++ [midpoint] ++ path_right` combination.
-  [`sweep_face_bidirectional`](@ref)'s dense paths are `[z,x,y]`-ordered
-  (matching `_track_path_segment!`'s `vcat(swept_param, state)`
-  convention); each row is reordered to `[x,y,z]` here, matching this
-  codebase's standing coordinate convention, before being stored.
-- Flat storage is row-major: point `(r,c)` lives at
-  `mesh_vertices[(r-1)*edge_sample_density + c, :]`.
+Re-projects each column anchor onto the slice at `z_mid`, sweeps it
+bidirectionally to `[z_bottom, z_top]`, and triangulates the resulting
+grid.
 
-Each `edge.sampled_points[c]` is first re-projected onto the actual
-slice curve at `z_mid` via [`_project_to_slice`](@ref) before being used
-as a sweep anchor -- see that function's docstring for why this is
-necessary (Phase 3's `sample_edge` output is only an approximate,
-linearly-interpolated polyline, not literally on the curve).
+# Grid layout
+- Columns follow `edge.sampled_points` (curve arclength order).
+- Rows run from `z_bottom` to `z_top` through the exact anchor at `z_mid`.
+- Storage is row-major: point `(r, c)` at
+  `mesh_vertices[(r - 1) * n_curve + c, :]`.
 
-# Triangulation convention (fixed, see architecture resolution)
-For each grid cell with corners `v1=(r,c), v2=(r+1,c), v3=(r+1,c+1),
-v4=(r,c+1)`, the diagonal always runs `v1`-`v3`, splitting into
-`(v1,v2,v3)` and `(v1,v3,v4)` (matching
-`prototipo_viejo_julia/SurfaceTopology.jl:211-224`'s existing
-convention). Triangles degenerate under THIS face's own local indices
-(e.g. two corners of a swept quad coincide from a pinch) are dropped
-here; **winding-order normalization (aligning normals with `∇f`) is
-deliberately NOT done here** -- it happens once, globally, in
-`SurfaceDecomposition.weld_mesh`, after cross-face index remapping, so
-that every triangle in the finished mesh (not just within one face) is
-consistently oriented.
+Winding normalization happens later in `weld_mesh`, not here.
+
+# Returns
+A `Face{T}` with `mesh_vertices` and `mesh_topology`.
 """
 function track_face(
     F::System,
@@ -687,6 +584,8 @@ function track_face(
     face_id::Int,
     cfg::HomotopyConfig{T},
 ) where {T<:AbstractFloat}
+    # sample_edge polylines may be off-curve; re-project anchors before sweeping.
+    # Triangulation: diagonal v1-v3 per quad; degenerate triangles dropped locally.
     n_curve = length(edge.sampled_points)
     n_curve >= 1 || throw(ArgumentError("track_face: edge $(edge.id) has no sampled points to sweep"))
     n_side = cfg.midslice_sample_density

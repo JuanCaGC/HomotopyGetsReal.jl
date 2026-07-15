@@ -37,21 +37,16 @@
     jacobian_rank_info(F::System, point::AbstractVector, cfg::HomotopyConfig{T}) where {T<:AbstractFloat}
         -> (rank::Int, singular_values::Vector{T})
 
-Evaluates the Jacobian of `F` at `point` (converted to `Complex{T}`) at
-`T`-precision (via low-level `evaluate(...; bits = precision(T))`, see
-module docstring above), computes its singular values with
-`LinearAlgebra.svdvals` (generic for any `T` once `GenericLinearAlgebra`
-is loaded), and reports the numerical rank obtained by counting
-singular values strictly greater than `cfg.jacobian_rank_tol`.
+Evaluate the Jacobian of `F` at `point` and return its numerical rank and singular values.
 
-This is the shared utility used by both [`compute_critical_points`](@ref)
-and [`intersect_bounding_object`](@ref); it does not itself decide
-`Singular` vs `Critical`/`Boundary` classification (see
-`_classify_vertex_type`, which additionally consults
-`cfg.singular_value_threshold` -- a deliberately distinct knob from
-`jacobian_rank_tol`, see `HomotopyConfig`'s docstring).
+Pass a `HomotopyConfig` to supply `jacobian_rank_tol`, the cutoff used when counting
+singular values as nonzero. Used by [`compute_critical_points`](@ref) and
+[`intersect_bounding_object`](@ref); vertex-type classification also consults
+`cfg.singular_value_threshold` separately.
 """
 function jacobian_rank_info(F::System, point::AbstractVector, cfg::HomotopyConfig{T}) where {T<:AbstractFloat}
+    # T-precision Jacobian via low-level evaluate(...; bits = precision(T)); svdvals is
+    # T-generic once GenericLinearAlgebra is loaded (see module header).
     x = Complex{T}.(point)
     bits = precision(T)
     Jsym = jacobian(F)
@@ -114,31 +109,15 @@ end
     compute_critical_points(F::System, cfg::HomotopyConfig{T}) where {T<:AbstractFloat}
         -> Vector{NativeVertex{T}}
 
-Step 1 of the six-step framework.
+Find and classify critical points of a polynomial system as `NativeVertex` records.
 
-`F` must be either:
-- already square (`length(F.expressions) == nvariables(F)`), i.e. an
-  already-augmented, 0-dimensional critical-point system -- this is the
-  curve case, matching the old prototype's convention where the caller
-  pre-builds e.g. `System([f, differentiate(f, y)], [x, y])` before
-  calling in; or
-- a single equation in exactly 3 variables (a raw surface), in which
-  case the augmented z-projection critical-point system
-  `{f, ∂f/∂x, ∂f/∂y}` is built internally (mirrors
-  `prototipo_viejo_julia/Solver.jl`'s `find_critical_z_slices`).
-
-Any other shape throws `ArgumentError`.
-
-Pipeline: path-track the (possibly augmented) system in Float64: filter
-to solutions whose imaginary part is within `cfg.critical_point_tol`
-(NOT `cfg.vertex_match_tol`); optionally Newton-polish to `T`-precision
-when `T != Float64`; classify each surviving point via
-[`jacobian_rank_info`](@ref) / `_classify_vertex_type` as `Critical` or
-`Singular`; deduplicate via `Clustering.cluster_vertices` using
-`cfg.vertex_match_tol` (NOT `cfg.critical_point_tol` -- see
-`HomotopyConfig`'s docstring for why these two must not be confused).
+Call with either a square 0-dimensional system (e.g. a pre-augmented curve critical-point
+system) or a single equation in three variables (a raw surface; the z-projection critical
+system is built internally). Solutions are path-tracked, classified as `Critical` or
+`Singular`, and deduplicated with `cfg.vertex_match_tol`.
 """
 function compute_critical_points(F::System, cfg::HomotopyConfig{T}) where {T<:AbstractFloat}
+    # Accept square F (caller-pre-augmented curve case) or 1 eq / 3 vars (auto-augment surface).
     nv = length(F.variables)
     ne = length(F.expressions)
 
@@ -156,6 +135,7 @@ function compute_critical_points(F::System, cfg::HomotopyConfig{T}) where {T<:Ab
         ))
     end
 
+    # Path-track in Float64; filter by critical_point_tol (not vertex_match_tol); polish when T != Float64.
     result = solve(Faug; show_progress = false)
     raw_sols = solutions(result; only_nonsingular = false)
 
@@ -183,33 +163,15 @@ end
     intersect_bounding_object(F::System, cfg::HomotopyConfig{T}) where {T<:AbstractFloat}
         -> Vector{NativeVertex{T}}
 
-Step 2 of the six-step framework.
+Find curve–bounding-box intersection points and return them as `NativeVertex` records.
 
-`F` must define a 1-dimensional variety in `nvariables(F)`-space, i.e.
-`length(F.expressions) == nvariables(F) - 1` with `nvariables(F) in (2, 3)`
--- a plane curve (2 variables, matching the old prototype's
-`find_boundary_points` exactly) or a space curve (3 variables). A raw
-single-equation *surface* (1 equation, 3 variables) is out of scope
-here: a surface meets a bounding box face in a curve, not isolated
-points, so standard 0-dimensional homotopy continuation cannot return
-it as a `Vector{NativeVertex}`; that reduction belongs to per-slice
-processing in a later phase.
-
-For each variable and each of its two `cfg.bbox_*` bounds, the variable
-is fixed at that bound, the resulting square system in the remaining
-variables is path-tracked in Float64, and solutions are kept if they
-are real (within `cfg.boundary_point_tol`, an imaginary-part cutoff)
-and their remaining coordinates fall within their own bounding
-intervals up to `cfg.boundary_point_tol` slack. Kept points are
-optionally Newton-polished (see `_newton_polish`) in the reduced
-variables, reassembled with the exact fixed coordinate, classified via
-the shared Jacobian-rank utility (evaluated against the *original* `F`,
-using all `nvariables(F)` variables, so the fixed coordinate's partial
-derivative is not lost), tagged `Boundary` (or `Singular`), and
-deduplicated via `Clustering.cluster_vertices` using
-`cfg.vertex_match_tol`.
+`F` must define a plane or space curve (`length(F.expressions) == nvariables(F) - 1`
+with two or three variables). Each variable is fixed at its `cfg.bbox_*` bounds in turn;
+real solutions inside the box are classified as `Boundary` or `Singular` and
+deduplicated with `cfg.vertex_match_tol`.
 """
 function intersect_bounding_object(F::System, cfg::HomotopyConfig{T}) where {T<:AbstractFloat}
+    # Raw surfaces (1 eq, 3 vars) are out of scope: a face intersection is a curve, not isolated points.
     nv = length(F.variables)
     ne = length(F.expressions)
     nv in (2, 3) && ne == nv - 1 || throw(ArgumentError(

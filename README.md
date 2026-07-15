@@ -1,6 +1,11 @@
 # HomotopyGetsReal
 
+[![CI](https://github.com/JuanCaGC/HomotopyGetsReal.jl/actions/workflows/CI.yml/badge.svg)](https://github.com/JuanCaGC/HomotopyGetsReal.jl/actions/workflows/CI.yml)
+[![Documentation](https://github.com/JuanCaGC/HomotopyGetsReal.jl/actions/workflows/Documentation.yml/badge.svg)](https://JuanCaGC.github.io/HomotopyGetsReal.jl)
+
 Julia reimplementation of **Homotopy gets real** — numerical algebraic geometry for decomposing real algebraic curves and surfaces using [HomotopyContinuation.jl](https://github.com/JuliaHomotopyContinuation/HomotopyContinuation.jl).
+
+Full documentation: [https://JuanCaGC.github.io/HomotopyGetsReal.jl](https://JuanCaGC.github.io/HomotopyGetsReal.jl)
 
 ## Install
 

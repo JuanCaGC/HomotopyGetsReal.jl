@@ -52,28 +52,11 @@
     compute_midslice(F::System, x_left::T, x_right::T, cfg::HomotopyConfig{T}) where {T<:AbstractFloat}
         -> Vector{Complex{T}}
 
-Step 3 of the six-step framework (plane-curve specialization -- see the
-module docstring for why this is *not* the 3D z-slicing operation of
-the same conceptual name in a later phase).
+Find real `y`-roots of a plane curve at the midpoint between two `x`-bounds.
 
-`F` must be a raw plane curve: `length(F.variables) == 2 &&
-length(F.expressions) == 1` (same convention as
-[`intersect_bounding_object`](@ref)'s raw-`F` input), else
-`ArgumentError`.
-
-Fixes `x_var` (the first of `F.variables`, matching
-[`compute_critical_points`](@ref)'s existing positional destructuring
-convention) at the midpoint `x_mid = (x_left + x_right) / 2`, path-tracks
-the resulting univariate system in `y_var` (the second variable) in
-Float64, and returns every root within `cfg.critical_point_tol` of real
-(the tolerance is *reused*, not reintroduced as a new `HomotopyConfig`
-field -- see the Phase 3 architecture discussion) as a
-`Vector{Complex{T}}`.
-
-No internal smoothness check is performed: this is guaranteed by
-construction as long as callers only ever invoke this strictly between
-two adjacent *distinct* x-values (see
-[`Clustering.cluster_scalars`](@ref)), never at a known vertex's own x.
+`F` must be a raw plane curve (one equation, two variables). Fixes the first variable at
+`x_mid = (x_left + x_right) / 2` and returns nearly-real roots within `cfg.critical_point_tol`.
+Call only between adjacent distinct x-slots, not at a vertex x-coordinate.
 """
 function compute_midslice(F::System, x_left::T, x_right::T, cfg::HomotopyConfig{T}) where {T<:AbstractFloat}
     length(F.variables) == 2 && length(F.expressions) == 1 || throw(ArgumentError(
@@ -83,6 +66,7 @@ function compute_midslice(F::System, x_left::T, x_right::T, cfg::HomotopyConfig{
     x_var, y_var = F.variables
     f = F.expressions[1]
 
+    # Plane-curve midslice only (not 3D z-slicing). Smoothness assumed between distinct x-slots.
     x_mid = (x_left + x_right) / T(2)
     # Substitute a Float64 copy of x_mid before solving -- see the
     # analogous fix (and its rationale) in Solver.jl's
@@ -184,34 +168,11 @@ end
     ) where {T<:AbstractFloat}
         -> Edge{T}
 
-Step 4 of the six-step framework. Called once per branch, i.e. once per
-`y`-root returned by [`compute_midslice`](@ref) at `x_mid = (x_left +
-x_right) / 2`.
+Connect one curve branch between two x-bounds by bidirectional path tracking.
 
-Tracks outward from the smooth midslice witness `(x_mid, y_mid)` toward
-`x_left` and `x_right` independently via [`build_tracker`](@ref)/
-[`track_bidirectional`](@ref) (Phase 4's `PathTracking.jl` engine,
-parameterized by `x_var`), using `cfg.max_path_steps` as the raw
-tracking step budget for *each* direction (adaptive bisection near
-detected singularities/failures -- see
-[`_track_path_segment!`](@ref) -- still bounded overall by this budget;
-`cfg.edge_sample_density` is never used here, it is reserved
-exclusively for [`sample_edge`](@ref)'s later equidistant resampling).
-
-At each end, the landing point is resolved via [`_resolve_endpoint`](@ref)
-against the *full* `vertices` list by actual `(x, y)` distance
-(`cfg.vertex_match_tol`) -- never by position in a sorted list (the
-Phase 3 naive-adjacency counterexample). `vertices` is mutated in place
-(hence the `!`) whenever a tracked branch lands on no known vertex: a
-new `Artificial`-typed `NativeVertex{T}` is appended so later calls in
-the same `decompose_1d_curve` run see it too.
-
-`edge_id` is supplied by the caller; `connect_the_dots!` never
-self-assigns edge ids. `Edge.is_singular` is `true` iff either resolved
-endpoint vertex (matched or newly-created) has `v_type == Singular`. The
-returned `Edge{T}` has raw (non-equidistant) `sampled_points` already
-populated, running left-endpoint -> ... -> midpoint -> ... ->
-right-endpoint.
+Call once per `y`-root from [`compute_midslice`](@ref). Tracks from `(x_mid, y_mid)` toward
+both endpoints, resolves landings against `vertices` (mutating it when needed), and returns
+an `Edge` with raw sampled points. `is_singular` is true when either endpoint is `Singular`.
 """
 function connect_the_dots!(
     F::System,
@@ -230,6 +191,7 @@ function connect_the_dots!(
     x_var, y_var = F.variables
     f = F.expressions[1]
 
+    # max_path_steps budgets each direction; edge_sample_density is for sample_edge only.
     H_sys = System([f], variables = [y_var], parameters = [x_var])
     xm64 = Float64(x_mid)
     ph, tracker = build_tracker(H_sys, xm64, cfg)
@@ -273,18 +235,10 @@ end
     sample_edge(edge::Edge{T}, cfg::HomotopyConfig{T}) where {T<:AbstractFloat}
         -> Edge{T}
 
-Step 6 of the six-step framework: pure geometric resampling, with zero
-`HomotopyContinuation.jl` involvement (it takes no `System`/`vertices`
-argument, unlike every other function in this file). Arc-length
-parametrizes `edge.sampled_points` and linearly interpolates to exactly
-`cfg.edge_sample_density` equidistant points, returning a new `Edge{T}`
-with the same `id`/`left_vertex_id`/`right_vertex_id`/`is_singular` and
-replaced `sampled_points`.
+Resample an edge to `cfg.edge_sample_density` equidistant points along arc length.
 
-Degenerate inputs (fewer than 2 raw points, or all raw points
-coincident, e.g. a zero-length edge) are handled by simply repeating the
-single available point `cfg.edge_sample_density` times, rather than
-dividing by a zero total arc length.
+Pure geometry — no homotopy continuation. Returns a new `Edge` with updated `sampled_points`
+and unchanged ids and singularity flag. Degenerate edges repeat the sole point.
 """
 function sample_edge(edge::Edge{T}, cfg::HomotopyConfig{T}) where {T<:AbstractFloat}
     pts = edge.sampled_points
@@ -331,34 +285,14 @@ end
     decompose_1d_curve(F::System, cfg::HomotopyConfig{T}) where {T<:AbstractFloat}
         -> (vertices::Vector{NativeVertex{T}}, edges::Vector{Edge{T}})
 
-Orchestrator for the full "1D Curve Decomposition Pipeline" (steps 3-6,
-following on from Phase 2's steps 1-2). Takes the *raw* plane curve
-system (same validation as [`compute_midslice`](@ref)):
-`length(F.variables) == 2 && length(F.expressions) == 1`.
+Decompose a raw plane curve into vertices and resampled edges.
 
-1. Builds the augmented critical-point system
-   `System([f, differentiate(f, y_var)], [x_var, y_var])` and calls
-   [`compute_critical_points`](@ref) on it; calls
-   [`intersect_bounding_object`](@ref) on `F` directly.
-2. Renumbers the second vertex set's ids past the first set's maximum id
-   (their internal numbering otherwise collides, since each function
-   starts counting at 1 independently), concatenates both sets, and
-   calls `Clustering.cluster_vertices(..., cfg.vertex_match_tol)` --
-   the actual cross-source "GetMergeCandidates" step (step 5).
-3. Calls `Clustering.cluster_scalars` on the merged vertices' real
-   x-coordinates to obtain the distinct x-slots that need connecting
-   (see the Phase 3 naive-adjacency counterexample for why this step,
-   rather than naively sorting+adjacent-pairing raw vertices, is
-   required).
-4. For each adjacent pair of distinct x-slots, calls
-   [`compute_midslice`](@ref) once, then [`connect_the_dots!`](@ref)
-   once per returned `y`-root, using a locally-owned incrementing
-   `edge_id` counter. `vertices` is threaded through by reference so
-   in-place `Artificial`-vertex insertions from one interval are visible
-   to later intervals processed in the same call.
-5. Runs [`sample_edge`](@ref) over every produced edge.
+Finds critical and boundary vertices, merges coincident ones, connects adjacent x-intervals
+via midslice witnesses, and returns equidistantly sampled edges.
 """
 function decompose_1d_curve(F::System, cfg::HomotopyConfig{T}) where {T<:AbstractFloat}
+    # Pipeline: critical + boundary vertices -> cluster_vertices -> cluster_scalars on x
+    # -> compute_midslice + connect_the_dots! per interval -> sample_edge on each edge.
     length(F.variables) == 2 && length(F.expressions) == 1 || throw(ArgumentError(
         "decompose_1d_curve: expected F with exactly 1 equation in exactly 2 variables " *
         "(a raw plane curve); got $(length(F.expressions)) equation(s) in $(length(F.variables)) variable(s).",

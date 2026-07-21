@@ -299,30 +299,26 @@ themselves degenerate), the gradient gate is skipped for that slab rather
 than dividing by zero -- documented as a known limitation of this
 heuristic, not silently miscounted as "healthy".
 
-# Known limitation: one confirmed, harmless false positive
-Re-validating the FULL Taubin heart regression with this gate in place
-surfaced a false positive on the `[1.0, 1.0648]` slab (the narrow,
-4-x-critical-point slab discussed above): its naive midpoint's minimum
-per-edge anchor gradient (`0.035`, at the thin inner sliver's pinch,
-where a small inner loop and the large outer loop meet) compared against
-the quarter-point reference's maximum (`3.94`, from the outer loop's own
-much stronger part of the SAME curve) gives ratio `0.0089` -- just under
-`cfg.z_mid_gradient_ratio_tol = 0.01` -- triggering one avoidable retry.
-This is a MIN-candidate-vs-MAX-reference artifact of a curve with
-multiple, legitimately very-differently-conditioned branches (inner
-sliver vs. outer loop), not a true near-degeneracy: the rejected `z_mid`
-already gave a perfectly good downstream sweep (max `|f|=2.4e-6`,
-confirmed both before and after this gate existed), and the retry lands
-on an equally fine `z_mid` (max `|f|=3.0e-6`), so no correctness issue
-results -- just one avoidable `slice_at_z` call on this slab. Flagged
-explicitly here rather than tuned away: shrinking the threshold to dodge
-this specific ratio (`0.0089`) would erode most of the two-orders-of-
-magnitude margin against the genuinely bad candidates (`0.0014`-`0.0057`)
-found on the `[-1,1]` slab, and a more surgical fix (matching each
-candidate edge to its own corresponding branch in the reference slice,
-rather than a single global min/max) is a real design change, not a
-threshold tweak, and is left for a future pass if a surface is found
-where this false-positive rate actually matters.
+# Historical note: the min-vs-max false positive, and its Phase 8 resolution
+The original gate compared the candidate's MIN anchor gradient against the
+reference's MAX, which false-fires on curves with multiple, legitimately
+very-differently-conditioned branches (a thin inner sliver's pinch anchor vs.
+a strong outer loop). On the fixed-axis `[1.0, 1.0648]` slab this cost one
+harmless avoidable retry (candidate min `0.035` vs reference max `3.94`,
+ratio `0.0089`, just under the `0.01` threshold; both the rejected and the
+accepted `z_mid` sweep fine, max `|f| ~ 2.4e-6`/`3.0e-6`). The Phase 8
+five-seed rotated-Taubin regression then showed the FATAL form of the same
+artifact: narrow slabs between two close genuine critical values (seed 3:
+`[-0.864, -0.858]`, seed 4: `[0.884, 0.900]` -- nowhere near the singular
+ellipse, no Singular vertices at all) carry a just-born tiny branch whose
+Critical anchor gradient (`4e-4` / `3.5e-3`) is structurally weak across the
+ENTIRE slab, so every retry candidate failed identically and the ladder
+exhausted -- a hard throw. The structural-heterogeneity skip (refinement 3
+in the Phase 8 section below) resolves both: measured `ref_min/ref_max` is
+`0.00306` on the `[1.0, 1.0648]` slab (gate skipped, false positive gone,
+naive midpoint accepted, sweep max `|f| = 2.4e-6`) and `0.372` / `0.0723` on
+the `[-1, 1]` / `[1.0648, 1.2367]` slabs (gate active, all true positives
+preserved) -- the `0.01` threshold sits ~3x from either side of this gap.
 
 # Phase 8 amendments: transversal singular curves (generic-projection charts)
 Both gates above were originally calibrated on fixed-axis fixtures, where a
@@ -345,22 +341,39 @@ threw and the decomposition died. Two refinements fix this:
    reference slices do NOT also contain `Singular` vertices. A structural
    singularity cannot be retried away; the original z=0 catastrophe still
    fires because its references at z=±0.5 are Singular-free.
-2. **Gradient gate**: edges left-anchored AT a `Singular` vertex are excluded
-   from the candidate minimum (their anchor gradient is ~0 because the anchor
-   IS the node); if every edge is excluded, the slab is suspect. A mid-edge
-   anchor was evaluated as an alternative and REJECTED with data: `sample_edge`
-   chords sit measurably off-curve precisely in the degenerate cases (the
-   z=0.02 catastrophe candidate reads a healthy `0.353` at its chord midpoint
-   while its downstream sweep is provably catastrophic), which would blind the
-   gate exactly where it is most needed.
+2. **Gradient gate, exclusion**: edges left-anchored AT a `Singular` vertex
+   are excluded from gradient measurements, candidate and reference alike
+   (their anchor gradient is ~0 because the anchor IS the node); if every
+   candidate edge is excluded, the slab is suspect. A mid-edge anchor was
+   evaluated as an alternative and REJECTED with data: `sample_edge` chords
+   sit measurably off-curve precisely in the degenerate cases (the z=0.02
+   catastrophe candidate reads a healthy `0.353` at its chord midpoint while
+   its downstream sweep is provably catastrophic), which would blind the gate
+   exactly where it is most needed.
+3. **Gradient gate, structural-heterogeneity skip** (added after the 5-seed
+   regression exposed the fatal form of the documented min-vs-max false
+   positive -- see the Historical note above): if the slab's OWN reference
+   slices fail the gradient criterion (`ref_min < z_mid_gradient_ratio_tol *
+   ref_max` over eligible anchors), then a legitimately weak-gradient branch
+   coexists with strong ones across the whole slab and the comparison cannot
+   discriminate candidates -- the gate is skipped instead of failing every
+   retry identically. This is the same principle as refinement 1: a signature
+   the references share with every candidate carries no information about
+   WHICH z_mid to prefer.
 
-Fixed-axis invariance was verified slab-by-slab on every existing fixture:
-identical retried flags and accepted z_mid values (`[-1,1] -> 0.06` retried,
-`[1, 1.0648] -> 1.03497` retried, `[1.0648, 1.2367] ->` naive midpoint), and
-full fixed-axis Taubin decompose max `|f| = 3.0e-6`. Point singularities also
-scatter their chart-z critical-value estimates (~2e-4 observed, beyond
-`vertex_match_tol`); the resulting sub-resolution sliver slabs are merged
-upstream by `cfg.min_slab_width` in `_slab_bounds`, not handled here.
+Validation of the refined gates (measured 2026-07): fixed-axis Taubin --
+`[-1,1] -> 0.06` retried exactly as before (reference heterogeneity `0.372`,
+gate active, the z=0 catastrophe ladder unchanged), `[1.0, 1.0648] ->` naive
+midpoint (heterogeneity `0.00306`, gate skipped, resolving the documented
+false positive; sweep max `|f| = 2.4e-6`), `[1.0648, 1.2367] ->` naive
+midpoint (heterogeneity `0.0723`, gate active, no fire); full fixed-axis
+decompose max `|f| = 2.4e-6`. Rotated Taubin, seeds 1-5: zero retries, zero
+throws; seed 3 (previously fatal) full decompose median world-`|f|` `2.1e-8`
+with 21/5677 points above `1e-4`, confined to the singular-curve band. Point
+singularities also scatter their chart-z critical-value estimates (~2e-4
+observed, beyond `vertex_match_tol`); the resulting sub-resolution sliver
+slabs are merged upstream by `cfg.min_slab_width` in `_slab_bounds`, not
+handled here.
 """
 function _robust_slice_at_z(F::System, patch::NamedTuple, z_bottom::T, z_top::T, cfg::HomotopyConfig{T}) where {T<:AbstractFloat}
     width = z_top - z_bottom
@@ -377,24 +390,36 @@ function _robust_slice_at_z(F::System, patch::NamedTuple, z_bottom::T, z_top::T,
         hypot(a, b)
     end
 
+    # Phase 8 refinement: edges whose LEFT vertex (the anchor, sampled_points[1]) is
+    # Singular-classified are excluded from gradient measurements — their anchor gradient
+    # is ~0 because the anchor IS the singular point, not because the whole slice curve is
+    # degenerate. Applied identically to candidate and reference slices.
+    _eligible_edges(vertices, edges) = begin
+        sing_ids = Set(v.id for v in vertices if v.v_type == Singular)
+        [e for e in edges if !isempty(e.sampled_points) && !(e.left_vertex_id in sing_ids)]
+    end
+
     # Memoized once per slab, computed EAGERLY on the naive-midpoint attempt (see the
-    # eagerness section of the docstring). Phase 8 extends it to also record whether the
-    # reference slices contain Singular vertices — the structural-singularity signal for
-    # the refined topology gate below.
-    ref_info = Ref{Union{Nothing,Tuple{T,Bool}}}(nothing)
+    # eagerness section of the docstring). Phase 8 extends it to record (a) whether the
+    # reference slices contain Singular vertices (the structural-singularity signal for
+    # the refined topology gate) and (b) the min AND max eligible anchor gradients (the
+    # structural-heterogeneity signal for the gradient-gate skip below).
+    ref_info = Ref{Union{Nothing,Tuple{T,T,Bool}}}(nothing)
     function _reference_info()
         ref_info[] === nothing || return ref_info[]
-        scale = zero(T)
+        ref_max = zero(T)
+        ref_min = T(Inf)
         ref_has_singular = false
         for z_ref in (z_bottom + T(0.25) * width, z_top - T(0.25) * width)
             v_ref, edges_ref = slice_at_z(F, z_ref, cfg)
             ref_has_singular |= any(v -> v.v_type == Singular, v_ref)
-            for e in edges_ref
-                isempty(e.sampled_points) && continue
-                scale = max(scale, _anchor_gradient_magnitude(e))
+            for e in _eligible_edges(v_ref, edges_ref)
+                g = _anchor_gradient_magnitude(e)
+                ref_max = max(ref_max, g)
+                ref_min = min(ref_min, g)
             end
         end
-        ref_info[] = (scale, ref_has_singular)
+        ref_info[] = (ref_max, ref_min, ref_has_singular)
         return ref_info[]
     end
 
@@ -402,21 +427,22 @@ function _robust_slice_at_z(F::System, patch::NamedTuple, z_bottom::T, z_top::T,
     # candidate when the slab's reference slices do NOT also contain Singular vertices.
     # If they do, a singular curve crosses the slab transversally and no z_mid choice
     # avoids it — retrying is definitionally useless (see the docstring's Phase 8 section).
-    _topology_suspect(vertices) = _cooccurrence(vertices) && !_reference_info()[2]
+    _topology_suspect(vertices) = _cooccurrence(vertices) && !_reference_info()[3]
 
-    # Phase 8 refinement: edges whose LEFT vertex (the anchor, sampled_points[1]) is
-    # Singular-classified are excluded from the candidate minimum — their anchor gradient
-    # is ~0 because the anchor IS the singular point, not because the whole slice curve is
-    # degenerate. All edges excluded => suspect (conservative).
     _gradient_suspect(vertices, edges) = begin
         isempty(edges) && return false
-        sing_ids = Set(v.id for v in vertices if v.v_type == Singular)
-        eligible = [e for e in edges if !isempty(e.sampled_points) && !(e.left_vertex_id in sing_ids)]
+        ref_max, ref_min, _ = _reference_info()
+        ref_max == zero(T) && return false
+        # Phase 8 refinement (structural heterogeneity): if the slab's own reference
+        # slices fail the gradient criterion themselves (a legitimately weak-gradient
+        # branch coexists with strong ones across the WHOLE slab), the min-candidate-vs-
+        # max-reference comparison cannot discriminate candidates here — skip the gate
+        # rather than fail every retry identically (see the docstring's Phase 8 section).
+        ref_min < cfg.z_mid_gradient_ratio_tol * ref_max && return false
+        eligible = _eligible_edges(vertices, edges)
         isempty(eligible) && return true
-        scale = _reference_info()[1]
-        scale == zero(T) && return false
         cand_scale = minimum(_anchor_gradient_magnitude(e) for e in eligible)
-        cand_scale < cfg.z_mid_gradient_ratio_tol * scale
+        cand_scale < cfg.z_mid_gradient_ratio_tol * ref_max
     end
 
     _suspect(vertices, edges) = _topology_suspect(vertices) || _gradient_suspect(vertices, edges)

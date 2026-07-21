@@ -319,12 +319,18 @@ println("  degenerate triangles (repeated vertex index) found in final mesh: ", 
 patch_heart = HomotopyGetsReal.build_patch_system(F_heart)
 n_spot = min(30, length(mesh_tris))
 rng_idx = round.(Int, range(1, length(mesh_tris); length = n_spot))
+# Alignment predicate is scale-RELATIVE, not a bare `>= 0`: weld_mesh corrects
+# winding at T (Float64) precision, but this test recomputes the dot product
+# from Float32-rounded mesh coordinates, so an exactly-degenerate triangle
+# (normal ~ orthogonal to ∇f) can land epsilon-negative (observed: -1.4e-22,
+# sixteen orders below the ~1e-6 magnitude of a genuine flip).
 n_aligned = count(idx -> begin
     tri = mesh_tris[idx]
     p1, p2, p3 = mesh_pts[tri[1]], mesh_pts[tri[2]], mesh_pts[tri[3]]
     n = cross(p2 .- p1, p3 .- p1)
     gx, gy, gz = HomotopyGetsReal._gradient_at(patch_heart, Float64(p1[1]), Float64(p1[2]), Float64(p1[3]), cfg)
-    dot(n, [gx, gy, gz]) >= 0
+    g = [gx, gy, gz]
+    dot(n, g) >= -1e-10 * norm(n) * norm(g)
 end, rng_idx)
 worst_dot_sign = minimum(idx -> begin
     tri = mesh_tris[idx]

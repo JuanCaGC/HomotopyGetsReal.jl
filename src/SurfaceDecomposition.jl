@@ -268,11 +268,32 @@ introducing new gradient-computation logic:
   approach above.
 
 Reference-scale computation calls [`slice_at_z`](@ref) at the two
-quarter-points, so it costs two extra 2D-curve decompositions -- but only
-lazily, memoized once per slab, and only ever paid on slabs that actually
-need at least one retry (the overwhelming majority of slabs, including
-every sphere/ellipsoid slab and 3 of this Taubin heart's own 5 slabs,
-never retry at all and never pay this cost). If the reference scale
+quarter-points, so it costs two extra 2D-curve decompositions per
+non-empty slab -- memoized once per slab, and paid EAGERLY on the very
+first (naive-midpoint) attempt, not only on slabs that go on to retry.
+This eagerness is deliberate and load-bearing, not an oversight: the
+gradient gate exists precisely to catch candidates that are
+topologically CLEAN but numerically degenerate, and the naive midpoint
+itself can be such a candidate, because the degenerate z (z=0 for the
+Taubin family) is NOT a critical z-value -- it sits invisibly inside a
+slab, and nothing pins it to the slab's exact center. Concretely
+(measured 2026-07, see dev/scratch/scratch_robust_slice_eagerness_check.jl):
+this same Taubin heart with `bbox_z = (-0.96, 1.3)` -- an ordinary
+asymmetric bounding-box crop, which drops the critical value z=-1 and
+makes the bottom slab [-0.96, 1.0] with naive midpoint z=0.02 -- yields
+a topology-clean naive slice (2 ordinary `Critical` vertices, no
+`:endpoint_fallback`, no `Singular`) whose downstream sweep measures
+max `|f| ≈ 1.6`, versus `2.4e-7` at the gradient-gate-chosen `z ≈ 0.059`.
+A retry-armed lazy variant (gradient gate active only from the first
+retry onward, restoring the cost model this paragraph originally
+claimed) was evaluated and REJECTED for exactly that reason: it
+silently accepts that slab. The measured eager cost is a ~3x multiplier
+on a healthy slab's slicing time (sphere/ellipsoid: 3.0x), accepted as
+the price of the guarantee; cheapening the reference itself (e.g.
+Gauss-Newton-projecting the candidate's own edge anchors to the
+quarter-point z's via `_project_to_slice` instead of running two full
+decompositions there) would change the gate's empirically measured
+thresholds above and is left for a future pass. If the reference scale
 itself comes back exactly zero (only possible if the quarter-points are
 themselves degenerate), the gradient gate is skipped for that slab rather
 than dividing by zero -- documented as a known limitation of this

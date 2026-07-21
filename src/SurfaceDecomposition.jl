@@ -503,6 +503,239 @@ function _slab_bounds(F::System, cfg::HomotopyConfig{T}) where {T<:AbstractFloat
 end
 
 """
+    CritSlice{T<:AbstractFloat}
+
+Phase 9a: the 1D decomposition of the surface AT one interior slab boundary
+(a critical z-value), as opposed to the mid-slab slices the pipeline sweeps
+from. Computed by [`_decompose_crit_slice`](@ref) when
+[`decompose_3d_surface`](@ref) runs with `incidence = true`.
+
+# Fields
+- `boundary_index`: `j` such that this slice sits at `z_bounds[j]` (interior
+  boundaries only; bbox endpoints never get a `CritSlice`).
+- `z`: the critical z-value (CHART frame under a `projection`, like
+  `Face.mid_slice_z`).
+- `vertices`, `edges`: the slice's cells, id-renumbered into the same global
+  namespace as the main decomposition's cells but NOT appended to the main
+  return (backward compatibility; ids never collide).
+- `is_degenerate`: `true` iff the slice has no edges — a fold/point-type
+  boundary (measured: sphere/ellipsoid extremes decompose to EMPTY slices,
+  Taubin cusp/tips to isolated `Singular` vertices; nodal saddle-type
+  boundaries decompose to real curves). Fold-type boundaries are anchored to
+  the surface's 3D critical vertices instead (see [`_assign_landings`](@ref)).
+"""
+struct CritSlice{T<:AbstractFloat}
+    boundary_index::Int
+    z::T
+    vertices::Vector{NativeVertex{T}}
+    edges::Vector{Edge{T}}
+    is_degenerate::Bool
+end
+
+"""
+    ColumnLanding{T<:AbstractFloat}
+
+Phase 9a: the incidence assignment of ONE swept column's landing point at one
+slab boundary. `kind` is `:edge` (a `CritSlice` edge), `:crit_slice_vertex`,
+`:critical_point` (a 3D surface critical vertex — the fold-type anchor),
+`:bbox` (the boundary is a bounding-box endpoint, no crit-slice exists), or
+`:none` (no candidate cell found); `id` is the cell id in the matching
+namespace (0 for `:bbox`/`:none`); `dist` is the Euclidean distance from the
+landing point to the assigned cell.
+
+Distances are RECORDED, never thresholded, in Phase 9a: assignment is
+nearest-wins, and the printed distance distributions (see
+test/test_taubin.jl's 9a section) are the evidence base from which Phase 9b
+will derive real acceptance thresholds — deliberately not guessed ahead of
+the data (the same discipline the Phase 8 gate history taught).
+"""
+struct ColumnLanding{T<:AbstractFloat}
+    kind::Symbol
+    id::Int
+    dist::T
+end
+
+"""
+    SurfaceIncidence{T<:AbstractFloat}
+
+Phase 9a: face/edge incidence data for a surface decomposition — which
+crit-slice cells each face's swept columns land on at its slab boundaries.
+Returned as the 5th element of [`decompose_3d_surface`](@ref) when
+`incidence = true`.
+
+# Fields
+- `crit_slices`: one [`CritSlice`](@ref) per interior slab boundary that an
+  actual face touches (lazily computed; sorted by `boundary_index`).
+- `face_bottom_edges` / `face_top_edges`: face id → ordered unique crit-slice
+  edge ids its boundary columns land on.
+- `face_bottom_anchor` / `face_top_anchor`: face id → 3D critical-vertex id
+  for fold-type boundaries (0 when none).
+- `edge_faces`: inverse adjacency, crit-slice edge id → face ids touching it.
+- `column_landings_bottom` / `column_landings_top`: face id → per-column
+  [`ColumnLanding`](@ref) in curve order — the raw data for Phase 9b's
+  branch-continuity check.
+
+Phase 9a is pure measurement: no continuity checking, no thresholds, no
+welding changes. Promoting the eventual continuity check from a warn/flag to
+a hard error is a deliberate FUTURE decision contingent on the firing-rate
+evidence this structure gathers — not something decided now.
+"""
+struct SurfaceIncidence{T<:AbstractFloat}
+    crit_slices::Vector{CritSlice{T}}
+    face_bottom_edges::Dict{Int,Vector{Int}}
+    face_top_edges::Dict{Int,Vector{Int}}
+    face_bottom_anchor::Dict{Int,Int}
+    face_top_anchor::Dict{Int,Int}
+    edge_faces::Dict{Int,Vector{Int}}
+    column_landings_bottom::Dict{Int,Vector{ColumnLanding{T}}}
+    column_landings_top::Dict{Int,Vector{ColumnLanding{T}}}
+end
+
+"""
+    _decompose_crit_slice(F, z_c::T, j::Int, cfg, v_offset::Int, e_offset::Int) -> CritSlice{T}
+
+Decompose the surface AT the exact interior boundary value `z_c = z_bounds[j]`
+via [`slice_at_z`](@ref), deliberately bypassing `_robust_slice_at_z`: the
+value is pinned by definition (it IS the critical value), so perturbed
+retries are meaningless here. Cell ids are shifted by the offsets into the
+global namespace. Measured on every fixture (fixed-axis and rotated Taubin
+included): nodal/saddle-type crit-slices decompose like the nodal-cubic
+fixture, fold-type extremes come back empty or as isolated `Singular`
+vertices, and nothing throws.
+"""
+function _decompose_crit_slice(F::System, z_c::T, j::Int, cfg::HomotopyConfig{T}, v_offset::Int, e_offset::Int) where {T<:AbstractFloat}
+    vertices_raw, edges_raw = slice_at_z(F, z_c, cfg)
+    vertices = NativeVertex{T}[
+        NativeVertex{T}(id = v.id + v_offset, coordinates = v.coordinates, v_type = v.v_type, metadata = v.metadata)
+        for v in vertices_raw
+    ]
+    edges = Edge{T}[
+        Edge{T}(
+            id = e.id + e_offset,
+            left_vertex_id = e.left_vertex_id + v_offset,
+            right_vertex_id = e.right_vertex_id + v_offset,
+            sampled_points = e.sampled_points,
+            is_singular = e.is_singular,
+        )
+        for e in edges_raw
+    ]
+    return CritSlice{T}(j, z_c, vertices, edges, isempty(edges))
+end
+
+"""
+    _surface_critical_vertices(F, cfg) -> Vector{NativeVertex{T}}
+
+The surface's 3D critical points (the same `compute_critical_points` call
+`compute_critical_z_slices` makes internally), needed as fold-type landing
+anchors. Called ONCE per `incidence = true` decomposition — an extra
+~seconds-scale solve that keeps the `incidence = false` call chain
+byte-identical; deduplicating it with `_slab_bounds`'s internal call is a
+deliberately deferred optimization.
+"""
+_surface_critical_vertices(F::System, cfg::HomotopyConfig{T}) where {T<:AbstractFloat} =
+    compute_critical_points(F, cfg)
+
+"""
+    _assign_landings(landings, cs, crit_vertices, z_c, cfg) -> Vector{ColumnLanding{T}}
+
+Nearest-wins incidence assignment for one face side. `landings` are the
+per-column `(x, y, z)` landing points (rows 1 / n_z of `Face.mesh_vertices`);
+`cs === nothing` means the boundary is a bbox endpoint (`:bbox` for every
+column). Otherwise each landing competes across: the crit-slice's edge
+polylines (minimum distance over `sampled_points` — chord-interpolated, hence
+the recorded distances carry the known chord error), the crit-slice's
+vertices, and the surface's 3D critical vertices within `cfg.min_slab_width`
+of `z_c` (the fold-type anchors, which the slice itself represents
+unreliably). Ties break by that category order. No candidates at all gives
+`:none` with `dist = Inf` — never an error in 9a (pure measurement).
+"""
+function _assign_landings(
+    landings::Vector{Vector{T}},
+    cs::Union{CritSlice{T},Nothing},
+    crit_vertices::Vector{NativeVertex{T}},
+    z_c::T,
+    cfg::HomotopyConfig{T},
+) where {T<:AbstractFloat}
+    cs === nothing && return ColumnLanding{T}[ColumnLanding{T}(:bbox, 0, zero(T)) for _ in landings]
+
+    anchors = [v for v in crit_vertices if abs(real(v.coordinates[3]) - z_c) <= cfg.min_slab_width]
+
+    out = Vector{ColumnLanding{T}}(undef, length(landings))
+    for (c, p) in enumerate(landings)
+        best_kind = :none
+        best_id = 0
+        best_dist = T(Inf)
+        for e in cs.edges
+            isempty(e.sampled_points) && continue
+            d = minimum(norm(p .- q) for q in e.sampled_points)
+            if d < best_dist
+                best_kind, best_id, best_dist = :edge, e.id, d
+            end
+        end
+        for v in cs.vertices
+            d = norm(p .- real.(v.coordinates))
+            if d < best_dist
+                best_kind, best_id, best_dist = :crit_slice_vertex, v.id, d
+            end
+        end
+        for v in anchors
+            d = norm(p .- real.(v.coordinates))
+            if d < best_dist
+                best_kind, best_id, best_dist = :critical_point, v.id, d
+            end
+        end
+        out[c] = ColumnLanding{T}(best_kind, best_id, best_dist)
+    end
+    return out
+end
+
+"""
+    _map_incidence_to_world(inc::SurfaceIncidence{T}, Q::Matrix{Float64}) -> SurfaceIncidence{T}
+
+World-maps a chart-frame [`SurfaceIncidence`](@ref) under a Phase 8
+projection: each `CritSlice`'s vertices/edges rotate exactly like the main
+decomposition's cells in `_map_to_world`; ids, adjacency dicts, and landing
+assignments are frame-free (`dist` is rotation-invariant) and carried over
+unchanged. Lives here rather than Projection.jl because the incidence structs
+are defined in this file (include order: Projection.jl precedes it).
+"""
+function _map_incidence_to_world(inc::SurfaceIncidence{T}, Q::Matrix{Float64}) where {T<:AbstractFloat}
+    QT = Matrix{T}(Q)
+    crit_slices = CritSlice{T}[
+        CritSlice{T}(
+            cs.boundary_index,
+            cs.z,
+            NativeVertex{T}[
+                NativeVertex{T}(id = v.id, coordinates = QT * v.coordinates, v_type = v.v_type, metadata = v.metadata)
+                for v in cs.vertices
+            ],
+            Edge{T}[
+                Edge{T}(
+                    id = e.id,
+                    left_vertex_id = e.left_vertex_id,
+                    right_vertex_id = e.right_vertex_id,
+                    sampled_points = [QT * p for p in e.sampled_points],
+                    is_singular = e.is_singular,
+                )
+                for e in cs.edges
+            ],
+            cs.is_degenerate,
+        )
+        for cs in inc.crit_slices
+    ]
+    return SurfaceIncidence{T}(
+        crit_slices,
+        inc.face_bottom_edges,
+        inc.face_top_edges,
+        inc.face_bottom_anchor,
+        inc.face_top_anchor,
+        inc.edge_faces,
+        inc.column_landings_bottom,
+        inc.column_landings_top,
+    )
+end
+
+"""
     weld_mesh(faces::Vector{Face{T}}, patch::NamedTuple, cfg::HomotopyConfig{T}) where {T<:AbstractFloat}
         -> GeometryBasics.Mesh
 
@@ -565,6 +798,30 @@ function weld_mesh(faces::Vector{Face{T}}, patch::NamedTuple, cfg::HomotopyConfi
 end
 
 """
+    _naked_mesh_edges(mesh::GeometryBasics.Mesh) -> Vector{Tuple{Int,Int}}
+
+Watertightness audit utility (Phase 9a, permanent): the undirected mesh edges
+that belong to exactly ONE triangle. A surface closed within the bounding box
+should have none; the current tolerance-only `weld_mesh` measurably leaves
+cracks along interior crit-slice boundaries (fixed-axis Taubin baseline,
+verified deterministic across sessions: 188 naked edges — 10 at z=-1, 70 at
+z=1.0, 84 at z=1.0648, 24 at z=1.2367), which is the characterized defect
+Phase 9b's incidence-based stitching is meant to drive to zero. Asserted
+exactly in test/test_taubin.jl so any accidental shift is caught immediately.
+"""
+function _naked_mesh_edges(mesh::GeometryBasics.Mesh)
+    counts = Dict{Tuple{Int,Int},Int}()
+    for t in GeometryBasics.faces(mesh)
+        a, b, c = Int(t[1]), Int(t[2]), Int(t[3])
+        for (i, j) in ((a, b), (b, c), (c, a))
+            key = i < j ? (i, j) : (j, i)
+            counts[key] = get(counts, key, 0) + 1
+        end
+    end
+    return [k for (k, n) in counts if n == 1]
+end
+
+"""
     decompose_3d_surface(F::System, cfg::HomotopyConfig{T}; projection = nothing, rng = Random.default_rng()) where {T<:AbstractFloat}
         -> (vertices, edges, faces, mesh)
 
@@ -597,6 +854,16 @@ one `GeometryBasics.Mesh`. This is the 3D analogue of [`decompose_1d_curve`](@re
   [`random_orthogonal_matrix`](@ref) and pass the matrix explicitly --
   `:random` is convenience for exploratory use.
 - `rng`: random source used only by `projection = :random`.
+- `incidence` (Phase 9a): `false` (default) keeps the exact 4-tuple return and
+  a byte-identical code path (no crit-slice decompositions, no extra solves).
+  `true` additionally decomposes every interior slab boundary an actual face
+  touches (the crit-slices), assigns each face's boundary columns to
+  crit-slice cells (nearest-wins, distances recorded — never thresholded in
+  9a; see [`ColumnLanding`](@ref)), and returns a 5-tuple whose last element
+  is a [`SurfaceIncidence`](@ref). Composes with `projection` (incidence is
+  computed in the chart and world-mapped). Measured cost on the fixed-axis
+  Taubin fixture: ~+9 s on a ~16 s decompose (4 crit-slices + one extra
+  critical-point solve for fold anchors).
 
 # Known limitation: generic projections over singular curves
 When a projection makes a positive-dimensional singular curve of the surface
@@ -620,6 +887,7 @@ function decompose_3d_surface(
     cfg::HomotopyConfig{T};
     projection::Union{Nothing,Symbol,AbstractMatrix} = nothing,
     rng::Random.AbstractRNG = Random.default_rng(),
+    incidence::Bool = false,
 ) where {T<:AbstractFloat}
     length(F.variables) == 3 && length(F.expressions) == 1 || throw(ArgumentError(
         "decompose_3d_surface: expected F with exactly 1 equation in exactly 3 variables " *
@@ -629,14 +897,23 @@ function decompose_3d_surface(
 
     # Phase 8: change-of-coordinates wrapper. The chart run recurses with
     # projection = nothing, so the entire validated fixed-axis pipeline below
-    # is reused unchanged; transforms live only at this boundary.
+    # is reused unchanged; transforms live only at this boundary. Phase 9a:
+    # incidence is computed in the CHART frame inside the recursion (slab
+    # structure is chart-frame; Q is not recoverable by the caller for
+    # :random), then world-mapped here alongside everything else.
     if projection !== nothing
         Q = _resolve_projection(projection, rng)
         F_chart = _rotate_system(F, Q)
         _verify_projection_ok(F_chart, cfg)
         cfg_chart = _chart_config(cfg, Q)
-        chart_result = decompose_3d_surface(F_chart, cfg_chart)
-        return _map_to_world(chart_result..., Q)
+        if incidence
+            vc, ec, fc, mc, inc = decompose_3d_surface(F_chart, cfg_chart; incidence = true)
+            wv, we, wf, wm = _map_to_world(vc, ec, fc, mc, Q)
+            return wv, we, wf, wm, _map_incidence_to_world(inc, Q)
+        else
+            chart_result = decompose_3d_surface(F_chart, cfg_chart)
+            return _map_to_world(chart_result..., Q)
+        end
     end
 
     # bbox_z endpoints + in-range critical z-values, with sub-resolution bounds
@@ -651,6 +928,60 @@ function decompose_3d_surface(
     all_edges = Edge{T}[]
     all_faces = Face{T}[]
     next_face_id = 1
+
+    # Global id high-water marks. With incidence = false these track exactly the
+    # `maximum(v.id for v in all_vertices)` values the pre-9a code computed (ids
+    # grow monotonically), so slab renumbering is unchanged; with incidence = true
+    # they additionally advance past lazily-created crit-slice cell ids, keeping
+    # ONE collision-free namespace across both containers regardless of the
+    # (lazy) order in which slabs and crit-slices are numbered.
+    v_hwm = 0
+    e_hwm = 0
+
+    # Phase 9a bookkeeping (all empty and untouched when incidence = false).
+    crit_slice_cache = Dict{Int,CritSlice{T}}()
+    fold_anchors = incidence ? _surface_critical_vertices(F, cfg) : NativeVertex{T}[]
+    face_bottom_edges = Dict{Int,Vector{Int}}()
+    face_top_edges = Dict{Int,Vector{Int}}()
+    face_bottom_anchor = Dict{Int,Int}()
+    face_top_anchor = Dict{Int,Int}()
+    edge_faces = Dict{Int,Vector{Int}}()
+    column_landings_bottom = Dict{Int,Vector{ColumnLanding{T}}}()
+    column_landings_top = Dict{Int,Vector{ColumnLanding{T}}}()
+
+    # Crit-slices exist only at INTERIOR bounds (j in 2:length(z_bounds)-1);
+    # bbox endpoints have no critical value to decompose. Computed lazily, once
+    # per boundary, shared by both adjacent slabs.
+    function _crit_slice_for!(j::Int)
+        haskey(crit_slice_cache, j) && return crit_slice_cache[j]
+        cs = _decompose_crit_slice(F, z_bounds[j], j, cfg, v_hwm, e_hwm)
+        v_hwm = max(v_hwm, maximum(v.id for v in cs.vertices; init = v_hwm))
+        e_hwm = max(e_hwm, maximum(e.id for e in cs.edges; init = e_hwm))
+        crit_slice_cache[j] = cs
+        return cs
+    end
+
+    # Summarize one side's per-column landings into the face-level dicts.
+    function _record_side!(face_id::Int, landings::Vector{ColumnLanding{T}},
+                           edges_dict, anchor_dict, landings_dict)
+        landings_dict[face_id] = landings
+        edge_ids = Int[]
+        anchor_id = 0
+        for l in landings
+            if l.kind === :edge
+                l.id in edge_ids || push!(edge_ids, l.id)
+            elseif l.kind === :critical_point && anchor_id == 0
+                anchor_id = l.id
+            end
+        end
+        edges_dict[face_id] = edge_ids
+        anchor_dict[face_id] = anchor_id
+        for eid in edge_ids
+            faces_for_edge = get!(edge_faces, eid, Int[])
+            face_id in faces_for_edge || push!(faces_for_edge, face_id)
+        end
+        return nothing
+    end
 
     for i in 1:(length(z_bounds) - 1)
         z_bottom, z_top = z_bounds[i], z_bounds[i+1]
@@ -667,8 +998,8 @@ function decompose_3d_surface(
         # (same separation decompose_1d_curve keeps within one call); shift
         # left/right_vertex_id by the vertex offset. Analogue of Topology.jl's
         # `offset = maximum(v.id for v in crit_vertices)` pattern, across slabs.
-        v_offset = isempty(all_vertices) ? 0 : maximum(v.id for v in all_vertices)
-        e_offset = isempty(all_edges) ? 0 : maximum(e.id for e in all_edges)
+        v_offset = v_hwm
+        e_offset = e_hwm
 
         vertices_renumbered = NativeVertex{T}[
             NativeVertex{T}(id = v.id + v_offset, coordinates = v.coordinates, v_type = v.v_type, metadata = v.metadata)
@@ -684,18 +1015,55 @@ function decompose_3d_surface(
             )
             for e in edges_2d
         ]
+        v_hwm = max(v_hwm, maximum(v.id for v in vertices_renumbered; init = v_hwm))
+        e_hwm = max(e_hwm, maximum(e.id for e in edges_renumbered; init = e_hwm))
 
         append!(all_vertices, vertices_renumbered)
         append!(all_edges, edges_renumbered)
+
+        # Boundary j = i is interior iff i >= 2; boundary j = i+1 is interior
+        # iff i+1 <= length(z_bounds) - 1. Only compute crit-slices when this
+        # slab actually produced faces.
+        bottom_interior = i >= 2
+        top_interior = i + 1 <= length(z_bounds) - 1
+        cs_bottom = (incidence && bottom_interior && !isempty(edges_renumbered)) ? _crit_slice_for!(i) : nothing
+        cs_top = (incidence && top_interior && !isempty(edges_renumbered)) ? _crit_slice_for!(i + 1) : nothing
 
         for edge in edges_renumbered
             # Face.boundary_edges come from already-renumbered edges.
             face = track_face(F, patch, edge, z_mid, z_bottom, z_top, next_face_id, cfg)
             push!(all_faces, face)
+
+            if incidence
+                # Landing rows recovered post-hoc from the swept grid: row 1 is
+                # the z_bottom landing, row n_z the z_top landing (track_face's
+                # documented layout) — FaceTracking needs no changes for this.
+                n_z = 2 * cfg.midslice_sample_density + 1
+                n_curve = size(face.mesh_vertices, 1) ÷ n_z
+                bottom_landings = [Vector{T}(face.mesh_vertices[c, :]) for c in 1:n_curve]
+                top_landings = [Vector{T}(face.mesh_vertices[(n_z - 1) * n_curve + c, :]) for c in 1:n_curve]
+                _record_side!(face.id, _assign_landings(bottom_landings, cs_bottom, fold_anchors, z_bottom, cfg),
+                              face_bottom_edges, face_bottom_anchor, column_landings_bottom)
+                _record_side!(face.id, _assign_landings(top_landings, cs_top, fold_anchors, z_top, cfg),
+                              face_top_edges, face_top_anchor, column_landings_top)
+            end
+
             next_face_id += 1
         end
     end
 
     mesh = weld_mesh(all_faces, patch, cfg)
-    return all_vertices, all_edges, all_faces, mesh
+    incidence || return all_vertices, all_edges, all_faces, mesh
+
+    surface_incidence = SurfaceIncidence{T}(
+        sort!(collect(values(crit_slice_cache)); by = cs -> cs.boundary_index),
+        face_bottom_edges,
+        face_top_edges,
+        face_bottom_anchor,
+        face_top_anchor,
+        edge_faces,
+        column_landings_bottom,
+        column_landings_top,
+    )
+    return all_vertices, all_edges, all_faces, mesh, surface_incidence
 end

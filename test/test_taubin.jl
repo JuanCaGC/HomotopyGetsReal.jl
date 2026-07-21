@@ -416,4 +416,105 @@ println("  report above): see the \"z_mid used\" column -- any slab whose report
 println("  differs from its naive (z_bottom+z_top)/2 needed at least one retry of either")
 println("  gate. No slab came close to exhausting cfg.max_z_mid_retries=$(cfg.max_z_mid_retries).")
 
+println()
+println("=" ^ 70)
+println("7. Phase 9a: naked-edge characterization baseline (the defect 9b must close)")
+println("=" ^ 70)
+
+# Verified deterministic across repeated decomposes and separate Julia
+# sessions (2026-07). These cracks are the CHARACTERIZED CURRENT DEFECT of
+# tolerance-only welding across slab boundaries: adjacent slabs' faces land on
+# the same crit-slice curve at different sample points, so weld_mesh never
+# merges them. Phase 9b's incidence-based stitching must drive these to zero;
+# if Phase 9a's own changes shift ANY of these numbers, that is an immediate
+# regression signal.
+naked = HomotopyGetsReal._naked_mesh_edges(mesh)
+count_naked_near(zc) = count(((i, j),) -> abs((mesh_pts[i][3] + mesh_pts[j][3]) / 2 - zc) < 0.01, naked)
+println("  naked edges: $(length(naked)) total | z=-1: $(count_naked_near(-1.0))  z=1: $(count_naked_near(1.0))  z=1.0648: $(count_naked_near(1.0648))  z=1.2367: $(count_naked_near(1.2367))")
+@test length(naked) == 188
+@test count_naked_near(-1.0) == 10
+@test count_naked_near(1.0) == 70
+@test count_naked_near(1.0648) == 84
+@test count_naked_near(1.2367) == 24
+
+println()
+println("=" ^ 70)
+println("8. Phase 9a: fixed-axis incidence run -- crit-slice census, coverage,")
+println("   and the assignment-distance distributions that will drive 9b's thresholds")
+println("=" ^ 70)
+
+t_inc = @elapsed (vi, ei, fi, mi, inc) = decompose_3d_surface(F_heart, cfg; incidence = true)
+println("  [$(round(t_inc; digits = 1)) s]  $(length(fi)) faces, $(length(inc.crit_slices)) crit-slices")
+
+# z_bounds = [-1.3, -1, 1, 1.0648, 1.2367, 1.3] -> interior boundaries j = 2..5.
+@test length(inc.crit_slices) == 4
+cs_by_z = Dict(round(cs.z; digits = 4) => cs for cs in inc.crit_slices)
+@test length(cs_by_z[-1.0].edges) == 0          # cusp: point-slice
+@test cs_by_z[-1.0].is_degenerate
+@test length(cs_by_z[1.0].edges) == 4           # singular notch: decomposes
+@test length(cs_by_z[1.0648].edges) == 12       # saddle pair: nodal curve
+@test length(cs_by_z[1.2367].edges) == 0        # lobe tips: point-slice
+@test cs_by_z[1.2367].is_degenerate
+
+# id-namespace uniqueness across slab cells and crit-slice cells
+all_vids = vcat([v.id for v in vi], [v.id for cs in inc.crit_slices for v in cs.vertices])
+all_eids = vcat([e.id for e in ei], [e.id for cs in inc.crit_slices for e in cs.edges])
+@test length(unique(all_vids)) == length(all_vids)
+@test length(unique(all_eids)) == length(all_eids)
+
+# coverage: every non-bbox landing is assigned to SOMETHING (pure measurement,
+# no distance thresholds in 9a -- see ColumnLanding's docstring)
+all_non_bbox = [l for d in (inc.column_landings_bottom, inc.column_landings_top) for ls in values(d) for l in ls if l.kind != :bbox]
+@test !isempty(all_non_bbox)
+@test all(l -> l.kind != :none, all_non_bbox)
+println("  coverage: $(length(all_non_bbox)) non-bbox landings, 100% assigned (0 :none)")
+
+# THE 9b DESIGN DATA: per-boundary assignment-distance distributions.
+z_bounds_h = sort(unique(vcat([cfg.bbox_z[1]], filter(zc -> cfg.bbox_z[1] <= zc <= cfg.bbox_z[2], z_crits), [cfg.bbox_z[2]])))
+face_slab(f) = findfirst(i -> z_bounds_h[i] < f.mid_slice_z < z_bounds_h[i+1], 1:(length(z_bounds_h) - 1))
+println("  assignment-distance distributions (median / p90 / max) per interior boundary:")
+for j in 2:(length(z_bounds_h) - 1)
+    dists_bottom = Float64[l.dist for f in fi if face_slab(f) == j for l in inc.column_landings_bottom[f.id]]
+    dists_top = Float64[l.dist for f in fi if face_slab(f) == j - 1 for l in inc.column_landings_top[f.id]]
+    dd = sort(vcat(dists_bottom, dists_top))
+    isempty(dd) && continue
+    kinds = Dict{Symbol,Int}()
+    for f in fi, (slabidx, d) in ((j, inc.column_landings_bottom), (j - 1, inc.column_landings_top))
+        face_slab(f) == slabidx || continue
+        for l in d[f.id]
+            kinds[l.kind] = get(kinds, l.kind, 0) + 1
+        end
+    end
+    println("    boundary z=$(round(z_bounds_h[j]; digits = 4)): n=$(length(dd))  median=$(round(dd[cld(end, 2)]; sigdigits = 3))  p90=$(round(dd[ceil(Int, 0.9length(dd))]; sigdigits = 3))  max=$(round(dd[end]; sigdigits = 3))  kinds=$(kinds)")
+end
+
+println()
+println("=" ^ 70)
+println("9. Phase 9a: rotated seed-1 incidence probe (evidence-gathering, loose asserts)")
+println("=" ^ 70)
+
+Q1 = random_orthogonal_matrix(Float64, 3; rng = Xoshiro(1))
+t_rot_inc = @elapsed (vr, er, fr, mr, incr) = decompose_3d_surface(F_heart, cfg; projection = Q1, incidence = true)
+@test incr isa SurfaceIncidence{Float64}
+@test !isempty(incr.crit_slices)
+n_none = count(l -> l.kind == :none, [l for d in (incr.column_landings_bottom, incr.column_landings_top) for ls in values(d) for l in ls])
+n_all = length([l for d in (incr.column_landings_bottom, incr.column_landings_top) for ls in values(d) for l in ls])
+println("  [$(round(t_rot_inc; digits = 1)) s]  $(length(fr)) faces, $(length(incr.crit_slices)) crit-slices, $(n_none)/$(n_all) landings :none")
+println("  per-boundary census + distance stats (rotated chart -- the 9b uncertainty probe):")
+for cs in incr.crit_slices
+    dd = Float64[]
+    for d in (incr.column_landings_bottom, incr.column_landings_top), ls in values(d), l in ls
+        # attribute landings to this boundary by matching the assigned cell's namespace
+        if (l.kind == :edge && any(e -> e.id == l.id, cs.edges)) ||
+           (l.kind == :crit_slice_vertex && any(v -> v.id == l.id, cs.vertices))
+            push!(dd, l.dist)
+        end
+    end
+    sort!(dd)
+    stats = isempty(dd) ? "no cell-assigned landings" :
+        "n=$(length(dd)) median=$(round(dd[cld(end, 2)]; sigdigits = 3)) p90=$(round(dd[ceil(Int, 0.9length(dd))]; sigdigits = 3)) max=$(round(dd[end]; sigdigits = 3))"
+    nfall = count(v -> v.v_type == HomotopyGetsReal.Artificial && get(v.metadata, :origin, nothing) == :endpoint_fallback, cs.vertices)
+    println("    boundary j=$(cs.boundary_index) z=$(round(cs.z; digits = 4)): $(length(cs.edges)) edges, $(length(cs.vertices)) verts ($(nfall) fallback), degenerate=$(cs.is_degenerate) | $stats")
+end
+
 end

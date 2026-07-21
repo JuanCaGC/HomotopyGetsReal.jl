@@ -76,6 +76,7 @@ export random_orthogonal_matrix
 
 # SurfaceDecomposition.jl
 export compute_critical_z_slices, slice_at_z, decompose_3d_surface, weld_mesh
+export CritSlice, ColumnLanding, SurfaceIncidence
 
 # Visuals.jl
 export plot_curve_decomposition, plot_surface_decomposition, interactive_3d_viewer

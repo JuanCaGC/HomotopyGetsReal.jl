@@ -240,9 +240,48 @@ function cluster_points_indexed(points::Vector{Vector{T}}, tol::T) where {T<:Abs
         return nothing
     end
 
-    @inbounds for i in 1:n, j in (i+1):n
-        if norm(points[i] .- points[j]) <= tol
-            union!(i, j)
+    if tol > zero(T)
+        # Grid-bucket pair enumeration (weld_mesh feeds this every mesh vertex, so
+        # the naive all-pairs scan was the pipeline's O(n^2) hot spot): cells of
+        # width 2*tol, so any pair with distance <= tol differs by <= tol <= half a
+        # cell per coordinate and always lands in the same or an adjacent cell.
+        # Same distance test as the exhaustive scan (norm of the difference), so
+        # the clustering result is identical -- non-qualifying pairs are simply
+        # never tested, which cannot change the connected components.
+        d = length(points[1])
+        cellwidth = 2 * tol
+        cellkey(p) = Int[floor(Int, p[k] / cellwidth) for k in 1:d]
+        buckets = Dict{Vector{Int},Vector{Int}}()
+        for i in 1:n
+            push!(get!(buckets, cellkey(points[i]), Int[]), i)
+        end
+        offsets = collect(Iterators.product((-1:1 for _ in 1:d)...))
+        buf = similar(points[1])
+        key2 = Vector{Int}(undef, d)
+        for i in 1:n
+            ki = cellkey(points[i])
+            for off in offsets
+                for k in 1:d
+                    key2[k] = ki[k] + off[k]
+                end
+                bucket = get(buckets, key2, nothing)
+                bucket === nothing && continue
+                for j in bucket
+                    j <= i && continue
+                    @inbounds for k in 1:d
+                        buf[k] = points[i][k] - points[j][k]
+                    end
+                    norm(buf) <= tol && union!(i, j)
+                end
+            end
+        end
+    else
+        # Degenerate tol (<= 0): cell width would be non-positive, so keep the
+        # exhaustive scan (only exact duplicates can merge anyway).
+        @inbounds for i in 1:n, j in (i+1):n
+            if norm(points[i] .- points[j]) <= tol
+                union!(i, j)
+            end
         end
     end
 

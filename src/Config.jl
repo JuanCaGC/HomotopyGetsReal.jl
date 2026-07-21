@@ -41,6 +41,7 @@ so `HomotopyConfig{BigFloat}()` gets full-precision literals.
 - `z_mid_retry_frac`: Fraction of slab width used to perturb `z_mid` on retry.
 - `max_z_mid_retries`: Maximum perturbed-`z_mid` attempts in `_robust_slice_at_z`.
 - `z_mid_gradient_ratio_tol`: Minimum patch-direction strength ratio for accepting a slice.
+- `min_slab_width`: Resolution floor for z-slab boundaries; closer critical z-values are merged.
 """
 @with_kw struct HomotopyConfig{T<:AbstractFloat}
     # critical_point_tol: solution quality at compute_critical_points ("did the solver converge?").
@@ -78,4 +79,14 @@ so `HomotopyConfig{BigFloat}()` gets full-precision literals.
     # clean but numerically ill-conditioned slices (Taubin heart [-1,1] slab). Dimensionless ratio;
     # raw residual and |∇_xy f|/|f_z| thresholds were tried and rejected (see _robust_slice_at_z).
     z_mid_gradient_ratio_tol::T = T(0.01)
+    # min_slab_width: resolution floor for z-slab boundaries in decompose_3d_surface (_slab_bounds).
+    # Critical z-values closer than this are numerical scatter of the SAME feature and get merged
+    # before slab construction. Motivated by the rotated Taubin heart (Phase 8): path endpoints
+    # landing on a point singularity (multiplicity > 1) carry ~accuracy^(1/m) scatter in z (~2e-4
+    # observed, beyond vertex_match_tol=1e-4), minting ~2e-4-wide slabs centered ON a singular
+    # point that no z_mid choice can slice. Default 1e-3: 5x above the observed scatter, 65x below
+    # the smallest genuine fixture gap (fixed-axis Taubin: 0.065), so all fixed-axis fixture
+    # bounds are unchanged. This is a resolution limit: genuinely distinct critical values closer
+    # than min_slab_width are not separated (same spirit as vertex_match_tol for vertices).
+    min_slab_width::T = T(1e-3)
 end

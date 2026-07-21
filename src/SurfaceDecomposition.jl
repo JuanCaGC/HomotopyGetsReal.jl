@@ -323,12 +323,50 @@ candidate edge to its own corresponding branch in the reference slice,
 rather than a single global min/max) is a real design change, not a
 threshold tweak, and is left for a future pass if a surface is found
 where this false-positive rate actually matters.
+
+# Phase 8 amendments: transversal singular curves (generic-projection charts)
+Both gates above were originally calibrated on fixed-axis fixtures, where a
+positive-dimensional singular curve of the surface (e.g. the Taubin heart's
+ellipse `{x^2+1.44y^2=1, z=0}`, along which `∇f` vanishes identically) is
+either parallel to the slicing planes -- confined to a single degenerate z,
+exactly the case the retry ladder handles -- or absent. Under a generic
+rotated chart (`decompose_3d_surface`'s Phase 8 `projection` support), that
+curve becomes TRANSVERSAL: it spans a whole range of chart-z values, and every
+midslice in that range legitimately contains isolated singular points (nodes).
+Measured on the rotated Taubin heart (seed 1, 2026-07): the naive midpoint of
+slab `[-0.956, -0.24]` has 2 `Singular` vertices (the ellipse crossings), 2
+benign branch-stitching `:endpoint_fallback` vertices, and per-edge
+first-sample anchor gradients `{4.01, 4.01, 1.44, 8.6e-15, 1.8e-13, 0.28}`
+against reference scale `3.98` -- BOTH gates false-fired on every retry
+candidate (the same structure recurs at every nearby z), so 5 of 9 slabs
+threw and the decomposition died. Two refinements fix this:
+
+1. **Topology gate**: the co-occurrence only fires when the quarter-point
+   reference slices do NOT also contain `Singular` vertices. A structural
+   singularity cannot be retried away; the original z=0 catastrophe still
+   fires because its references at z=±0.5 are Singular-free.
+2. **Gradient gate**: edges left-anchored AT a `Singular` vertex are excluded
+   from the candidate minimum (their anchor gradient is ~0 because the anchor
+   IS the node); if every edge is excluded, the slab is suspect. A mid-edge
+   anchor was evaluated as an alternative and REJECTED with data: `sample_edge`
+   chords sit measurably off-curve precisely in the degenerate cases (the
+   z=0.02 catastrophe candidate reads a healthy `0.353` at its chord midpoint
+   while its downstream sweep is provably catastrophic), which would blind the
+   gate exactly where it is most needed.
+
+Fixed-axis invariance was verified slab-by-slab on every existing fixture:
+identical retried flags and accepted z_mid values (`[-1,1] -> 0.06` retried,
+`[1, 1.0648] -> 1.03497` retried, `[1.0648, 1.2367] ->` naive midpoint), and
+full fixed-axis Taubin decompose max `|f| = 3.0e-6`. Point singularities also
+scatter their chart-z critical-value estimates (~2e-4 observed, beyond
+`vertex_match_tol`); the resulting sub-resolution sliver slabs are merged
+upstream by `cfg.min_slab_width` in `_slab_bounds`, not handled here.
 """
 function _robust_slice_at_z(F::System, patch::NamedTuple, z_bottom::T, z_top::T, cfg::HomotopyConfig{T}) where {T<:AbstractFloat}
     width = z_top - z_bottom
     max_multiple = max(1, floor(Int, T(0.45) / cfg.z_mid_retry_frac))
 
-    _topology_suspect(vertices) = any(
+    _cooccurrence(vertices) = any(
         v -> v.v_type == Artificial && get(v.metadata, :origin, nothing) == :endpoint_fallback,
         vertices,
     ) && any(v -> v.v_type == Singular, vertices)
@@ -339,30 +377,49 @@ function _robust_slice_at_z(F::System, patch::NamedTuple, z_bottom::T, z_top::T,
         hypot(a, b)
     end
 
-    ref_scale = Ref{Union{Nothing,T}}(nothing)
-    function _reference_scale()
-        ref_scale[] === nothing || return ref_scale[]
+    # Memoized once per slab, computed EAGERLY on the naive-midpoint attempt (see the
+    # eagerness section of the docstring). Phase 8 extends it to also record whether the
+    # reference slices contain Singular vertices — the structural-singularity signal for
+    # the refined topology gate below.
+    ref_info = Ref{Union{Nothing,Tuple{T,Bool}}}(nothing)
+    function _reference_info()
+        ref_info[] === nothing || return ref_info[]
         scale = zero(T)
+        ref_has_singular = false
         for z_ref in (z_bottom + T(0.25) * width, z_top - T(0.25) * width)
-            _, edges_ref = slice_at_z(F, z_ref, cfg)
+            v_ref, edges_ref = slice_at_z(F, z_ref, cfg)
+            ref_has_singular |= any(v -> v.v_type == Singular, v_ref)
             for e in edges_ref
                 isempty(e.sampled_points) && continue
                 scale = max(scale, _anchor_gradient_magnitude(e))
             end
         end
-        ref_scale[] = scale
-        return scale
+        ref_info[] = (scale, ref_has_singular)
+        return ref_info[]
     end
 
-    _gradient_suspect(edges) = begin
+    # Phase 8 refinement: the fallback+Singular co-occurrence only counts against a
+    # candidate when the slab's reference slices do NOT also contain Singular vertices.
+    # If they do, a singular curve crosses the slab transversally and no z_mid choice
+    # avoids it — retrying is definitionally useless (see the docstring's Phase 8 section).
+    _topology_suspect(vertices) = _cooccurrence(vertices) && !_reference_info()[2]
+
+    # Phase 8 refinement: edges whose LEFT vertex (the anchor, sampled_points[1]) is
+    # Singular-classified are excluded from the candidate minimum — their anchor gradient
+    # is ~0 because the anchor IS the singular point, not because the whole slice curve is
+    # degenerate. All edges excluded => suspect (conservative).
+    _gradient_suspect(vertices, edges) = begin
         isempty(edges) && return false
-        scale = _reference_scale()
+        sing_ids = Set(v.id for v in vertices if v.v_type == Singular)
+        eligible = [e for e in edges if !isempty(e.sampled_points) && !(e.left_vertex_id in sing_ids)]
+        isempty(eligible) && return true
+        scale = _reference_info()[1]
         scale == zero(T) && return false
-        cand_scale = minimum(_anchor_gradient_magnitude(e) for e in edges if !isempty(e.sampled_points))
+        cand_scale = minimum(_anchor_gradient_magnitude(e) for e in eligible)
         cand_scale < cfg.z_mid_gradient_ratio_tol * scale
     end
 
-    _suspect(vertices, edges) = _topology_suspect(vertices) || _gradient_suspect(edges)
+    _suspect(vertices, edges) = _topology_suspect(vertices) || _gradient_suspect(vertices, edges)
 
     z_mid = (z_bottom + z_top) / T(2)
     vertices_3d, edges_3d = slice_at_z(F, z_mid, cfg)
@@ -385,6 +442,38 @@ function _robust_slice_at_z(F::System, patch::NamedTuple, z_bottom::T, z_top::T,
         "cfg.z_mid_gradient_ratio_tol=$(cfg.z_mid_gradient_ratio_tol)); giving up rather than " *
         "silently proceeding with a slice known to be untrustworthy.",
     ))
+end
+
+"""
+    _slab_bounds(F::System, cfg::HomotopyConfig{T}) where {T<:AbstractFloat} -> Vector{T}
+
+Build the sorted z-slab boundary list for [`decompose_3d_surface`](@ref):
+`cfg.bbox_z` endpoints plus in-range critical z-values, with boundaries closer
+than `cfg.min_slab_width` merged.
+
+The merge (Phase 8) exists because path endpoints landing on a point
+singularity carry ~accuracy^(1/multiplicity) scatter in their z-estimate
+(~2e-4 observed on the rotated Taubin heart, beyond `vertex_match_tol`'s
+reach), which would otherwise mint sliver slabs centered ON a singular point
+that no `z_mid` choice can slice. `cluster_scalars` averages each cluster;
+the outermost bounds are clamped back to the exact bbox afterward. All
+existing fixed-axis fixtures have critical-z gaps >= 0.065 (65x the default
+floor), so their bounds are unchanged. This is a documented resolution limit:
+genuinely distinct critical values closer than `cfg.min_slab_width` are not
+separated.
+"""
+function _slab_bounds(F::System, cfg::HomotopyConfig{T}) where {T<:AbstractFloat}
+    z_bottom_bound, z_top_bound = cfg.bbox_z
+    z_crits_raw = compute_critical_z_slices(F, cfg)
+    # Critical z outside bbox_z is not a slab boundary for this decomposition.
+    z_crits = filter(z -> z_bottom_bound <= z <= z_top_bound, z_crits_raw)
+    z_bounds = sort(unique(vcat(T[z_bottom_bound], z_crits, T[z_top_bound])))
+    length(z_bounds) > 2 || return z_bounds
+    merged = cluster_scalars(z_bounds, cfg.min_slab_width)
+    length(merged) < 2 && return T[z_bottom_bound, z_top_bound]
+    merged[1] = z_bottom_bound
+    merged[end] = z_top_bound
+    return merged
 end
 
 """
@@ -476,11 +565,9 @@ function decompose_3d_surface(F::System, cfg::HomotopyConfig{T}) where {T<:Abstr
         "got $(length(F.expressions)) equation(s) in $(length(F.variables)) variable(s).",
     ))
 
-    z_bottom_bound, z_top_bound = cfg.bbox_z
-    z_crits_raw = compute_critical_z_slices(F, cfg)
-    # Critical z outside bbox_z is not a slab boundary for this decomposition.
-    z_crits = filter(z -> z_bottom_bound <= z <= z_top_bound, z_crits_raw)
-    z_bounds = sort(unique(vcat(T[z_bottom_bound], z_crits, T[z_top_bound])))
+    # bbox_z endpoints + in-range critical z-values, with sub-resolution bounds
+    # merged per cfg.min_slab_width (see _slab_bounds).
+    z_bounds = _slab_bounds(F, cfg)
 
     # One patch for the whole surface: reused by _robust_slice_at_z (gradient
     # gate via FaceTracking.patch_direction) and by FaceTracking.track_face.

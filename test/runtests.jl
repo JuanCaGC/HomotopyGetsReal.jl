@@ -14,6 +14,7 @@ const _TEST_OUTPUT = mkpath(joinpath(@__DIR__, "output"))
     include("test_topology.jl")
     include("test_pathtracking.jl")
     include("test_surfacedecomposition.jl")
+    include("test_projection.jl")
     include("test_visuals.jl")
 
     if get(ENV, "HOMOTOPYGETSREAL_RUN_SLOW_TESTS", "0") == "1"

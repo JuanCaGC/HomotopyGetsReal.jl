@@ -156,7 +156,9 @@ A 2D decomposition cell from a mid-slice with boundary edges and mesh data.
 # Fields
 
 - `id`: Unique face identifier.
-- `mid_slice_z`: Z-coordinate of the source mid-slice.
+- `mid_slice_z`: Z-coordinate of the source mid-slice. When
+  `decompose_3d_surface` runs with a `projection`, this is the sweep
+  coordinate of the rotated working chart, not literal world z.
 - `boundary_edges`: Ids of bounding [`Edge`](@ref)s.
 - `mesh_vertices`: Mesh vertex coordinates, one row per vertex.
 - `mesh_topology`: Mesh connectivity indices, one row per element.

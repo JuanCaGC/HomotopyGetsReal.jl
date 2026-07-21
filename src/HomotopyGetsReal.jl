@@ -18,7 +18,11 @@
 # `PathTracking._track_path_segment!` directly; `FaceTracking.jl` must
 # come before `SurfaceDecomposition.jl` since `decompose_3d_surface`
 # calls `build_patch_system`/`track_face` directly and `weld_mesh` calls
-# `_gradient_at` directly; `SurfaceDecomposition.jl` must come before
+# `_gradient_at` directly; `Projection.jl` must come before
+# `SurfaceDecomposition.jl` since `decompose_3d_surface`'s projection
+# branch calls `_resolve_projection`/`_rotate_system`/
+# `_verify_projection_ok`/`_chart_config`/`_map_to_world` directly;
+# `SurfaceDecomposition.jl` must come before
 # `Visuals.jl` since `plot_surface_decomposition`'s methods take
 # `decompose_3d_surface`'s/`weld_mesh`'s own return types directly (no
 # `using` needed within a flat module).
@@ -31,6 +35,7 @@ using GenericLinearAlgebra
 using Parameters
 using GeometryBasics
 using GLMakie
+using Random
 
 include("Config.jl")
 include("Types.jl")
@@ -39,6 +44,7 @@ include("Solver.jl")
 include("PathTracking.jl")
 include("Topology.jl")
 include("FaceTracking.jl")
+include("Projection.jl")
 include("SurfaceDecomposition.jl")
 include("Visuals.jl")
 
@@ -64,6 +70,9 @@ export compute_midslice, connect_the_dots!, sample_edge, decompose_1d_curve
 # FaceTracking.jl
 export build_patch_system, patch_direction, build_face_tracker, track_dense_path,
        sweep_face_bidirectional, track_face
+
+# Projection.jl
+export random_orthogonal_matrix
 
 # SurfaceDecomposition.jl
 export compute_critical_z_slices, slice_at_z, decompose_3d_surface, weld_mesh

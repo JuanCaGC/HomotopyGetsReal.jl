@@ -539,7 +539,7 @@ function weld_mesh(faces::Vector{Face{T}}, patch::NamedTuple, cfg::HomotopyConfi
 end
 
 """
-    decompose_3d_surface(F::System, cfg::HomotopyConfig{T}) where {T<:AbstractFloat}
+    decompose_3d_surface(F::System, cfg::HomotopyConfig{T}; projection = nothing, rng = Random.default_rng()) where {T<:AbstractFloat}
         -> (vertices, edges, faces, mesh)
 
 Decompose a real algebraic surface into vertices, edges, faces, and a welded mesh.
@@ -553,17 +553,65 @@ one `GeometryBasics.Mesh`. This is the 3D analogue of [`decompose_1d_curve`](@re
 - `F::System`: surface system (`length(F.expressions) == 1`, `nvariables(F) == 3`).
 - `cfg::HomotopyConfig{T}`: tolerances, bounding box, and sampling densities.
 
+# Keyword arguments (Phase 8)
+- `projection`: `nothing` (default) sweeps along the literal z axis with the
+  exact pre-Phase-8 behavior -- no coordinate transform is applied at all.
+  `:random` draws a Haar-uniform SO(3) rotation internally (seed via `rng`);
+  a user-supplied 3x3 orthonormal, det = +1 matrix `Q` is validated and used
+  directly. When a projection is active the pipeline runs on the chart system
+  `F'(x') = F(Q x')` over the enclosing axis-aligned box of the rotated world
+  bbox (slightly larger than the world box at the same `cfg`);
+  [`_verify_projection_ok`](@ref) rejects projections that leave an augmenting
+  partial identically zero (the `z - x^2` crash class) with a loud
+  `ArgumentError`; and every returned vertex coordinate, edge sample, face
+  mesh row, and welded mesh point is mapped back to world coordinates via
+  `p = Q p'`. `Face.mid_slice_z` and boundary-vertex
+  `:fixed_variable`/`:fixed_value` metadata remain CHART-frame quantities.
+  Callers who need `Q` itself should construct it with
+  [`random_orthogonal_matrix`](@ref) and pass the matrix explicitly --
+  `:random` is convenience for exploratory use.
+- `rng`: random source used only by `projection = :random`.
+
+# Known limitation: generic projections over singular curves
+When a projection makes a positive-dimensional singular curve of the surface
+(`∇f = 0` along a curve, e.g. the Taubin heart's z=0 ellipse) transversal to
+the slicing planes, mesh quality degrades in a narrow band around that curve.
+Measured (rotated Taubin heart, seed 1, 2026-07): median world-`|f|` residual
+`6e-9` over 2617 mesh points, but ~2.5% of points exceed `1e-4` (max `0.26`),
+ALL confined to `|z_world| <= 0.14` around the singular plane (the surface
+spans `|z| <= 1.24`). Away from the singular locus the decomposition is
+unaffected. Decomposing singular curves themselves (BertiniReal's
+deflation/singular-curve machinery) is future work; see also
+`_robust_slice_at_z`'s Phase 8 amendments section.
+
 # Returns
 A 4-tuple `(vertices, edges, faces, mesh)` of types
 `Vector{NativeVertex{T}}`, `Vector{Edge{T}}`, `Vector{Face{T}}`, and
-`GeometryBasics.Mesh`.
+`GeometryBasics.Mesh`, in world coordinates.
 """
-function decompose_3d_surface(F::System, cfg::HomotopyConfig{T}) where {T<:AbstractFloat}
+function decompose_3d_surface(
+    F::System,
+    cfg::HomotopyConfig{T};
+    projection::Union{Nothing,Symbol,AbstractMatrix} = nothing,
+    rng::Random.AbstractRNG = Random.default_rng(),
+) where {T<:AbstractFloat}
     length(F.variables) == 3 && length(F.expressions) == 1 || throw(ArgumentError(
         "decompose_3d_surface: expected F with exactly 1 equation in exactly 3 variables " *
         "(a raw surface, variables ordered [x_var, y_var, z_var] -- z LAST); " *
         "got $(length(F.expressions)) equation(s) in $(length(F.variables)) variable(s).",
     ))
+
+    # Phase 8: change-of-coordinates wrapper. The chart run recurses with
+    # projection = nothing, so the entire validated fixed-axis pipeline below
+    # is reused unchanged; transforms live only at this boundary.
+    if projection !== nothing
+        Q = _resolve_projection(projection, rng)
+        F_chart = _rotate_system(F, Q)
+        _verify_projection_ok(F_chart, cfg)
+        cfg_chart = _chart_config(cfg, Q)
+        chart_result = decompose_3d_surface(F_chart, cfg_chart)
+        return _map_to_world(chart_result..., Q)
+    end
 
     # bbox_z endpoints + in-range critical z-values, with sub-resolution bounds
     # merged per cfg.min_slab_width (see _slab_bounds).

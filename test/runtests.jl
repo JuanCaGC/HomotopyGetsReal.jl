@@ -10,6 +10,7 @@ const _TEST_OUTPUT = mkpath(joinpath(@__DIR__, "output"))
 
 @testset "HomotopyGetsReal" begin
     include("test_types.jl")
+    include("test_vertex_registry.jl")
     include("test_solver.jl")
     include("test_topology.jl")
     include("test_pathtracking.jl")

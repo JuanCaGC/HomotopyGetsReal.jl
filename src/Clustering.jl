@@ -14,6 +14,16 @@
 # around "a tolerance-indexed clustering of vertices with metadata-
 # preserving merge" rather than anything specific to Phase 2's two
 # callers.
+#
+# Phase 10 (Stage 1): that anticipated extension. VertexRegistry/register!
+# below is a PERSISTENT, cross-call sibling to cluster_vertices' one-shot
+# batch clustering — investigated as the substrate a BertiniReal-style
+# shared vertex identity (its VertexSet) would need, so that a slab's own
+# boundary vertex and the shared CritSlice's independently-computed vertex
+# for the SAME critical point can be reconciled to one id, enabling
+# targeted (not free-sweep) boundary tracking in a later stage. This file
+# only gains the new struct/function below; cluster_vertices and its
+# batch semantics are completely unchanged.
 
 using LinearAlgebra
 
@@ -306,4 +316,162 @@ function cluster_points_indexed(points::Vector{Vector{T}}, tol::T) where {T<:Abs
     end
 
     return representatives, membership
+end
+
+"""
+    VertexRegistry{T<:AbstractFloat}
+
+Phase 10: a PERSISTENT, cross-call vertex-identity substrate — unlike
+[`cluster_vertices`](@ref), which deduplicates a single batch of vertices
+and then discards its own bookkeeping, a `VertexRegistry` accumulates
+vertices ACROSS MULTIPLE SEPARATE CALLS (e.g. one call per slab, plus one
+per shared crit-slice, in `decompose_3d_surface`'s slab loop — wiring
+deferred to a later stage), assigning the SAME id to any two candidates
+that land within `tol` of an already-registered vertex — even though
+those candidates come from numerically INDEPENDENT computations (e.g. a
+slab's own `decompose_1d_curve` call and the shared crit-slice's own
+`slice_at_z` call, both converging on "the same" critical point at a
+shared z-boundary).
+
+This is the gap `cluster_vertices` was explicitly anticipated to extend
+into (see this file's own header, written in Phase 2), but a genuinely
+different OPERATION from it: `cluster_vertices` clusters a known, complete
+`Vector` all at once (batch); `VertexRegistry` matches ONE new candidate
+against a growing store, one [`register!`](@ref) call at a time
+(streaming), with no upper bound on how many separate calls may
+eventually contribute to the same canonical vertex.
+
+Stage 1 (this struct + `register!`): a pure, standalone data structure,
+exercised only by its own unit tests (`test/test_vertex_registry.jl`).
+Nothing in `decompose_3d_surface` constructs or calls a `VertexRegistry`
+yet — that wiring is a deliberately separate, later stage.
+
+# Fields
+- `vertices`: canonical, deduplicated entries; `vertices[id]` is the entry
+  with that id (ids are assigned sequentially as new vertices are
+  registered, and are never reassigned once given out).
+- `tol`: matching distance — reuse `cfg.vertex_match_tol`, the SAME "are
+  these the same vertex?" identity tolerance `cluster_vertices` already
+  uses, not a new one.
+- `raw_contributions`: `raw_contributions[id]` accumulates every
+  `(candidate.id, candidate.metadata)` pair ever merged into `vertices[id]`
+  across all `register!` calls — kept explicitly (not folded into
+  `vertices[id].metadata` in place) so [`merge_metadata`](@ref) can be
+  RECOMPUTED FROM THE FULL accumulated set on every new match, rather than
+  merging two-at-a-time. The latter would be lossy: `merge_metadata`'s own
+  `:cluster_size`/`:cluster_member_ids` bookkeeping is a batch operation
+  (see its own docstring), and repeatedly overwriting an already-merged
+  entry's metadata with a fresh 2-member merge would silently discard
+  earlier members' contributions. Recomputing from the full raw list every
+  time keeps the merge genuinely correct no matter how many separate
+  `register!` calls eventually land on the same canonical vertex —
+  verified directly in the test suite across 3+ incremental merges, not
+  just the 2-item case.
+"""
+mutable struct VertexRegistry{T<:AbstractFloat}
+    vertices::Vector{NativeVertex{T}}
+    tol::T
+    raw_contributions::Vector{Vector{Tuple{Int,Dict{Symbol,Any}}}}
+end
+
+"""
+    VertexRegistry{T}(tol::T) where {T<:AbstractFloat}
+
+Construct an empty [`VertexRegistry`](@ref) with the given matching tolerance.
+"""
+VertexRegistry{T}(tol::T) where {T<:AbstractFloat} =
+    VertexRegistry{T}(NativeVertex{T}[], tol, Vector{Tuple{Int,Dict{Symbol,Any}}}[])
+
+"""
+    Base.length(reg::VertexRegistry) -> Int
+
+Number of distinct canonical vertices currently registered.
+"""
+Base.length(reg::VertexRegistry) = length(reg.vertices)
+
+"""
+    register!(reg::VertexRegistry{T}, candidate::NativeVertex{T}) where {T<:AbstractFloat} -> Int
+
+Register `candidate` against `reg`, returning the id it is assigned.
+
+Finds the NEAREST already-registered vertex within `reg.tol` of
+`candidate.coordinates` (not merely the first found within tolerance —
+matters for determinism when multiple existing entries could plausibly be
+in range). If one exists, `candidate` is MERGED into it (returning that
+entry's existing, unchanged id — ids are never reassigned once given out)
+and the entry's stored coordinates, type, and metadata are updated:
+
+- coordinates: running centroid over every contribution merged into this
+  entry so far (mirrors [`cluster_vertices`](@ref)'s own centroid rule).
+- type: `Singular` if either the existing entry or `candidate` is
+  `Singular`; else the common type if they agree; else `Artificial` — the
+  EXACT three-way rule [`cluster_vertices`](@ref) documents (a
+  rank-deficient contribution must never be silently averaged away by an
+  otherwise-regular one), reused here rather than re-derived, and holding
+  across any number of successive merges, not just the first one.
+- metadata: [`merge_metadata`](@ref), recomputed from the FULL accumulated
+  `raw_contributions` for this entry (see the struct's own docstring for
+  why this must be a full recompute, not an incremental two-at-a-time
+  merge).
+
+`candidate.id` itself is used ONLY as metadata provenance (fed into
+`merge_metadata`'s `:cluster_member_ids` bookkeeping, exactly as
+[`cluster_vertices`](@ref) already treats input ids) — it plays no role in
+which id gets returned, since (unlike a one-shot batch clustering, where
+"smallest input id" is an arbitrary-but-consistent tie-break) a persistent
+registry must keep an already-assigned id STABLE regardless of what id a
+later caller's own, unrelated local numbering happens to use.
+
+If no existing entry is within tolerance, `candidate` is registered as a
+brand new canonical vertex with a freshly assigned id (`length(reg) + 1`),
+storing its own coordinates/type/metadata unchanged.
+"""
+function register!(reg::VertexRegistry{T}, candidate::NativeVertex{T}) where {T<:AbstractFloat}
+    best_idx = 0
+    best_dist = reg.tol
+    for (idx, existing) in enumerate(reg.vertices)
+        d = norm(existing.coordinates .- candidate.coordinates)
+        if d <= best_dist
+            best_dist = d
+            best_idx = idx
+        end
+    end
+
+    if best_idx != 0
+        existing = reg.vertices[best_idx]
+        n = length(reg.raw_contributions[best_idx])
+        centroid = (existing.coordinates .* T(n) .+ candidate.coordinates) ./ T(n + 1)
+
+        v_type = if existing.v_type === Singular || candidate.v_type === Singular
+            Singular
+        elseif existing.v_type === candidate.v_type
+            existing.v_type
+        else
+            Artificial
+        end
+
+        push!(reg.raw_contributions[best_idx], (candidate.id, candidate.metadata))
+        all_ids = Int[c[1] for c in reg.raw_contributions[best_idx]]
+        all_metadatas = Dict{Symbol,Any}[c[2] for c in reg.raw_contributions[best_idx]]
+        metadata = merge_metadata(all_metadatas, all_ids)
+
+        reg.vertices[best_idx] = NativeVertex{T}(
+            id = existing.id, coordinates = centroid, v_type = v_type, metadata = metadata,
+        )
+        return existing.id
+    end
+
+    new_id = length(reg.vertices) + 1
+    # Routed through merge_metadata even for this trivial 1-member case (rather than storing
+    # candidate.metadata as-is) so every registry entry has the SAME metadata shape
+    # (:cluster_size/:cluster_member_ids present) from the moment it is created, regardless of
+    # whether or how many times it later merges -- :cluster_size == 1 is then a meaningful,
+    # uniformly-available signal ("only ever computed once"), not a special case callers must
+    # branch on.
+    metadata = merge_metadata(Dict{Symbol,Any}[candidate.metadata], Int[candidate.id])
+    push!(reg.vertices, NativeVertex{T}(
+        id = new_id, coordinates = candidate.coordinates, v_type = candidate.v_type, metadata = metadata,
+    ))
+    push!(reg.raw_contributions, [(candidate.id, candidate.metadata)])
+    return new_id
 end

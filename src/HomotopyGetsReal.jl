@@ -57,6 +57,7 @@ export NativeVertex, Edge, Face
 
 # Clustering.jl
 export cluster_vertices, cluster_scalars, cluster_points_indexed
+export VertexRegistry, register!
 
 # Solver.jl
 export jacobian_rank_info, compute_critical_points, intersect_bounding_object

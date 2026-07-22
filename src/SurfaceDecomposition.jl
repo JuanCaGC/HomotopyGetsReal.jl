@@ -581,18 +581,52 @@ Returned as the 5th element of [`decompose_3d_surface`](@ref) when
   (see `_landing_confidence`) consecutive columns, on both sides, lands on
   combinatorially adjacent crit-slice cells (see `_cells_adjacent`). Absent
   keys mean the face touched no crit-slice (both sides `:bbox`/empty).
+  **Currently a write-only diagnostic field**: populated by
+  [`_check_continuity!`](@ref) during `decompose_3d_surface`, but nothing in
+  `weld_mesh` or elsewhere in the pipeline reads it — it does not affect any
+  mesh actually produced today. It exists to gather firing-rate evidence
+  ahead of a possible future promotion to an enforced check (see below).
 - `continuity_violations_bottom` / `continuity_violations_top` (Phase 9b):
   face id → indices `c` of violating consecutive pairs `(c, c+1)`.
 
 Promoting `continuity_ok` from a flag to a hard error is a deliberate FUTURE
 decision contingent on the firing-rate evidence this structure gathers on
-real fixtures — not something decided now. Measured on the Taubin heart
-(2026-07): fixed-axis 10/14 faces `continuity_ok` (16 flagged pairs),
-rotated seed 1 15/22 faces (17 flagged pairs); sphere/ellipsoid (single
-fold-type boundary each) show zero. The flagged pairs concentrate at the
-SAME multi-face edge-type boundaries `weld_mesh`'s Phase 9b docstring
-section documents as an open coverage-gap issue — this is exactly the
-evidence-gathering this field exists for, not a surprise finding.
+real fixtures — not something decided now, and not safe to decide until the
+flags themselves are trustworthy (see the 2026-07 fix below).
+
+**2026-07 diagnostic investigation and fix**: a direct measurement (ground-
+truth residual/geometry checks, resolution-sensitivity re-runs at higher
+`edge_sample_density`/`midslice_sample_density`, and direct coordinate
+comparison of the flagged cells themselves — see
+`dev/scratch/scratch_continuity_ok_diagnosis.jl`) found that the ORIGINAL
+measured firing rate (fixed-axis 10/14 faces `continuity_ok`/16 flagged
+pairs, rotated seed 1 15/22 faces/17 flagged pairs) was dominated by a FALSE
+POSITIVE, not genuine branch-jumping or resolution-limited ambiguity: 12 of
+the 16 fixed-axis pairs (and a comparable share of the rotated ones) paired
+a `:critical_point` landing against a `:crit_slice_vertex` landing that are,
+by construction, the SAME physical fold-tip location — confirmed coincident
+to machine precision (~1e-16) by direct coordinate comparison — which
+`_cells_adjacent`'s original rule had no case for (only exact `(kind, id)`
+matches or `:edge`-involving pairs were ever considered adjacent). The tell
+that distinguished this from genuine ambiguity: these 12 pairs did NOT
+shrink at higher sampling density the way the OTHER (genuine) 4 fixed-axis
+violations at z=1.0648 did (which vanish completely by `edge_sample_density
+= 16`) — they persisted and grew MORE confidently separated, the opposite
+of what resolution-limited ambiguity should do.
+
+Fixed by adding `:critical_point` coincidence cases to `_cells_adjacent`
+(coincidence checked against `cfg.vertex_match_tol`, the same tolerance
+`weld_mesh`'s own clustering uses). Re-measured after the fix: fixed-axis
+drops to 4/14 faces flagged with exactly the 4 genuine z=1.0648 pairs
+remaining (0 at the fold-tip boundaries, confirmed still resolving to 0 by
+`edge_sample_density = 16`, unchanged); rotated seed 1 drops to roughly
+5-7/22 faces (~10-11 pairs, run-to-run jitter from the same HC.jl
+cross-process nondeterminism documented elsewhere in this codebase). The
+residual flags on both fixtures now concentrate at the SAME multi-face
+edge-type boundaries `weld_mesh`'s Phase 9b/9c docstring section documents
+as an open coverage-gap issue — this is exactly the evidence-gathering this
+field exists for, not a surprise finding, and it is now a much cleaner
+signal than before the fix.
 """
 struct SurfaceIncidence{T<:AbstractFloat}
     crit_slices::Vector{CritSlice{T}}
@@ -795,25 +829,63 @@ function _landing_confidence(
 end
 
 """
-    _cells_adjacent(cs::CritSlice{T}, a::ColumnLanding{T}, b::ColumnLanding{T}) where {T<:AbstractFloat} -> Bool
+    _cells_adjacent(cs::CritSlice{T}, a::ColumnLanding{T}, b::ColumnLanding{T}, critical_vertices::Vector{NativeVertex{T}}, tol::T) where {T<:AbstractFloat} -> Bool
 
 Combinatorial adjacency of two landing assignments on the SAME crit-slice
-`cs`: identical cells, two `:edge`s sharing an endpoint vertex id, or an
-`:edge` and one of its own endpoint `:crit_slice_vertex`. Every other kind
-combination (including any pairing involving `:critical_point`, or two
-distinct `:crit_slice_vertex` ids) is NOT adjacent -- deliberately
-conservative: at a degenerate (fold-type) boundary distinct vertex/anchor ids
-represent genuinely different points, and flagging non-adjacency there is
-safe under Phase 9b's warn-not-error policy. Used only by
-[`_check_continuity!`](@ref); `:bbox`/`:none` landings never reach this call
-(excluded by [`_landing_confidence`](@ref) first).
+`cs`: identical cells, two `:edge`s sharing an endpoint vertex id, an `:edge`
+and one of its own endpoint `:crit_slice_vertex`, OR (2026-07 fix) a
+`:critical_point` and a `:crit_slice_vertex`/`:edge`-endpoint that are the
+SAME physical location within `tol` (`cfg.vertex_match_tol`, the same
+tolerance `weld_mesh`'s own clustering uses). Every other kind combination
+(two distinct non-coincident `:crit_slice_vertex` ids, or a `:critical_point`
+that does NOT coincide with the other cell) is NOT adjacent -- deliberately
+conservative: at a genuinely degenerate boundary, non-coincident vertex/anchor
+ids represent genuinely different points, and flagging non-adjacency there is
+safe under Phase 9b's warn-not-error policy.
+
+The `:critical_point` cases were added after a direct diagnostic investigation
+(2026-07) found they accounted for the LARGE majority of flagged
+discontinuities on the fixed-axis Taubin fixture (12/16 violations, all at
+fold-type point boundaries) and a meaningful share on rotated fixtures --
+and, critically, were confirmed FALSE POSITIVES, not genuine ambiguity: a
+surface's z-critical anchor (`:critical_point`, from `compute_critical_points`)
+and that SAME physical location's own crit-slice decomposition
+(`:crit_slice_vertex`, from `slice_at_z` at the exact critical z) are, by
+construction, literally the same point -- measured coincident to machine
+precision (~1e-16) on every checked instance, not merely "close." The
+resolution-sensitivity evidence that FIRST distinguished this from genuine
+ambiguity: unlike a real resolution-limited case (which shrinks and vanishes
+at higher `edge_sample_density`/`midslice_sample_density`, confirmed
+separately for the z=1.0648 boundary's 4 genuine violations), these 12 flags
+PERSISTED and grew MORE confidently separated (not less) at higher sampling
+density -- the opposite of what ambiguity should do, and the tell that this
+was a missing adjacency rule, not a real jump. See
+`dev/scratch/scratch_continuity_ok_diagnosis.jl` for the full investigation.
+
+Used only by [`_check_continuity!`](@ref); `:bbox`/`:none` landings never
+reach this call (excluded by [`_landing_confidence`](@ref) first).
 """
-function _cells_adjacent(cs::CritSlice{T}, a::ColumnLanding{T}, b::ColumnLanding{T}) where {T<:AbstractFloat}
+function _cells_adjacent(
+    cs::CritSlice{T},
+    a::ColumnLanding{T},
+    b::ColumnLanding{T},
+    critical_vertices::Vector{NativeVertex{T}},
+    tol::T,
+) where {T<:AbstractFloat}
     a.kind === b.kind && a.id == b.id && return true
     _endpoints(eid) = begin
         e = only(filter(x -> x.id == eid, cs.edges))
         (e.left_vertex_id, e.right_vertex_id)
     end
+    _crit_slice_vertex_coords(vid) = begin
+        v = only(filter(x -> x.id == vid, cs.vertices))
+        T[real(v.coordinates[1]), real(v.coordinates[2]), cs.z]
+    end
+    _critical_point_coincides(cp_id, vid) = begin
+        cp = only(filter(x -> x.id == cp_id, critical_vertices))
+        norm(real.(cp.coordinates) .- _crit_slice_vertex_coords(vid)) <= tol
+    end
+
     if a.kind === :edge && b.kind === :edge
         la, ra = _endpoints(a.id)
         lb, rb = _endpoints(b.id)
@@ -822,14 +894,23 @@ function _cells_adjacent(cs::CritSlice{T}, a::ColumnLanding{T}, b::ColumnLanding
         la, ra = _endpoints(a.id)
         return b.id == la || b.id == ra
     elseif a.kind === :crit_slice_vertex && b.kind === :edge
-        return _cells_adjacent(cs, b, a)
+        return _cells_adjacent(cs, b, a, critical_vertices, tol)
+    elseif a.kind === :critical_point && b.kind === :crit_slice_vertex
+        return _critical_point_coincides(a.id, b.id)
+    elseif a.kind === :crit_slice_vertex && b.kind === :critical_point
+        return _cells_adjacent(cs, b, a, critical_vertices, tol)
+    elseif a.kind === :critical_point && b.kind === :edge
+        la, ra = _endpoints(b.id)
+        return _critical_point_coincides(a.id, la) || _critical_point_coincides(a.id, ra)
+    elseif a.kind === :edge && b.kind === :critical_point
+        return _cells_adjacent(cs, b, a, critical_vertices, tol)
     else
         return false
     end
 end
 
 """
-    _check_continuity!(face_id, points, landings, cs, edge_spacing, scale_ref_points, patch, cfg, ok_dict, viol_dict)
+    _check_continuity!(face_id, points, landings, cs, edge_spacing, scale_ref_points, patch, cfg, critical_vertices, ok_dict, viol_dict)
 
 Phase 9b branch-continuity check for ONE face side: for every pair of
 consecutive columns that are BOTH confident (see
@@ -839,7 +920,9 @@ consecutive columns that are BOTH confident (see
 recorded) and appends the left column's index to `viol_dict[face_id]`. Never
 throws -- Phase 9b's approved policy is warn/flag, not error; promotion to a
 hard error is a deliberate future decision. `cs === nothing` (a bbox-type
-boundary) or fewer than 2 columns trivially passes.
+boundary) or fewer than 2 columns trivially passes. `critical_vertices` is
+the surface's fold-type anchors (`decompose_3d_surface`'s `fold_anchors`),
+needed by [`_cells_adjacent`](@ref)'s `:critical_point` coincidence check.
 
 The confidence gate is what makes this check meaningful rather than noisy:
 distances beyond `cfg.incidence_snap_tol_ratio * scale` are exactly the
@@ -848,7 +931,9 @@ singular-band seams) where a jump/no-jump call would be unfounded, so those
 pairs are recorded as inconclusive instead of flagged. This is a documented
 resolution limit: two branches closer together than roughly `2 *`
 the local chord spacing are not distinguishable from a jump at a given
-crit-slice sampling density.
+crit-slice sampling density. (`:critical_point` false positives are a
+SEPARATE phenomenon from this resolution limit -- see
+[`_cells_adjacent`](@ref)'s own docstring.)
 """
 function _check_continuity!(
     face_id::Int,
@@ -859,6 +944,7 @@ function _check_continuity!(
     scale_ref_points::Vector{Vector{T}},
     patch::NamedTuple,
     cfg::HomotopyConfig{T},
+    critical_vertices::Vector{NativeVertex{T}},
     ok_dict::Dict{Int,Bool},
     viol_dict::Dict{Int,Vector{Int}},
 ) where {T<:AbstractFloat}
@@ -872,7 +958,7 @@ function _check_continuity!(
     ok = get(ok_dict, face_id, true)
     for c in 1:(length(points) - 1)
         (confident[c] && confident[c+1]) || continue
-        if !_cells_adjacent(cs, landings[c], landings[c+1])
+        if !_cells_adjacent(cs, landings[c], landings[c+1], critical_vertices, cfg.vertex_match_tol)
             ok = false
             push!(viol_dict[face_id], c)
         end
@@ -2022,10 +2108,10 @@ function decompose_3d_surface(
                 _record_side!(face.id, top_assigned, face_top_edges, face_top_anchor, column_landings_top)
                 _check_continuity!(face.id, bottom_landings, bottom_assigned, cs_bottom, edge_spacing,
                                     _inward_row_points(face, :bottom, n_z, n_curve), patch, cfg,
-                                    continuity_ok, continuity_violations_bottom)
+                                    fold_anchors, continuity_ok, continuity_violations_bottom)
                 _check_continuity!(face.id, top_landings, top_assigned, cs_top, edge_spacing,
                                     _inward_row_points(face, :top, n_z, n_curve), patch, cfg,
-                                    continuity_ok, continuity_violations_top)
+                                    fold_anchors, continuity_ok, continuity_violations_top)
             end
 
             next_face_id += 1

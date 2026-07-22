@@ -77,15 +77,34 @@ println("  incidence world-mapped through the projection recursion without error
 
 println()
 println("=" ^ 70)
-println("4. id-namespace uniqueness across main return and crit-slice cells")
+println("4. id namespace: edges stay globally unique; vertex id collisions (Phase 10")
+println("   Stage 2's VertexRegistry) must be genuine geometric matches, not accidents")
 println("=" ^ 70)
 
-# Taubin-lite check is in the slow suite; here assert on the sphere run.
-all_vids = vcat([v.id for v in vs], [v.id for cs in inc.crit_slices for v in cs.vertices])
+# Taubin-lite check (the fixture that actually EXERCISES a collision, since its
+# crit-slices carry real vertices) is in the slow suite; here assert on the
+# sphere run, whose crit-slices are degenerate/empty -- this still checks
+# referential integrity even with nothing to collide against.
+all_registered_vertices = vcat(vs, [v for cs in inc.crit_slices for v in cs.vertices])
+by_id = Dict{Int,Vector{Vector{Complex{Float64}}}}()
+for v in all_registered_vertices
+    push!(get!(by_id, v.id, Vector{Complex{Float64}}[]), v.coordinates)
+end
+collision_ok = all(coords -> all(c -> norm(c .- coords[1]) <= cfg.vertex_match_tol, coords), values(by_id))
+@test collision_ok
+known_vertex_ids = Set(keys(by_id))
+
 all_eids = vcat([e.id for e in es], [e.id for cs in inc.crit_slices for e in cs.edges])
-@test length(unique(all_vids)) == length(all_vids)
-@test length(unique(all_eids)) == length(all_eids)
-println("  no vertex/edge id collisions between slab cells and crit-slice cells.")
+@test length(unique(all_eids)) == length(all_eids)   # edge ids: unchanged positional scheme
+
+all_endpoint_ids = vcat(
+    [e.left_vertex_id for e in es], [e.right_vertex_id for e in es],
+    [e.left_vertex_id for cs in inc.crit_slices for e in cs.edges],
+    [e.right_vertex_id for cs in inc.crit_slices for e in cs.edges],
+)
+@test all(id -> id in known_vertex_ids, all_endpoint_ids)
+println("  vertex ids: any cross-container collision verified geometric; edge ids unique;")
+println("  every edge endpoint resolves to a known registered vertex.")
 
 println()
 println("=" ^ 70)

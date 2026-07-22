@@ -456,11 +456,33 @@ cs_by_z = Dict(round(cs.z; digits = 4) => cs for cs in inc.crit_slices)
 @test length(cs_by_z[1.2367].edges) == 0        # lobe tips: point-slice
 @test cs_by_z[1.2367].is_degenerate
 
-# id-namespace uniqueness across slab cells and crit-slice cells
-all_vids = vcat([v.id for v in vi], [v.id for cs in inc.crit_slices for v in cs.vertices])
+# id namespace (Phase 10, Stage 2): edges stay globally unique (unchanged
+# positional scheme); vertex ids may now legitimately collide across
+# containers via the shared VertexRegistry -- this fixture is the one that
+# actually EXERCISES that (z=1.0 and z=1.0648 crit-slices carry real
+# vertices, unlike the sphere/ellipsoid controls in test_incidence.jl), so
+# any collision here must be a genuine geometric match, not an accident.
+all_registered_vertices = vcat(vi, [v for cs in inc.crit_slices for v in cs.vertices])
+by_id = Dict{Int,Vector{Vector{ComplexF64}}}()
+for v in all_registered_vertices
+    push!(get!(by_id, v.id, Vector{ComplexF64}[]), v.coordinates)
+end
+collision_ok = all(coords -> all(c -> norm(c .- coords[1]) <= cfg.vertex_match_tol, coords), values(by_id))
+n_colliding_ids = count(coords -> length(coords) > 1, values(by_id))
+@test collision_ok
+known_vertex_ids = Set(keys(by_id))
+
 all_eids = vcat([e.id for e in ei], [e.id for cs in inc.crit_slices for e in cs.edges])
-@test length(unique(all_vids)) == length(all_vids)
 @test length(unique(all_eids)) == length(all_eids)
+
+all_endpoint_ids = vcat(
+    [e.left_vertex_id for e in ei], [e.right_vertex_id for e in ei],
+    [e.left_vertex_id for cs in inc.crit_slices for e in cs.edges],
+    [e.right_vertex_id for cs in inc.crit_slices for e in cs.edges],
+)
+@test all(id -> id in known_vertex_ids, all_endpoint_ids)
+println("  vertex ids: $(n_colliding_ids) legitimate cross-container collision(s) (registry ",
+        "merges), all geometrically verified; edge ids unique; every endpoint resolves.")
 
 # coverage: every non-bbox landing is assigned to SOMETHING (pure measurement,
 # no distance thresholds in 9a -- see ColumnLanding's docstring)

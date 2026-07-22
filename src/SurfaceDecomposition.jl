@@ -610,28 +610,32 @@ struct SurfaceIncidence{T<:AbstractFloat}
 end
 
 """
-    _decompose_crit_slice(F, z_c::T, j::Int, cfg, v_offset::Int, e_offset::Int) -> CritSlice{T}
+    _decompose_crit_slice(F, z_c::T, j::Int, cfg, vertex_registry::VertexRegistry{T}, e_offset::Int) -> CritSlice{T}
 
 Decompose the surface AT the exact interior boundary value `z_c = z_bounds[j]`
 via [`slice_at_z`](@ref), deliberately bypassing `_robust_slice_at_z`: the
 value is pinned by definition (it IS the critical value), so perturbed
-retries are meaningless here. Cell ids are shifted by the offsets into the
-global namespace. Measured on every fixture (fixed-axis and rotated Taubin
-included): nodal/saddle-type crit-slices decompose like the nodal-cubic
-fixture, fold-type extremes come back empty or as isolated `Singular`
-vertices, and nothing throws.
+retries are meaningless here. Edge ids are shifted by `e_offset` into the
+global namespace (unchanged positional scheme); vertex ids come from
+`register!`ing each raw vertex into the shared `vertex_registry` (Phase 10,
+Stage 2) instead of an offset -- coordinates are taken from the RAW vertex,
+never from the registry's (possibly merge-averaged) stored copy. Measured on
+every fixture (fixed-axis and rotated Taubin included): nodal/saddle-type
+crit-slices decompose like the nodal-cubic fixture, fold-type extremes come
+back empty or as isolated `Singular` vertices, and nothing throws.
 """
-function _decompose_crit_slice(F::System, z_c::T, j::Int, cfg::HomotopyConfig{T}, v_offset::Int, e_offset::Int) where {T<:AbstractFloat}
+function _decompose_crit_slice(F::System, z_c::T, j::Int, cfg::HomotopyConfig{T}, vertex_registry::VertexRegistry{T}, e_offset::Int) where {T<:AbstractFloat}
     vertices_raw, edges_raw = slice_at_z(F, z_c, cfg)
+    local_ids = Dict{Int,Int}(v.id => register!(vertex_registry, v) for v in vertices_raw)
     vertices = NativeVertex{T}[
-        NativeVertex{T}(id = v.id + v_offset, coordinates = v.coordinates, v_type = v.v_type, metadata = v.metadata)
+        NativeVertex{T}(id = local_ids[v.id], coordinates = v.coordinates, v_type = v.v_type, metadata = v.metadata)
         for v in vertices_raw
     ]
     edges = Edge{T}[
         Edge{T}(
             id = e.id + e_offset,
-            left_vertex_id = e.left_vertex_id + v_offset,
-            right_vertex_id = e.right_vertex_id + v_offset,
+            left_vertex_id = local_ids[e.left_vertex_id],
+            right_vertex_id = local_ids[e.right_vertex_id],
             sampled_points = e.sampled_points,
             is_singular = e.is_singular,
         )
@@ -1445,12 +1449,25 @@ function decompose_3d_surface(
 
     # Global id high-water marks. With incidence = false these track exactly the
     # `maximum(v.id for v in all_vertices)` values the pre-9a code computed (ids
-    # grow monotonically), so slab renumbering is unchanged; with incidence = true
-    # they additionally advance past lazily-created crit-slice cell ids, keeping
-    # ONE collision-free namespace across both containers regardless of the
-    # (lazy) order in which slabs and crit-slices are numbered.
+    # grow monotonically), so slab renumbering is unchanged.
     v_hwm = 0
     e_hwm = 0
+
+    # Phase 10, Stage 2: incidence = true routes VERTEX id assignment through a
+    # single, persistent VertexRegistry (Phase 10, Stage 1) shared by every slab
+    # and every crit-slice, instead of the v_hwm positional-offset scheme above --
+    # geometrically coincident vertices produced by different calls now share one
+    # canonical id (nearest-match within cfg.vertex_match_tol), mirroring
+    # BertiniReal's shared vertex-set architecture. This is an id-bookkeeping
+    # change ONLY: register! may internally average coordinates when it merges,
+    # but that averaged value is never read back into any vertex actually stored
+    # in all_vertices/CritSlice.vertices/etc. (only the returned id is used), so
+    # no tracked coordinate moves in this stage. incidence = false never
+    # constructs this and stays on the v_hwm scheme, byte-identical to pre-Stage-2
+    # behavior. EDGE ids stay on the e_hwm positional scheme in BOTH modes --
+    # edges are distinct topological paths, not points, so there is no identity
+    # to merge; only their endpoint vertex ids are affected.
+    vertex_registry = incidence ? VertexRegistry{T}(cfg.vertex_match_tol) : nothing
 
     # Phase 9a/9b bookkeeping (all empty and untouched when incidence = false).
     crit_slice_cache = Dict{Int,CritSlice{T}}()
@@ -1474,8 +1491,9 @@ function decompose_3d_surface(
     # per boundary, shared by both adjacent slabs.
     function _crit_slice_for!(j::Int)
         haskey(crit_slice_cache, j) && return crit_slice_cache[j]
-        cs = _decompose_crit_slice(F, z_bounds[j], j, cfg, v_hwm, e_hwm)
-        v_hwm = max(v_hwm, maximum(v.id for v in cs.vertices; init = v_hwm))
+        # vertex_registry is always non-nothing here: _crit_slice_for! is only
+        # ever invoked from the incidence = true branch below.
+        cs = _decompose_crit_slice(F, z_bounds[j], j, cfg, vertex_registry, e_hwm)
         e_hwm = max(e_hwm, maximum(e.id for e in cs.edges; init = e_hwm))
         for e in cs.edges
             edge_spacing[e.id] = _edge_spacing(e)
@@ -1516,29 +1534,50 @@ function decompose_3d_surface(
         vertices_2d, edges_2d, z_mid = _robust_slice_at_z(F, patch, z_bottom, z_top, cfg)
 
         # Each slice_at_z / decompose_1d_curve restarts ids near 1. Concatenating
-        # slabs without offsets would collide namespaces (not geometric merges —
-        # each slab has a distinct z_mid). Offset vertex and edge ids independently
-        # (same separation decompose_1d_curve keeps within one call); shift
-        # left/right_vertex_id by the vertex offset. Analogue of Topology.jl's
-        # `offset = maximum(v.id for v in crit_vertices)` pattern, across slabs.
-        v_offset = v_hwm
+        # slabs without offsets would collide namespaces. Edge ids: offset by
+        # e_hwm unconditionally (unchanged positional scheme in both modes).
+        # Vertex ids: incidence = false offsets by v_hwm exactly as before
+        # (byte-identical); incidence = true instead registers each raw vertex
+        # into the shared vertex_registry (Phase 10, Stage 2) so a vertex
+        # geometrically coincident with one already seen (in an earlier slab OR
+        # a crit-slice) gets the SAME id -- coordinates below are always the RAW
+        # ones, never the registry's merge-averaged copy.
         e_offset = e_hwm
 
-        vertices_renumbered = NativeVertex{T}[
-            NativeVertex{T}(id = v.id + v_offset, coordinates = v.coordinates, v_type = v.v_type, metadata = v.metadata)
-            for v in vertices_2d
-        ]
-        edges_renumbered = Edge{T}[
-            Edge{T}(
-                id = e.id + e_offset,
-                left_vertex_id = e.left_vertex_id + v_offset,
-                right_vertex_id = e.right_vertex_id + v_offset,
-                sampled_points = e.sampled_points,
-                is_singular = e.is_singular,
-            )
-            for e in edges_2d
-        ]
-        v_hwm = max(v_hwm, maximum(v.id for v in vertices_renumbered; init = v_hwm))
+        if incidence
+            local_ids = Dict{Int,Int}(v.id => register!(vertex_registry, v) for v in vertices_2d)
+            vertices_renumbered = NativeVertex{T}[
+                NativeVertex{T}(id = local_ids[v.id], coordinates = v.coordinates, v_type = v.v_type, metadata = v.metadata)
+                for v in vertices_2d
+            ]
+            edges_renumbered = Edge{T}[
+                Edge{T}(
+                    id = e.id + e_offset,
+                    left_vertex_id = local_ids[e.left_vertex_id],
+                    right_vertex_id = local_ids[e.right_vertex_id],
+                    sampled_points = e.sampled_points,
+                    is_singular = e.is_singular,
+                )
+                for e in edges_2d
+            ]
+        else
+            v_offset = v_hwm
+            vertices_renumbered = NativeVertex{T}[
+                NativeVertex{T}(id = v.id + v_offset, coordinates = v.coordinates, v_type = v.v_type, metadata = v.metadata)
+                for v in vertices_2d
+            ]
+            edges_renumbered = Edge{T}[
+                Edge{T}(
+                    id = e.id + e_offset,
+                    left_vertex_id = e.left_vertex_id + v_offset,
+                    right_vertex_id = e.right_vertex_id + v_offset,
+                    sampled_points = e.sampled_points,
+                    is_singular = e.is_singular,
+                )
+                for e in edges_2d
+            ]
+            v_hwm = max(v_hwm, maximum(v.id for v in vertices_renumbered; init = v_hwm))
+        end
         e_hwm = max(e_hwm, maximum(e.id for e in edges_renumbered; init = e_hwm))
 
         append!(all_vertices, vertices_renumbered)

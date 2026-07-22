@@ -176,4 +176,63 @@ println("  jacobian_rank_info at origin (BigFloat): rank=$(info_big.rank), singu
 @test eltype(info_big.singular_values) == BigFloat
 @test info_big.rank == 1
 
+println()
+println("=" ^ 70)
+println("8. Isosingular deflation Stage 1: estimate_corank / deflation_stabilized")
+println("=" ^ 70)
+
+# Toy singular curves, hand-verified against expected_rank = length(F.expressions)
+# (the SAME "full row rank == smooth point" convention intersect_bounding_object
+# already uses on a bare curve system -- J here is 1x2, not square).
+#
+# Node:  f_node(x,y) = y^2 - x^2 = (y-x)(y+x), an ordinary double point at (0,0).
+#   grad f_node = (-2x, 2y).
+#   At (0,0): J = [0 0]  -> rank 0 -> corank = 1 - 0 = 1.
+#   At (1,1) (on the y=x branch, f=0): J = [-2 2] -> rank 1 -> corank = 1 - 1 = 0.
+#
+# Cusp:  f_cusp(x,y) = y^2 - x^3, a cuspidal point at (0,0).
+#   grad f_cusp = (-3x^2, 2y).
+#   At (0,0): J = [0 0]  -> rank 0 -> corank = 1.
+#   At (1,1) (on the curve, f(1,1)=1-1=0): J = [-3 2] -> rank 1 -> corank = 0.
+#
+# First-order corank alone cannot distinguish a node from a cusp -- both are
+# corank-1 singularities of the bare Jacobian. Telling them apart needs a
+# further deflation iteration (Stage 2+, out of scope for this primitive) or
+# higher-order data. Both toy systems reporting the SAME corank (1) at their
+# singular point is the expected, hand-verified outcome, not a discrepancy.
+
+println("Setup: node f=y^2-x^2 and cusp f=y^2-x^3, both singular at (0,0)")
+
+@var xs ys
+f_node = ys^2 - xs^2
+f_cusp = ys^2 - xs^3
+F_node = System([f_node], variables = [xs, ys])
+F_cusp = System([f_cusp], variables = [xs, ys])
+
+c_node_origin = estimate_corank(F_node, ComplexF64[0, 0], cfg64)
+c_node_smooth = estimate_corank(F_node, ComplexF64[1, 1], cfg64)
+c_cusp_origin = estimate_corank(F_cusp, ComplexF64[0, 0], cfg64)
+c_cusp_smooth = estimate_corank(F_cusp, ComplexF64[1, 1], cfg64)
+
+println("  node  corank at (0,0) = $c_node_origin  (hand-computed: 1)")
+println("  node  corank at (1,1) = $c_node_smooth  (hand-computed: 0)")
+println("  cusp  corank at (0,0) = $c_cusp_origin  (hand-computed: 1)")
+println("  cusp  corank at (1,1) = $c_cusp_smooth  (hand-computed: 0)")
+
+@test c_node_origin == 1
+@test c_node_smooth == 0
+@test c_cusp_origin == 1
+@test c_cusp_smooth == 0
+
+println("  deflation_stabilized([1,1,0])  = ", deflation_stabilized([1, 1, 0]))
+println("  deflation_stabilized([1,0])    = ", deflation_stabilized([1, 0]))
+println("  deflation_stabilized([])       = ", deflation_stabilized(Int[]))
+println("  deflation_stabilized([1,1,1])  = ", deflation_stabilized([1, 1, 1]))
+
+@test deflation_stabilized([1, 1, 0]) == true
+@test deflation_stabilized([1, 0]) == true
+@test deflation_stabilized(Int[]) == false
+@test deflation_stabilized([1, 1, 1]) == false
+@test_throws ArgumentError deflation_stabilized([1, 2])
+
 end

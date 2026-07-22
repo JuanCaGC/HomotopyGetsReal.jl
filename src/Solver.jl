@@ -80,6 +80,78 @@ function _classify_vertex_type(
 end
 
 """
+    estimate_corank(F::System, point::AbstractVector, cfg::HomotopyConfig{T};
+                     expected_rank::Int = length(F.expressions)) where {T<:AbstractFloat}
+        -> Int
+
+Isosingular-deflation Stage 1 primitive (2026-07 investigation): the Julia/HC.jl
+analogue of BertiniReal's `nullSpace` corank estimate from `isosingular_deflation`
+(`src/symbolics/isosingular.cpp:5-134`, upstream `bertini_real` 1.9.0). BertiniReal
+gets this number from Bertini1's own `witnessGeneration` under `TrackType: 6` (an
+internal numerical-rank/SVD test, not visible in `bertini_real`'s own source); this
+reimplements the same quantity directly on top of [`jacobian_rank_info`](@ref),
+which already computes a genuinely `T`-generic SVD-based rank.
+
+`corank = expected_rank - rank(J)`. Defaults `expected_rank` to `length(F.expressions)`
+(full row rank == smooth/transversal point), matching the convention
+[`intersect_bounding_object`](@ref) already uses when calling
+[`_classify_vertex_type`](@ref) on a bare curve system; pass `expected_rank`
+explicitly for a pre-augmented or pre-sliced system where a different rank is
+the regular-point baseline.
+
+Note the scope boundary: this is a purely first-order (single-Jacobian-evaluation)
+quantity. It cannot by itself distinguish singularities that share the same
+first-order corank (e.g. a node vs. a cusp both report corank 1) -- doing so
+needs either a further deflation iteration (appending the minor equations and
+re-evaluating; Stage 2+, not implemented here) or higher-order data. This is
+expected behavior, not a bug -- see the Stage 1 verification in `test_solver.jl`.
+"""
+function estimate_corank(
+    F::System,
+    point::AbstractVector,
+    cfg::HomotopyConfig{T};
+    expected_rank::Int = length(F.expressions),
+) where {T<:AbstractFloat}
+    info = jacobian_rank_info(F, point, cfg)
+    return expected_rank - info.rank
+end
+
+"""
+    deflation_stabilized(corank_sequence::AbstractVector{<:Integer}) -> Bool
+
+Isosingular-deflation Stage 1 primitive: mirrors the two-part check
+`isosingular_deflation`'s outer loop performs on BertiniReal's corank sequence
+(`src/symbolics/isosingular.cpp:53-97`):
+
+1. The sequence must be nonincreasing -- BertiniReal treats an increase as a
+   hard error (`isosingular.cpp:80-85`, "the deflation sequence must be a
+   nonincreasing sequence"), not merely "not yet stabilized". Violated here by
+   throwing `ArgumentError`, for the same reason: an increase signals a
+   numerical failure in the corank estimate itself, not a legitimate
+   deflation state.
+2. Deflation has succeeded once the corank reaches `0` -- a regular
+   (full-rank) point of the current (possibly already-deflated) system, at
+   which Newton's method is once again quadratically convergent. This is the
+   standard Leykin-Verschelde-Zhao termination criterion; BertiniReal's own
+   `success` flag is computed inside Bertini1's closed internals
+   (`witnessGeneration`/`isosingular_summary`, not visible in `bertini_real`'s
+   own source), so this equivalence is asserted from the published theory, not
+   verified line-for-line against Bertini1 itself.
+
+Returns `false` (not yet stabilized) for an empty or nonzero-terminated
+sequence.
+"""
+function deflation_stabilized(corank_sequence::AbstractVector{<:Integer})
+    for i in 2:length(corank_sequence)
+        corank_sequence[i] <= corank_sequence[i-1] || throw(ArgumentError(
+            "corank sequence must be nonincreasing (BertiniReal isosingular.cpp:80-85); " *
+            "got $(corank_sequence[i-1]) -> $(corank_sequence[i]) at step $i",
+        ))
+    end
+    return !isempty(corank_sequence) && last(corank_sequence) == 0
+end
+
+"""
     _newton_polish(F::System, x0::Vector{Complex{T}}, cfg::HomotopyConfig{T}) where {T<:AbstractFloat}
 
 Refines `x0` (a solution of the square system `F`, typically obtained

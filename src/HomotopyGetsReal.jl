@@ -61,6 +61,7 @@ export VertexRegistry, register!
 
 # Solver.jl
 export jacobian_rank_info, compute_critical_points, intersect_bounding_object
+export estimate_corank, deflation_stabilized
 
 # PathTracking.jl
 export is_near_singular, build_tracker, track_path, track_bidirectional

@@ -512,45 +512,63 @@ end
 
 println()
 println("=" ^ 70)
-println("8b. Phase 9b: stitched-mesh naked-edge closure (the actual, honest outcome)")
+println("8b. Phase 9c: stitched-mesh naked-edge closure (the actual, honest outcome)")
 println("=" ^ 70)
 
-# Phase 9b's snap-unification + T-junction-split machinery (weld_mesh's
-# incidence path, exercised automatically since `mi` above came from
-# incidence = true) FULLY closes the two FOLD/POINT-type boundaries (cusp
-# z=-1, lobe tips z=1.2367) -- both match the sphere/ellipsoid pole-
-# convergence controls (0 naked edges) exactly. It does NOT fully close the
-# two multi-edge, multi-face EDGE-type boundaries (singular notch z=1.0,
-# saddle pair z=1.0648): diagnosed directly (2026-07) -- even with fully
-# consistent cross-face target assignment, a crit-slice edge's own sample
-# points are only partially touched by ANY swept column (e.g. one edge used
-# targets [1,2,4,7] of its own 8 samples; 3,5,6 receive no column landing
-# from any face), because the crit-slice's sampling and the swept columns'
-# arrival positions are two INDEPENDENT discretizations of the same curve.
-# Snapping onto existing targets, however consistently assigned, cannot
-# fabricate coverage that isn't there. Confirmed structural (not a
-# resolution artifact fixable by turning a density knob): edge_sample_density
-# 8/16/24 gave total naked-edge counts 58/158/248 -- WORSE, not better, as
-# density increases, since more independently-approaching columns spread
-# over more targets makes exact multi-face reconciliation harder. Closing
-# this requires a genuine conforming-triangulation/boundary-zippering step
-# (merge every side's vertex set along the shared crit-slice curve and
-# retriangulate against the union) -- a materially different and larger
-# algorithm than snap-and-split, deliberately DEFERRED as a scoped future
-# phase rather than guessed at here.
+# weld_mesh's incidence path (exercised automatically since `mi` above came
+# from incidence = true) layers THREE mechanisms: Phase 9b's snap-unification
+# (_snap_boundary_points!, closes fold/point-type boundaries COMPLETELY --
+# cusp z=-1, lobe tips z=1.2367 -- matching the sphere/ellipsoid pole-
+# convergence controls exactly, 0 naked edges, deterministic), then Phase
+# 9c's coordinated loft (_identify_edge_runs + _append_loft_triangles!:
+# full-coverage ribbon triangulation against a crit-slice edge's COMPLETE
+# sample sequence, not a snap-derived subset, plus seam-capping) and
+# _chained_edge_polylines + _split_t_junctions (T-junction fixing extended to
+# cover junction points SHARED between adjacent crit-slice edges, not just
+# within one edge's own polyline).
+#
+# Investigated directly (2026-07) whether a higher-fidelity, higher-risk
+# alternative -- BertiniReal-style targeted homotopy tracking toward known
+# crit-slice vertices ("Option A"), replacing free-sweep track_face hops --
+# would do meaningfully better than this loft approach ("Option B"):
+# measured precision showed no mechanism for Option A to beat DIRECT reuse
+# of already-Newton-polished crit-slice coordinates (parity at best, since
+# it necessarily adds tracker predictor-corrector error on top of converging
+# to the SAME target); not pursued.
+#
+# Measured on the multi-edge, multi-face EDGE-type boundaries (singular
+# notch z=1.0, saddle pair z=1.0648) -- the ONLY boundaries this reduces,
+# since fold/point-type boundaries were already fully closed by Phase 9b
+# alone: total naked edges 58 (Phase 9b only) -> 31-35 across 4 repeated
+# fixed-axis decomposes (2026-07) -- a genuine, substantial reduction, NOT a
+# full closure. The run-to-run spread (31/33/34/35, z=1.0 in [16,19], z=1.0648
+# in [15,17]) is the SAME already-documented cross-process HC.jl solver
+# jitter this file's rotated-seed-1 section exists to characterize (affects
+# crit-slice sample coordinates by tiny amounts, which this file's finer
+# per-column confidence/bridge-DP decisions are visibly more sensitive to
+# than Phase 9b's coarser snap ever was) -- hence loose, not exact, bounds
+# below for the multi-edge boundaries specifically. Diagnosed but NOT fully
+# resolved: roughly a third of the residual is genuine cross-edge-junction
+# cases the chaining did not close, a third seam artifacts at run
+# boundaries the capping did not fully reach, and a third UNDIAGNOSED after
+# three separate investigation attempts -- confirmed not a resolution
+# artifact (matching Phase 9b's own finding for edge_sample_density). Full
+# closure is DEFERRED as a future, separately-scoped phase, same treatment
+# as full singular-curve decomposition.
 naked_stitched = HomotopyGetsReal._naked_mesh_edges(mi)
 mi_pts = GeometryBasics.coordinates(mi)
 count_stitched_near(zc) = count(((i, j),) -> abs((mi_pts[i][3] + mi_pts[j][3]) / 2 - zc) < 0.01, naked_stitched)
 println("  stitched-mesh naked edges: $(length(naked_stitched)) total | z=-1: $(count_stitched_near(-1.0))  z=1: $(count_stitched_near(1.0))  z=1.0648: $(count_stitched_near(1.0648))  z=1.2367: $(count_stitched_near(1.2367))")
-println("  (unstitched baseline was 188 = 10/70/84/24 -- see section 7)")
-@test length(naked_stitched) == 58
-@test count_stitched_near(-1.0) == 0
-@test count_stitched_near(1.0) == 26
-@test count_stitched_near(1.0648) == 32
-@test count_stitched_near(1.2367) == 0
+println("  (unstitched baseline was 188 = 10/70/84/24, Phase 9b-only baseline was 58 = 0/26/32/0 -- see section 7)")
+@test count_stitched_near(-1.0) == 0        # fold-type: deterministic, exact (Phase 9b alone already closes this)
+@test count_stitched_near(1.2367) == 0      # fold-type: deterministic, exact (Phase 9b alone already closes this)
+@test length(naked_stitched) < 58           # genuine improvement over Phase 9b -- not exact, see jitter note above
+@test length(naked_stitched) <= 40          # regression guard around the measured 31-35 range
 println("  fold/point-type boundaries (cusp, tips) FULLY closed, matching sphere/ellipsoid")
-println("  pole-convergence controls exactly. Multi-face edge-type boundaries reduced but")
-println("  not closed -- see comment above for the diagnosed root cause and the deferred fix.")
+println("  pole-convergence controls exactly. Multi-face edge-type boundaries substantially")
+println("  reduced (58 -> 31-35) but not closed -- see comment above for the diagnosis and")
+println("  the deferred fix; loose bounds here reflect measured HC.jl cross-process jitter,")
+println("  not a weaker guarantee about the mechanism itself.")
 
 println()
 println("=" ^ 70)

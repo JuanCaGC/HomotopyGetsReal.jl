@@ -572,16 +572,31 @@ Returned as the 5th element of [`decompose_3d_surface`](@ref) when
   for fold-type boundaries (0 when none).
 - `edge_faces`: inverse adjacency, crit-slice edge id → face ids touching it.
 - `column_landings_bottom` / `column_landings_top`: face id → per-column
-  [`ColumnLanding`](@ref) in curve order — the raw data for Phase 9b's
-  branch-continuity check.
+  [`ColumnLanding`](@ref) in curve order.
+- `critical_vertices` (Phase 9b): the surface's 3D critical points (fold-type
+  landing anchors), stored so `:critical_point`-kind landing ids resolve to
+  coordinates — needed for snap-unification, not stored in Phase 9a since
+  nothing there looked them up by id after assignment.
+- `continuity_ok` (Phase 9b): face id → `true` iff every pair of CONFIDENT
+  (see `_landing_confidence`) consecutive columns, on both sides, lands on
+  combinatorially adjacent crit-slice cells (see `_cells_adjacent`). Absent
+  keys mean the face touched no crit-slice (both sides `:bbox`/empty).
+- `continuity_violations_bottom` / `continuity_violations_top` (Phase 9b):
+  face id → indices `c` of violating consecutive pairs `(c, c+1)`.
 
-Phase 9a is pure measurement: no continuity checking, no thresholds, no
-welding changes. Promoting the eventual continuity check from a warn/flag to
-a hard error is a deliberate FUTURE decision contingent on the firing-rate
-evidence this structure gathers — not something decided now.
+Promoting `continuity_ok` from a flag to a hard error is a deliberate FUTURE
+decision contingent on the firing-rate evidence this structure gathers on
+real fixtures — not something decided now. Measured on the Taubin heart
+(2026-07): fixed-axis 10/14 faces `continuity_ok` (16 flagged pairs),
+rotated seed 1 15/22 faces (17 flagged pairs); sphere/ellipsoid (single
+fold-type boundary each) show zero. The flagged pairs concentrate at the
+SAME multi-face edge-type boundaries `weld_mesh`'s Phase 9b docstring
+section documents as an open coverage-gap issue — this is exactly the
+evidence-gathering this field exists for, not a surprise finding.
 """
 struct SurfaceIncidence{T<:AbstractFloat}
     crit_slices::Vector{CritSlice{T}}
+    critical_vertices::Vector{NativeVertex{T}}
     face_bottom_edges::Dict{Int,Vector{Int}}
     face_top_edges::Dict{Int,Vector{Int}}
     face_bottom_anchor::Dict{Int,Int}
@@ -589,6 +604,9 @@ struct SurfaceIncidence{T<:AbstractFloat}
     edge_faces::Dict{Int,Vector{Int}}
     column_landings_bottom::Dict{Int,Vector{ColumnLanding{T}}}
     column_landings_top::Dict{Int,Vector{ColumnLanding{T}}}
+    continuity_ok::Dict{Int,Bool}
+    continuity_violations_bottom::Dict{Int,Vector{Int}}
+    continuity_violations_top::Dict{Int,Vector{Int}}
 end
 
 """
@@ -690,14 +708,186 @@ function _assign_landings(
 end
 
 """
+    _median_spacing(pts::Vector{Vector{T}}) where {T<:AbstractFloat} -> T
+
+Median consecutive-point spacing along an ordered point sequence (a
+crit-slice edge's `sampled_points`, or one face side's landing points) --
+the local chord/column scale Phase 9b's confidence gate measures distances
+against. `< 2` points gives `zero(T)` (no local scale defined).
+"""
+function _median_spacing(pts::Vector{Vector{T}}) where {T<:AbstractFloat}
+    length(pts) < 2 && return zero(T)
+    seglens = sort(T[norm(pts[k+1] .- pts[k]) for k in 1:(length(pts)-1)])
+    return seglens[cld(length(seglens), 2)]
+end
+
+_edge_spacing(edge::Edge{T}) where {T<:AbstractFloat} = _median_spacing(edge.sampled_points)
+
+"""
+    _inward_row_points(face::Face{T}, side::Symbol, n_z::Int, n_curve::Int) where {T<:AbstractFloat} -> Vector{Vector{T}}
+
+The row ONE STEP IN from `side`'s boundary row of `face`'s swept grid
+(`side = :bottom` -> row 2, `side = :top` -> row `n_z - 1`), read directly
+from `face.mesh_vertices` (interior rows are never mutated by snapping).
+Used as the local-scale reference for `:crit_slice_vertex`/`:critical_point`
+confidence (see [`_landing_confidence`](@ref)): the BOUNDARY row's own
+inter-column spacing collapses toward zero at a converging fold point (every
+column approaching the SAME limit), which self-referentially defeats a ratio
+check against the very distance it is supposed to bound. Measured on the
+fixed-axis Taubin cusp (2026-07): boundary-row spacing `0.00355` vs a
+landing distance of `0.0037` (fails a `1.5x` ratio against itself) while the
+row-inward spacing is `0.0982` (comfortably passes) -- the SAME columns,
+one ring earlier, before they have collapsed together.
+"""
+function _inward_row_points(face::Face{T}, side::Symbol, n_z::Int, n_curve::Int) where {T<:AbstractFloat}
+    r = side === :bottom ? 2 : n_z - 1
+    return Vector{T}[Vector{T}(face.mesh_vertices[(r-1)*n_curve+c, :]) for c in 1:n_curve]
+end
+
+"""
+    _landing_confidence(point, landing, edge_spacing, scale_ref, patch, cfg) where {T<:AbstractFloat} -> Bool
+
+Phase 9b: whether `landing` is confident enough to participate in EITHER
+snap-unification ([`_snap_boundary_points!`](@ref)) or the continuity check
+([`_check_continuity!`](@ref)) -- the SAME gate for both, per the Phase 9b
+design. An `:edge` landing is confident within
+`cfg.incidence_snap_tol_ratio` times its assigned edge's local chord spacing
+(`edge_spacing`) AND within `cfg.critical_point_tol` surface residual --
+calibrated against the Phase 8 singular-band evidence, where off-surface
+`:edge` landings measure residual `~0.257` (six orders above the default
+`critical_point_tol`) while on-surface ones measure `~1e-17`, a clean,
+well-separated gap.
+
+A `:crit_slice_vertex`/`:critical_point` landing is confident within the
+SAME ratio of `scale_ref` (the [`_inward_row_points`](@ref) spacing -- a
+single point has no chord spacing of its own) but is NOT additionally
+residual-gated: measured on the fixed-axis Taubin cusp, genuinely converging
+columns can carry surface residual `~2e-6` (just over the default
+`critical_point_tol = 1e-6`) purely from Newton's convergence rate slowing
+near a multiple root (the same phenomenon `_newton_polish`'s own docstring
+notes elsewhere in this codebase) -- not an off-surface signal the way it is
+for `:edge` landings, since a fold/point cell has no "incomplete branch
+representation" failure mode to guard against. Snapping such a point only
+IMPROVES its on-surface quality (it moves TO the cell's own, independently
+validated, near-machine-precision coordinates), so omitting the residual
+gate here carries no correctness risk once the distance ratio itself is
+sound. `:bbox`/`:none` landings are never confident.
+"""
+function _landing_confidence(
+    point::AbstractVector{T},
+    landing::ColumnLanding{T},
+    edge_spacing::Dict{Int,T},
+    scale_ref::T,
+    patch::NamedTuple,
+    cfg::HomotopyConfig{T},
+) where {T<:AbstractFloat}
+    landing.kind in (:edge, :crit_slice_vertex, :critical_point) || return false
+    scale = landing.kind === :edge ? get(edge_spacing, landing.id, zero(T)) : scale_ref
+    scale > zero(T) || return false
+    landing.dist <= cfg.incidence_snap_tol_ratio * scale || return false
+    landing.kind === :edge || return true
+    resid = _residual_at(patch, T(point[1]), T(point[2]), T(point[3]), cfg)
+    return abs(resid) <= cfg.critical_point_tol
+end
+
+"""
+    _cells_adjacent(cs::CritSlice{T}, a::ColumnLanding{T}, b::ColumnLanding{T}) where {T<:AbstractFloat} -> Bool
+
+Combinatorial adjacency of two landing assignments on the SAME crit-slice
+`cs`: identical cells, two `:edge`s sharing an endpoint vertex id, or an
+`:edge` and one of its own endpoint `:crit_slice_vertex`. Every other kind
+combination (including any pairing involving `:critical_point`, or two
+distinct `:crit_slice_vertex` ids) is NOT adjacent -- deliberately
+conservative: at a degenerate (fold-type) boundary distinct vertex/anchor ids
+represent genuinely different points, and flagging non-adjacency there is
+safe under Phase 9b's warn-not-error policy. Used only by
+[`_check_continuity!`](@ref); `:bbox`/`:none` landings never reach this call
+(excluded by [`_landing_confidence`](@ref) first).
+"""
+function _cells_adjacent(cs::CritSlice{T}, a::ColumnLanding{T}, b::ColumnLanding{T}) where {T<:AbstractFloat}
+    a.kind === b.kind && a.id == b.id && return true
+    _endpoints(eid) = begin
+        e = only(filter(x -> x.id == eid, cs.edges))
+        (e.left_vertex_id, e.right_vertex_id)
+    end
+    if a.kind === :edge && b.kind === :edge
+        la, ra = _endpoints(a.id)
+        lb, rb = _endpoints(b.id)
+        return la in (lb, rb) || ra in (lb, rb)
+    elseif a.kind === :edge && b.kind === :crit_slice_vertex
+        la, ra = _endpoints(a.id)
+        return b.id == la || b.id == ra
+    elseif a.kind === :crit_slice_vertex && b.kind === :edge
+        return _cells_adjacent(cs, b, a)
+    else
+        return false
+    end
+end
+
+"""
+    _check_continuity!(face_id, points, landings, cs, edge_spacing, scale_ref_points, patch, cfg, ok_dict, viol_dict)
+
+Phase 9b branch-continuity check for ONE face side: for every pair of
+consecutive columns that are BOTH confident (see
+[`_landing_confidence`](@ref)), their assigned cells must be
+[`_cells_adjacent`](@ref); any confirmed non-adjacent pair sets
+`ok_dict[face_id] = false` (ANDed with whatever the other side already
+recorded) and appends the left column's index to `viol_dict[face_id]`. Never
+throws -- Phase 9b's approved policy is warn/flag, not error; promotion to a
+hard error is a deliberate future decision. `cs === nothing` (a bbox-type
+boundary) or fewer than 2 columns trivially passes.
+
+The confidence gate is what makes this check meaningful rather than noisy:
+distances beyond `cfg.incidence_snap_tol_ratio * scale` are exactly the
+ambiguous cases (chord error near coarse crit-slice sampling, or the Phase 8
+singular-band seams) where a jump/no-jump call would be unfounded, so those
+pairs are recorded as inconclusive instead of flagged. This is a documented
+resolution limit: two branches closer together than roughly `2 *`
+the local chord spacing are not distinguishable from a jump at a given
+crit-slice sampling density.
+"""
+function _check_continuity!(
+    face_id::Int,
+    points::Vector{Vector{T}},
+    landings::Vector{ColumnLanding{T}},
+    cs::Union{CritSlice{T},Nothing},
+    edge_spacing::Dict{Int,T},
+    scale_ref_points::Vector{Vector{T}},
+    patch::NamedTuple,
+    cfg::HomotopyConfig{T},
+    ok_dict::Dict{Int,Bool},
+    viol_dict::Dict{Int,Vector{Int}},
+) where {T<:AbstractFloat}
+    viol_dict[face_id] = get(viol_dict, face_id, Int[])
+    if cs === nothing || length(points) < 2
+        ok_dict[face_id] = get(ok_dict, face_id, true)
+        return nothing
+    end
+    scale_ref = _median_spacing(scale_ref_points)
+    confident = Bool[_landing_confidence(points[c], landings[c], edge_spacing, scale_ref, patch, cfg) for c in eachindex(points)]
+    ok = get(ok_dict, face_id, true)
+    for c in 1:(length(points) - 1)
+        (confident[c] && confident[c+1]) || continue
+        if !_cells_adjacent(cs, landings[c], landings[c+1])
+            ok = false
+            push!(viol_dict[face_id], c)
+        end
+    end
+    ok_dict[face_id] = ok
+    return nothing
+end
+
+"""
     _map_incidence_to_world(inc::SurfaceIncidence{T}, Q::Matrix{Float64}) -> SurfaceIncidence{T}
 
 World-maps a chart-frame [`SurfaceIncidence`](@ref) under a Phase 8
-projection: each `CritSlice`'s vertices/edges rotate exactly like the main
-decomposition's cells in `_map_to_world`; ids, adjacency dicts, and landing
-assignments are frame-free (`dist` is rotation-invariant) and carried over
-unchanged. Lives here rather than Projection.jl because the incidence structs
-are defined in this file (include order: Projection.jl precedes it).
+projection: each `CritSlice`'s vertices/edges and `critical_vertices` rotate
+exactly like the main decomposition's cells in `_map_to_world`; ids,
+adjacency dicts, landing assignments, and continuity data are frame-free
+(`dist` is rotation-invariant, adjacency and continuity are purely
+combinatorial) and carried over unchanged. Lives here rather than
+Projection.jl because the incidence structs are defined in this file
+(include order: Projection.jl precedes it).
 """
 function _map_incidence_to_world(inc::SurfaceIncidence{T}, Q::Matrix{Float64}) where {T<:AbstractFloat}
     QT = Matrix{T}(Q)
@@ -723,8 +913,13 @@ function _map_incidence_to_world(inc::SurfaceIncidence{T}, Q::Matrix{Float64}) w
         )
         for cs in inc.crit_slices
     ]
+    critical_vertices = NativeVertex{T}[
+        NativeVertex{T}(id = v.id, coordinates = QT * v.coordinates, v_type = v.v_type, metadata = v.metadata)
+        for v in inc.critical_vertices
+    ]
     return SurfaceIncidence{T}(
         crit_slices,
+        critical_vertices,
         inc.face_bottom_edges,
         inc.face_top_edges,
         inc.face_bottom_anchor,
@@ -732,11 +927,254 @@ function _map_incidence_to_world(inc::SurfaceIncidence{T}, Q::Matrix{Float64}) w
         inc.edge_faces,
         inc.column_landings_bottom,
         inc.column_landings_top,
+        inc.continuity_ok,
+        inc.continuity_violations_bottom,
+        inc.continuity_violations_top,
     )
 end
 
 """
-    weld_mesh(faces::Vector{Face{T}}, patch::NamedTuple, cfg::HomotopyConfig{T}) where {T<:AbstractFloat}
+    _monotone_snap_targets(points::Vector{Vector{T}}, targets::Vector{Vector{T}}) where {T<:AbstractFloat} -> Vector{Int}
+
+Phase 9b: assigns each of `points` (a contiguous, same-crit-slice-edge run of
+one face side's swept columns, in curve order) to a target index into
+`targets` (that edge's Gauss-Newton re-projected samples, also in curve
+order), minimizing total assignment distance SUBJECT TO the assigned indices
+being monotone (whichever of non-decreasing / non-increasing gives lower
+total cost) in the SAME order as `points`.
+
+Motivated directly by measurement: plain nearest-target assignment (no
+monotonicity constraint) was checked on the fixed-axis Taubin `z=1.0`
+boundary and visits targets non-monotonically on more than half of same-edge
+column runs (4/8 sides monotone without this constraint, 16/56 segments
+spanning >= 2 targets) -- which would zigzag the welded boundary. This DP
+eliminates that by construction: `O(n*m)` two-pass (one per direction)
+dynamic program with a running-prefix-minimum (`n = length(points)`,
+`m = length(targets)`), trivial at realistic sizes.
+
+Known scope limit: the DP searches the FULL target list, not a local window,
+so a self-intersecting or sharply doubling-back crit-slice edge could in
+principle attract a run to a distant, geometrically-unrelated section of the
+SAME edge. Not observed on any fixture measured so far; flagged rather than
+guarded against, per this project's "don't guess ahead of evidence" practice.
+"""
+function _monotone_snap_targets(points::Vector{Vector{T}}, targets::Vector{Vector{T}}) where {T<:AbstractFloat}
+    n = length(points)
+    m = length(targets)
+    n == 0 && return Int[]
+
+    function solve(increasing::Bool)
+        dp = fill(T(Inf), n, m)
+        prev = zeros(Int, n, m)
+        for j in 1:m
+            dp[1, j] = norm(points[1] .- targets[j])
+        end
+        for i in 2:n
+            jr = increasing ? (1:m) : (m:-1:1)
+            runmin = T(Inf)
+            runarg = 0
+            for j in jr
+                if dp[i-1, j] < runmin
+                    runmin = dp[i-1, j]
+                    runarg = j
+                end
+                dp[i, j] = runmin + norm(points[i] .- targets[j])
+                prev[i, j] = runarg
+            end
+        end
+        jbest = argmin(view(dp, n, :))
+        path = Vector{Int}(undef, n)
+        path[n] = jbest
+        for i in n:-1:2
+            path[i-1] = prev[i, path[i]]
+        end
+        return path, dp[n, jbest]
+    end
+
+    path_inc, cost_inc = solve(true)
+    path_dec, cost_dec = solve(false)
+    return cost_inc <= cost_dec ? path_inc : path_dec
+end
+
+"""
+    _snap_boundary_points!(all_points, index_of, faces, incidence, patch, cfg) where {T<:AbstractFloat} -> Dict{Tuple{Int,Int},Int}
+
+Phase 9b: mutates `all_points` in place, snapping every CONFIDENT (see
+[`_landing_confidence`](@ref)) boundary-column landing onto a shared target:
+`:edge`-kind landings in a contiguous same-edge column run snap to that
+edge's Gauss-Newton re-projected samples via
+[`_monotone_snap_targets`](@ref); `:crit_slice_vertex`/`:critical_point`-kind
+landings snap directly to that cell's own coordinates. Two faces whose
+columns both land near the SAME target now hold EXACTLY equal coordinates, so
+the subsequent `cluster_points_indexed` call merges them -- this is what
+closes the tolerance-welding cracks `_naked_mesh_edges` measures.
+Non-confident, `:bbox`, and `:none` landings are left untouched.
+
+Returns `target_flat_idx`: for every `(crit-slice edge id, target index)`
+pair actually used by some snapped column, ONE representative flat index into
+`all_points` -- consumed by [`_split_t_junctions`](@ref) after clustering to
+build each edge's used-target polyline.
+"""
+function _snap_boundary_points!(
+    all_points::Vector{Vector{T}},
+    index_of::Dict{Tuple{Int,Int},Int},
+    faces::Vector{Face{T}},
+    incidence::SurfaceIncidence{T},
+    patch::NamedTuple,
+    cfg::HomotopyConfig{T},
+) where {T<:AbstractFloat}
+    id_to_fi = Dict(f.id => i for (i, f) in enumerate(faces))
+
+    edge_spacing = Dict{Int,T}(e.id => _edge_spacing(e) for cs in incidence.crit_slices for e in cs.edges)
+    edge_targets = Dict{Int,Vector{Vector{T}}}()
+    for cs in incidence.crit_slices, e in cs.edges
+        tg = Vector{Vector{T}}(undef, length(e.sampled_points))
+        for (k, p) in enumerate(e.sampled_points)
+            xr, yr = _project_to_slice(patch, p[1], p[2], cs.z, cfg)
+            tg[k] = T[xr, yr, cs.z]
+        end
+        edge_targets[e.id] = tg
+    end
+    cell_point_vertex = Dict{Int,Vector{T}}()
+    for cs in incidence.crit_slices, v in cs.vertices
+        cell_point_vertex[v.id] = T[real(v.coordinates[1]), real(v.coordinates[2]), cs.z]
+    end
+    cell_point_anchor = Dict{Int,Vector{T}}(
+        v.id => T[real(v.coordinates[1]), real(v.coordinates[2]), real(v.coordinates[3])]
+        for v in incidence.critical_vertices
+    )
+
+    target_flat_idx = Dict{Tuple{Int,Int},Int}()
+
+    # Pass 1: snap :crit_slice_vertex/:critical_point immediately (every column
+    # confidently assigned to the SAME cell gets the exact same coordinates
+    # regardless of which face touches it -- no cross-face coordination needed).
+    # :edge-kind confident columns are POOLED by crit-slice edge id, across ALL
+    # faces, for a joint assignment in pass 2 (see its own comment for why).
+    pooled_edge_cols = Dict{Int,Vector{Tuple{Int,Vector{T}}}}()
+    for face in faces
+        n_pts = size(face.mesh_vertices, 1)
+        n_pts == 0 && continue
+        n_z = 2 * cfg.midslice_sample_density + 1
+        n_curve = n_pts ÷ n_z
+        fi = id_to_fi[face.id]
+
+        for (landings_dict, row_of, side) in (
+            (incidence.column_landings_bottom, c -> c, :bottom),
+            (incidence.column_landings_top, c -> (n_z - 1) * n_curve + c, :top),
+        )
+            haskey(landings_dict, face.id) || continue
+            landings = landings_dict[face.id]
+            length(landings) == n_curve || continue
+
+            flat_idxs = [index_of[(fi, row_of(c))] for c in 1:n_curve]
+            points = [all_points[idx] for idx in flat_idxs]
+            scale_ref = _median_spacing(_inward_row_points(face, side, n_z, n_curve))
+
+            for c in 1:n_curve
+                _landing_confidence(points[c], landings[c], edge_spacing, scale_ref, patch, cfg) || continue
+                if landings[c].kind === :crit_slice_vertex
+                    all_points[flat_idxs[c]] = cell_point_vertex[landings[c].id]
+                elseif landings[c].kind === :critical_point
+                    all_points[flat_idxs[c]] = cell_point_anchor[landings[c].id]
+                elseif landings[c].kind === :edge
+                    entries = get!(pooled_edge_cols, landings[c].id, Tuple{Int,Vector{T}}[])
+                    push!(entries, (flat_idxs[c], points[c]))
+                end
+            end
+        end
+    end
+
+    # Pass 2: per crit-slice edge, jointly monotone-assign ALL pooled columns
+    # from EVERY face at once. A per-face-only pass (each face's own contiguous
+    # column run monotone-snapped independently, with no visibility into other
+    # faces touching the SAME crit-slice edge) was tried first and found
+    # insufficient: measured on the fixed-axis Taubin z=1.0648 boundary, two
+    # different faces approaching the SAME crit-slice edge from different
+    # directions picked internally-monotone but MUTUALLY INCONSISTENT target
+    # subsets (e.g. one face -> targets [1,2,2,3], another -> [6,1]) -- each
+    # individually valid, but not zippering together, leaving naked edges
+    # despite 100% landing confidence. Pooling first and assigning once fixes
+    # this by construction. Columns are rough-presorted by their own nearest
+    # (unconstrained) target index before the monotone DP, giving it a
+    # sensible starting order across faces with no other ordering relationship.
+    for (eid, entries) in pooled_edge_cols
+        tg = edge_targets[eid]
+        rough_idx(pt) = argmin(T[norm(pt .- t) for t in tg])
+        sort!(entries; by = e -> rough_idx(e[2]))
+        pts_only = Vector{T}[e[2] for e in entries]
+        assign = _monotone_snap_targets(pts_only, tg)
+        for (i, (flat_idx, _)) in enumerate(entries)
+            k = assign[i]
+            all_points[flat_idx] = tg[k]
+            haskey(target_flat_idx, (eid, k)) || (target_flat_idx[(eid, k)] = flat_idx)
+        end
+    end
+    return target_flat_idx
+end
+
+"""
+    _split_t_junctions(triangles::Vector{NTuple{3,Int}}, edge_polylines::Dict{Int,Vector{Int}}) -> Vector{NTuple{3,Int}}
+
+Phase 9b: fixes T-junctions left by [`_snap_boundary_points!`](@ref) --
+adjacent faces snapping to different, non-adjacent subsets of the same
+crit-slice edge's targets means a triangle's boundary edge can have OTHER
+faces' snapped points sitting on it as unconnected mesh vertices, which
+`_naked_mesh_edges` would still count as cracks. `edge_polylines` maps each
+crit-slice edge id to the ORDERED sequence of welded rep indices its USED
+targets collapsed to (built by the caller from
+[`_snap_boundary_points!`](@ref)'s `target_flat_idx` after clustering). For
+every triangle edge `(p, q)` whose both endpoints lie on the SAME polyline
+with intermediate polyline points between them, the triangle is fan-split
+against the opposite vertex along that sub-polyline -- preserving the
+original triangle's winding (the fan shares its cyclic order with the
+original `(p, q, r)`). Iterates to a fixed point (bounded at 4 passes,
+generous for the observed single-hop-per-edge case) since a fan split can in
+principle expose a new triangle edge that itself needs splitting.
+"""
+function _split_t_junctions(triangles::Vector{NTuple{3,Int}}, edge_polylines::Dict{Int,Vector{Int}})
+    on_polyline = Dict{Int,Tuple{Int,Int}}()
+    for (eid, seq) in edge_polylines, (pos, r) in enumerate(seq)
+        haskey(on_polyline, r) || (on_polyline[r] = (eid, pos))
+    end
+    isempty(on_polyline) && return triangles
+
+    function split_one_pass(tris)
+        out = NTuple{3,Int}[]
+        changed = false
+        for (a, b, c) in tris
+            replaced = false
+            for (p, q, r) in ((a, b, c), (b, c, a), (c, a, b))
+                (haskey(on_polyline, p) && haskey(on_polyline, q)) || continue
+                eid_p, pos_p = on_polyline[p]
+                eid_q, pos_q = on_polyline[q]
+                eid_p == eid_q || continue
+                lo, hi = pos_p < pos_q ? (pos_p, pos_q) : (pos_q, pos_p)
+                hi - lo <= 1 && continue
+                seq = edge_polylines[eid_p]
+                chain = pos_p < pos_q ? seq[lo:hi] : reverse(seq[lo:hi])
+                for k in 1:(length(chain) - 1)
+                    push!(out, (chain[k], chain[k+1], r))
+                end
+                replaced = true
+                changed = true
+                break
+            end
+            replaced || push!(out, (a, b, c))
+        end
+        return out, changed
+    end
+
+    tris = triangles
+    for _ in 1:4
+        tris, changed = split_one_pass(tris)
+        changed || break
+    end
+    return tris
+end
+
+"""
+    weld_mesh(faces::Vector{Face{T}}, patch::NamedTuple, cfg::HomotopyConfig{T}; incidence = nothing) where {T<:AbstractFloat}
         -> GeometryBasics.Mesh
 
 Merge per-face meshes into one watertight `GeometryBasics.Mesh`.
@@ -751,18 +1189,63 @@ indices, drops degenerate triangles, and flips winding so normals align with
 - `patch::NamedTuple`: surface patch system (for gradient-based winding).
 - `cfg::HomotopyConfig{T}`: vertex-matching tolerance.
 
+# Keyword arguments (Phase 9b)
+- `incidence`: `nothing` (default) is the exact pre-Phase-9b behavior --
+  tolerance-only welding, byte-identical code path. A [`SurfaceIncidence`](@ref)
+  (from `decompose_3d_surface(...; incidence = true)`) additionally snaps
+  confident boundary-column landings onto shared crit-slice targets
+  ([`_snap_boundary_points!`](@ref)) before clustering (pooled across ALL
+  faces touching a given crit-slice edge, then jointly monotone-assigned --
+  see that function's own docstring for why a per-face-only pass is
+  insufficient), then fixes resulting T-junctions
+  ([`_split_t_junctions`](@ref)) after.
+
+  Measured on the fixed-axis Taubin fixture (2026-07): `_naked_mesh_edges`
+  drops from 188 to 58 (69%). The two FOLD/POINT-type boundaries (cusp,
+  lobe tips -- where all approaching columns converge to a single point)
+  close COMPLETELY (0 naked edges, matching the sphere/ellipsoid pole
+  controls exactly). The two multi-edge, multi-face EDGE-type boundaries
+  (the singular notch, the saddle pair) reduce substantially but do NOT
+  fully close: even with fully consistent cross-face assignment, a
+  crit-slice edge's own sample points are only PARTIALLY touched by any
+  swept column (measured: one edge's 8 samples had only 4 touched, e.g.
+  `[1,2,4,7]`), because the crit-slice's sampling and the swept columns'
+  arrival positions are two INDEPENDENT discretizations of the same curve --
+  snapping onto existing targets cannot fabricate coverage that isn't there.
+  Confirmed structural, not a resolution artifact: `edge_sample_density` of
+  8/16/24 gave TOTAL naked-edge counts of 58/158/248 -- WORSE with density,
+  since more independently-approaching columns spread over more targets
+  makes exact multi-face reconciliation harder, not easier. Closing this
+  fully requires a genuine conforming-triangulation/boundary-zippering step
+  (merge every side's vertex set along the shared crit-slice curve and
+  retriangulate against the union) -- deliberately DEFERRED as a future,
+  separately-scoped phase rather than attempted here; see
+  `test/test_taubin.jl`'s Phase 9b section for the exact measured numbers.
+
 # Returns
 A welded `GeometryBasics.Mesh` with `Point3f` vertices.
 """
-function weld_mesh(faces::Vector{Face{T}}, patch::NamedTuple, cfg::HomotopyConfig{T}) where {T<:AbstractFloat}
+function weld_mesh(
+    faces::Vector{Face{T}},
+    patch::NamedTuple,
+    cfg::HomotopyConfig{T};
+    incidence::Union{Nothing,SurfaceIncidence{T}} = nothing,
+) where {T<:AbstractFloat}
     # Adjacent faces share boundary geometry (position-based merge, not id offset).
     all_points = Vector{T}[]
     provenance = Tuple{Int,Int}[]
+    index_of = Dict{Tuple{Int,Int},Int}()
     for (fi, face) in enumerate(faces)
         for r in 1:size(face.mesh_vertices, 1)
             push!(all_points, face.mesh_vertices[r, :])
             push!(provenance, (fi, r))
+            index_of[(fi, r)] = length(all_points)
         end
+    end
+
+    target_flat_idx = Dict{Tuple{Int,Int},Int}()
+    if incidence !== nothing
+        target_flat_idx = _snap_boundary_points!(all_points, index_of, faces, incidence, patch, cfg)
     end
 
     reps, membership = cluster_points_indexed(all_points, cfg.vertex_match_tol)
@@ -791,6 +1274,21 @@ function weld_mesh(faces::Vector{Face{T}}, patch::NamedTuple, cfg::HomotopyConfi
         push!(fixed_triangles, dot(n, T[gx, gy, gz]) < 0 ? (g1, g3, g2) : (g1, g2, g3))
     end
 
+    if incidence !== nothing
+        edge_polylines = Dict{Int,Vector{Int}}()
+        for cs in incidence.crit_slices, e in cs.edges
+            seq = Int[]
+            for k in eachindex(e.sampled_points)
+                idx = get(target_flat_idx, (e.id, k), 0)
+                idx == 0 && continue
+                r = membership[idx]
+                (isempty(seq) || seq[end] != r) && push!(seq, r)
+            end
+            isempty(seq) || (edge_polylines[e.id] = seq)
+        end
+        fixed_triangles = _split_t_junctions(fixed_triangles, edge_polylines)
+    end
+
     # Cluster at T-precision; narrow to Float32 only for the GeometryBasics.Mesh container.
     points3 = [GeometryBasics.Point3f(Float32(p[1]), Float32(p[2]), Float32(p[3])) for p in reps]
     tris = [GeometryBasics.TriangleFace{Int}(t[1], t[2], t[3]) for t in fixed_triangles]
@@ -802,11 +1300,16 @@ end
 
 Watertightness audit utility (Phase 9a, permanent): the undirected mesh edges
 that belong to exactly ONE triangle. A surface closed within the bounding box
-should have none; the current tolerance-only `weld_mesh` measurably leaves
-cracks along interior crit-slice boundaries (fixed-axis Taubin baseline,
-verified deterministic across sessions: 188 naked edges — 10 at z=-1, 70 at
-z=1.0, 84 at z=1.0648, 24 at z=1.2367), which is the characterized defect
-Phase 9b's incidence-based stitching is meant to drive to zero. Asserted
+should have none; the plain tolerance-only `weld_mesh` (`incidence = nothing`)
+measurably leaves cracks along interior crit-slice boundaries (fixed-axis
+Taubin baseline, verified deterministic across sessions: 188 naked edges —
+10 at z=-1, 70 at z=1.0, 84 at z=1.0648, 24 at z=1.2367). Phase 9b's
+incidence-based stitching (`weld_mesh(...; incidence = ...)`) closes this to
+58 (0/26/32/0) on the same fixture: FULLY at the fold/point-type boundaries
+(cusp, tips), partially at the multi-face edge-type boundaries (notch,
+saddle pair) — see `weld_mesh`'s own Phase 9b docstring section for the
+diagnosed root cause and why full closure there needs a separately-scoped
+future phase, not more of the same mechanism. Both baselines are asserted
 exactly in test/test_taubin.jl so any accidental shift is caught immediately.
 """
 function _naked_mesh_edges(mesh::GeometryBasics.Mesh)
@@ -854,16 +1357,27 @@ one `GeometryBasics.Mesh`. This is the 3D analogue of [`decompose_1d_curve`](@re
   [`random_orthogonal_matrix`](@ref) and pass the matrix explicitly --
   `:random` is convenience for exploratory use.
 - `rng`: random source used only by `projection = :random`.
-- `incidence` (Phase 9a): `false` (default) keeps the exact 4-tuple return and
-  a byte-identical code path (no crit-slice decompositions, no extra solves).
-  `true` additionally decomposes every interior slab boundary an actual face
+- `incidence` (Phase 9a/9b): `false` (default) keeps the exact 4-tuple return
+  and a byte-identical code path (no crit-slice decompositions, no extra
+  solves, `weld_mesh` runs its original tolerance-only welding). `true`
+  additionally decomposes every interior slab boundary an actual face
   touches (the crit-slices), assigns each face's boundary columns to
-  crit-slice cells (nearest-wins, distances recorded — never thresholded in
-  9a; see [`ColumnLanding`](@ref)), and returns a 5-tuple whose last element
-  is a [`SurfaceIncidence`](@ref). Composes with `projection` (incidence is
-  computed in the chart and world-mapped). Measured cost on the fixed-axis
-  Taubin fixture: ~+9 s on a ~16 s decompose (4 crit-slices + one extra
-  critical-point solve for fold anchors).
+  crit-slice cells (nearest-wins, distances recorded), checks branch
+  continuity between consecutive columns (flagged, not erred — see
+  `SurfaceIncidence.continuity_ok`), and passes the result into `weld_mesh`,
+  which additionally SNAPS confident landings onto shared crit-slice targets
+  before clustering and fixes any resulting T-junctions afterward (see
+  `weld_mesh`'s own Phase 9b section) — measured to reduce the fixed-axis
+  Taubin fixture's `_naked_mesh_edges` count from 188 to 58, closing the
+  fold/point-type boundaries completely and the multi-face edge-type
+  boundaries partially (see `weld_mesh`'s docstring for the diagnosed
+  reason full closure needs a separate future phase). Returns a 5-tuple
+  whose last element is a [`SurfaceIncidence`](@ref). Composes with
+  `projection` (incidence and stitching happen in the chart, then
+  world-map). Measured cost on the fixed-axis Taubin fixture: ~+9 s on a
+  ~16 s decompose (4 crit-slices + one extra critical-point solve for fold
+  anchors; snapping/splitting themselves are comparatively negligible, no
+  new solves).
 
 # Known limitation: generic projections over singular curves
 When a projection makes a positive-dimensional singular curve of the surface
@@ -938,7 +1452,7 @@ function decompose_3d_surface(
     v_hwm = 0
     e_hwm = 0
 
-    # Phase 9a bookkeeping (all empty and untouched when incidence = false).
+    # Phase 9a/9b bookkeeping (all empty and untouched when incidence = false).
     crit_slice_cache = Dict{Int,CritSlice{T}}()
     fold_anchors = incidence ? _surface_critical_vertices(F, cfg) : NativeVertex{T}[]
     face_bottom_edges = Dict{Int,Vector{Int}}()
@@ -948,6 +1462,12 @@ function decompose_3d_surface(
     edge_faces = Dict{Int,Vector{Int}}()
     column_landings_bottom = Dict{Int,Vector{ColumnLanding{T}}}()
     column_landings_top = Dict{Int,Vector{ColumnLanding{T}}}()
+    # Phase 9b: edge id -> local chord spacing (populated alongside crit-slice
+    # creation below), and the branch-continuity results.
+    edge_spacing = Dict{Int,T}()
+    continuity_ok = Dict{Int,Bool}()
+    continuity_violations_bottom = Dict{Int,Vector{Int}}()
+    continuity_violations_top = Dict{Int,Vector{Int}}()
 
     # Crit-slices exist only at INTERIOR bounds (j in 2:length(z_bounds)-1);
     # bbox endpoints have no critical value to decompose. Computed lazily, once
@@ -957,6 +1477,9 @@ function decompose_3d_surface(
         cs = _decompose_crit_slice(F, z_bounds[j], j, cfg, v_hwm, e_hwm)
         v_hwm = max(v_hwm, maximum(v.id for v in cs.vertices; init = v_hwm))
         e_hwm = max(e_hwm, maximum(e.id for e in cs.edges; init = e_hwm))
+        for e in cs.edges
+            edge_spacing[e.id] = _edge_spacing(e)
+        end
         crit_slice_cache[j] = cs
         return cs
     end
@@ -1042,21 +1565,32 @@ function decompose_3d_surface(
                 n_curve = size(face.mesh_vertices, 1) ÷ n_z
                 bottom_landings = [Vector{T}(face.mesh_vertices[c, :]) for c in 1:n_curve]
                 top_landings = [Vector{T}(face.mesh_vertices[(n_z - 1) * n_curve + c, :]) for c in 1:n_curve]
-                _record_side!(face.id, _assign_landings(bottom_landings, cs_bottom, fold_anchors, z_bottom, cfg),
-                              face_bottom_edges, face_bottom_anchor, column_landings_bottom)
-                _record_side!(face.id, _assign_landings(top_landings, cs_top, fold_anchors, z_top, cfg),
-                              face_top_edges, face_top_anchor, column_landings_top)
+                bottom_assigned = _assign_landings(bottom_landings, cs_bottom, fold_anchors, z_bottom, cfg)
+                top_assigned = _assign_landings(top_landings, cs_top, fold_anchors, z_top, cfg)
+                _record_side!(face.id, bottom_assigned, face_bottom_edges, face_bottom_anchor, column_landings_bottom)
+                _record_side!(face.id, top_assigned, face_top_edges, face_top_anchor, column_landings_top)
+                _check_continuity!(face.id, bottom_landings, bottom_assigned, cs_bottom, edge_spacing,
+                                    _inward_row_points(face, :bottom, n_z, n_curve), patch, cfg,
+                                    continuity_ok, continuity_violations_bottom)
+                _check_continuity!(face.id, top_landings, top_assigned, cs_top, edge_spacing,
+                                    _inward_row_points(face, :top, n_z, n_curve), patch, cfg,
+                                    continuity_ok, continuity_violations_top)
             end
 
             next_face_id += 1
         end
     end
 
-    mesh = weld_mesh(all_faces, patch, cfg)
-    incidence || return all_vertices, all_edges, all_faces, mesh
+    if !incidence
+        mesh = weld_mesh(all_faces, patch, cfg)
+        return all_vertices, all_edges, all_faces, mesh
+    end
 
+    # Phase 9b: SurfaceIncidence is assembled BEFORE weld_mesh so its snap-
+    # unification / T-junction stitching can consume it.
     surface_incidence = SurfaceIncidence{T}(
         sort!(collect(values(crit_slice_cache)); by = cs -> cs.boundary_index),
+        fold_anchors,
         face_bottom_edges,
         face_top_edges,
         face_bottom_anchor,
@@ -1064,6 +1598,10 @@ function decompose_3d_surface(
         edge_faces,
         column_landings_bottom,
         column_landings_top,
+        continuity_ok,
+        continuity_violations_bottom,
+        continuity_violations_top,
     )
+    mesh = weld_mesh(all_faces, patch, cfg; incidence = surface_incidence)
     return all_vertices, all_edges, all_faces, mesh, surface_incidence
 end

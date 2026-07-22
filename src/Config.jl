@@ -42,6 +42,7 @@ so `HomotopyConfig{BigFloat}()` gets full-precision literals.
 - `max_z_mid_retries`: Maximum perturbed-`z_mid` attempts in `_robust_slice_at_z`.
 - `z_mid_gradient_ratio_tol`: Minimum patch-direction strength ratio for accepting a slice.
 - `min_slab_width`: Resolution floor for z-slab boundaries; closer critical z-values are merged.
+- `incidence_snap_tol_ratio`: Chord-error-aware distance ratio gating Phase 9b snap-unification/continuity.
 """
 @with_kw struct HomotopyConfig{T<:AbstractFloat}
     # critical_point_tol: solution quality at compute_critical_points ("did the solver converge?").
@@ -89,4 +90,19 @@ so `HomotopyConfig{BigFloat}()` gets full-precision literals.
     # bounds are unchanged. This is a resolution limit: genuinely distinct critical values closer
     # than min_slab_width are not separated (same spirit as vertex_match_tol for vertices).
     min_slab_width::T = T(1e-3)
+    # incidence_snap_tol_ratio: Phase 9b's ColumnLanding confidence gate
+    # (SurfaceDecomposition._landing_confidence) — a landing is snap/continuity-
+    # eligible only if dist <= incidence_snap_tol_ratio * local_scale, where
+    # local_scale is the assigned crit-slice edge's median chord spacing
+    # (:edge-kind) or the face's own generating-column spacing (:crit_slice_vertex/
+    # :critical_point-kind), PLUS the landing's own |f| residual <=
+    # critical_point_tol. Calibrated on the fixed-axis Taubin fixture (2026-07):
+    # honest dist/spacing ratios topped out at 0.828 across two structurally
+    # different edge-type boundaries (z=1.0 median 0.094/max 0.828, z=1.0648
+    # median 0.389/max 0.825); the default 1.5 sits with ~1.8x margin above that
+    # ceiling. A single constant, not a per-boundary or per-kind absolute cutoff,
+    # because raw distances scale with local sample spacing (12x spread within
+    # one boundary alone) — see decompose_3d_surface's Phase 9b docstring section
+    # and weld_mesh's for the full evidence trail.
+    incidence_snap_tol_ratio::T = T(1.5)
 end

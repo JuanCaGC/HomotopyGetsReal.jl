@@ -27,46 +27,14 @@
 # `decompose_3d_surface`'s/`weld_mesh`'s own return types directly (no
 # `using` needed within a flat module).
 #
-# Convention (2026-07, isosingular deflation Stage 4a): because this is one
-# flat namespace, two `@enum` blocks anywhere in `src/` can collide on a
-# member name with no compile error -- Julia's `==` across two different
-# enum types just silently returns `false` rather than erroring, so a
-# collision doesn't announce itself; it quietly breaks whichever comparison
-# assumed the wrong one was in scope. This nearly happened between
-# `IsosingularVerdict.Inconclusive` (Solver.jl, Stage 3) and a first draft of
-# `ResolveVerdict`'s own `Inconclusive` (Stage 4a) -- caught only by
-# re-deriving the docstring's own example by hand, not by any check. Before
-# adding any new `@enum` to this module: grep the whole `src/` tree for
-# every candidate member name first, and prefix multi-value "verdict"-shaped
-# enums with a short tag tied to their own owning function (e.g.
-# `ResolveResolved`/`ResolveAmbiguous`/`ResolveExhausted`, not bare
-# `Resolved`/`Ambiguous`/`Exhausted`) rather than relying on a word simply
-# sounding unlikely to collide -- that's exactly what `Inconclusive` sounded
-# like the first time too. Not applied retroactively to
-# `IsosingularVerdict`/`ResolveVerdict`'s own already-shipped, exported
-# members; applies going forward.
-#
-# Note (2026-07, isosingular deflation Stage 4c validation): established-normal
-# round counts for `resolve_isosingular_dimension`, for future reference if a
-# deeper or unexplained round count ever shows up elsewhere and someone needs
-# to know whether that's within observed range or new. Every ground-truth case
-# through Stage 3/4a resolved in 1-2 rounds. The Taubin heart fixture's full
-# Stage 4c validation (individually inspecting all 22 real firings during a
-# `decompose_3d_surface(...; deflate=true)` run, not just the ones surviving to
-# final output) found 17 of 22 at 1 round, but 5 genuine outliers at 4 rounds
-# (`corank_seq=[2,1,1,1,0]`), all at the slice-level critical points x=(±1,0)
-# -- the heart's left/right-most z-slice extremes. All 22 still resolved
-# cleanly (`Resolved`, zero `Ambiguous`/`Exhausted`/`attempts>=15`), so 4
-# rounds at a genuine local degeneracy is confirmed normal behavior, not a
-# red flag by itself -- but it's a real, non-spurious deviation from the [1,2]
-# range seen everywhere else, worth knowing about before assuming a similar
-# count elsewhere is a bug. Separately, every one of those 22 firings resolved
-# to `isosingular_dimension=0`, and every `d=0` resolution has `attempts=0` by
-# construction (`verify_isosingular_dimension` needs zero hyperplanes when
-# `d=0`, so its retry mechanism never runs) -- the soft-flag attempts range of
-# [1,4] used during this validation was only ever scoped to `d>=1` cases that
-# actually exercise that retry loop; `attempts=0` at `d=0` is not itself
-# evidence of anything and should not be treated as a flag in future runs.
+# Two design-history notes moved to docs/DESIGN_NOTES.md (Audit 2, 2026-07):
+# the ResolveVerdict/IsosingularVerdict enum-naming-collision near-miss (the
+# convention it established for adding future @enum blocks to this flat
+# namespace still applies -- grep src/ for candidate member names first, and
+# prefix multi-value "verdict"-shaped enums with a short tag tied to their own
+# owning function), and resolve_isosingular_dimension's established-normal
+# round-count reference data (for future reference if a deeper or unexplained
+# round count ever shows up elsewhere).
 
 module HomotopyGetsReal
 

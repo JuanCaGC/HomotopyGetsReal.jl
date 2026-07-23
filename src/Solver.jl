@@ -199,26 +199,12 @@ columns (`length(F.expressions)` / `length(F.variables)`) -- the latter is
 not a bug to work around, it is `deflate_once` telling you `F` is not yet a
 valid witness-point system.
 
-**Correction, 2026-07 (retracts this docstring's own prior claim)**: an
-earlier version of this note assumed `F` must already include generic
-slicing hyperplanes before `deflate_once` is usable -- a "construct a
-witness slice first" pipeline stage was proposed on that basis and then
-directly investigated. It was confirmed unnecessary: `deflate_once` called
-directly on the BARE, unsliced curve/surface equation (Whitney umbrella
-`x^2-y^2*z`, both the handle `(0,0,1)` and tip `(0,0,0)`) reproduces the
-Hauenstein-Wampler `D_det` operator's own published deflation sequences
-exactly (`{3,1,1,...}` and `{3,2,0,...}`), using this function's own default
-`expected_rank = length(F.variables)` with no slice, no witness-point
-construction, and no other change. The `minorSize=2`-exceeds-1-row failure
-this note used to cite as evidence a slice was required is real (that guard
-still fires, correctly, at a SMOOTH point of a bare curve, `rank(J)=1`), but
-it does not mean a slice is needed in general -- it means `deflate_once` was
-being asked a question (is this an isolated point?) that a smooth point of a
-positive-dimensional variety can never answer yes to, independent of
-slicing. `compute_critical_points`, `decompose_1d_curve`, and
-`decompose_3d_surface` may hand this function the bare curve/surface
-equation directly; no intermediate slicing step is needed before Stage 3/4
-wiring.
+`compute_critical_points`, `decompose_1d_curve`, and `decompose_3d_surface`
+may hand this function the BARE curve/surface equation directly -- no
+intermediate slicing step is needed before Stage 3/4 wiring. See
+`docs/DESIGN_NOTES.md` §isosingular-deflation, Stage 2, for the investigation
+behind that conclusion (a since-retracted docstring note once claimed the
+opposite).
 """
 function deflate_once(
     F::System,
@@ -266,29 +252,21 @@ regular there (`corank == 0`, handled trivially by
 track needed at all), or `minor_size = rank(J)+1 <= min(length(F_original.expressions),
 length(F_original.variables))`, exactly `deflate_once`'s own `ArgumentError` guard.
 
-**Why this exists, and why `corank > 0` alone (the originally proposed gate) is wrong**:
-found via a real crash on the Taubin heart fixture's own crit-slices, not invented
-speculatively. `compute_critical_points`'s `deflate = true` path triggers on `v_type ==
-Singular`, which is classified against `Faug` (the caller's pre-augmented curve system,
-or the auto-built `[f,f_x,f_y]` surface system) -- NOT against `F_original`'s own bare
-Jacobian. A point can be `Faug`-singular (e.g. a fold w.r.t. the x-projection, where
-`Faug`'s own square Jacobian is rank-deficient) while `F_original` itself is perfectly
-regular there (nonzero gradient, just a higher-order-degenerate critical point in one
-projection direction -- concretely reproduced by `f = x - y^3` at the origin: `f_y =
--3y^2 = 0` there, so `Faug = [f,f_y]` has a singular 2x2 Jacobian, but `f_x = 1 != 0`, so
-`F_original`'s own 1x2 Jacobian has full rank 1). For a bare, single-equation
-`F_original` the maximum achievable rank is 1, so under the ambient (`expected_rank =
-nv`) convention `corank` can NEVER reach `0` for such a system regardless of whether the
-point is genuinely singular -- confirmed directly: `corank == 1` at BOTH the fold point
-above and at any ordinary smooth point of a bare curve. `corank > 0` therefore excludes
-nothing; the actual crash-preventing condition is on `minor_size`, not on `corank`'s bare
-sign.
-
-**Cost, measured, not assumed**: on a case that genuinely exercises tracking (the Whitney
-umbrella handle, not a case that resolves via the free `corank == 0` shortcut), this
-check costs ~0.008ms against a real `resolve_isosingular_dimension` resolution's
-~1486ms -- roughly 200,000x cheaper. Safe to call unconditionally for every
-`Singular`-classified vertex; no cheaper pre-check is needed.
+**Why `corank > 0` alone (the originally proposed gate) is wrong**: for a
+bare, single-equation `F_original`, the maximum achievable rank is 1, so
+under the ambient (`expected_rank = nv`) convention `corank` can NEVER
+reach `0` for such a system regardless of whether the point is genuinely
+singular -- a smooth point of a bare curve reports `corank == 1` too. A
+minimal witness: `f = x - y^3` at the origin has `f_x = 1 != 0` (so
+`F_original`'s own 1x2 Jacobian has full rank 1, i.e. NOT singular), yet
+`Faug = [f, f_y]` (the pre-augmented system `compute_critical_points`
+actually classifies `Singular` against) has a singular 2x2 Jacobian there
+(`f_y = -3y^2 = 0`). `corank > 0` therefore excludes nothing; the actual
+crash-preventing condition is on `minor_size`. See
+`docs/DESIGN_NOTES.md` §isosingular-deflation, Stage 4c, for the real crash
+this gate was found from, and a measured cost benchmark (~200,000x
+cheaper than a full resolution) confirming it's safe to call
+unconditionally.
 
 **Why `intersect_bounding_object` needs no equivalent gate**: it classifies `Singular`
 using `expected_rank = length(F.expressions)` directly on `F` itself -- the SAME matrix
@@ -315,11 +293,10 @@ end
     IsosingularVerdict
 
 Three-way outcome of [`verify_isosingular_dimension`](@ref) -- deliberately
-not a `Bool`. Collapsing "confirmed non-terminal" and "no clean answer either
-way" into a single `false` would hide exactly the distinction that mattered
-in this feature's own investigation: a demonstrated 4-of-6 false-positive
-rate under naive `R(f)=A*f` randomization, on a case (the cusp curve's round
-1) with a mathematically certain non-terminal answer.
+not a `Bool`. Collapsing "confirmed non-terminal" and "no clean answer
+either way" into a single `false` would hide a real distinction: see
+`docs/DESIGN_NOTES.md` §isosingular-deflation, Stage 3, for the measured
+false-positive rate that motivated keeping these separate.
 
 - `Verified`: `d` is confirmed as the isosingular local dimension at this
   round -- either trivially (`d == 0`, an already-isolated point) or via a
@@ -379,21 +356,15 @@ the final acceptance residual is checked against. Conflating these into one
 argument was exactly the class of bug this signature is designed to make
 impossible to write by accident.
 
-Construction (validated against all three ground-truth cases available in
-this project -- node/cusp, Whitney umbrella handle and tip, every round
-tested, terminal and non-terminal): build `d` generic real hyperplanes
-`L_i(x) = sum_j a_ij*(x_j - x0_j)` through `x0` (random real Gaussian
-`a_ij`, matching `random_orthogonal_matrix`'s precedent for genericity, not
-complex -- `x0` is always real by construction here, coming from a
-real-classified vertex), append them to the FULL, UNMODIFIED `F_current` --
-no equation discarding, no `R(f)=A*f` randomization. Both alternatives were
-tried and rejected: discarding equations before tracking/certifying produces
-false positives (demonstrated directly on the Whitney umbrella handle);
-`R(f)=A*f` randomization produces a demonstrated 4-of-6 false-positive rate
-on the cusp's known-non-terminal round 1 (residuals 0.08-1.79 against the
-original system, on tracks that reported `return_code == :success`). Tracks
-via a parameter homotopy from `start_parameters = 0` (the hyperplanes' value
-at `x0`, by construction) to a fixed nonzero `target_parameters`.
+Construction: build `d` generic real hyperplanes `L_i(x) = sum_j
+a_ij*(x_j - x0_j)` through `x0` (random real Gaussian `a_ij`, matching the
+genericity precedent set by `random_orthogonal_matrix`, not complex --
+`x0` is always real by construction here, coming from a real-classified
+vertex), append them to the FULL, UNMODIFIED `F_current` -- no equation
+discarding, no `R(f)=A*f` randomization (both tried and rejected; see
+`docs/DESIGN_NOTES.md`, section isosingular-deflation, Stage 3). Tracks via
+a parameter homotopy from `start_parameters = 0` (the hyperplanes' value at
+`x0`, by construction) to a fixed nonzero `target_parameters`.
 
 Acceptance requires BOTH conditions, checked explicitly and never silently
 combined into one boolean:
@@ -402,37 +373,34 @@ combined into one boolean:
    `cfg.critical_point_tol` -- checked against the ORIGINAL system, never
    `F_current` or the augmented tracking system.
 
-Condition 2 is not optional decoration -- see the false-positive rate cited
-above. An implementation that checked only condition 1 would have wrongly
-verified the cusp's round 1 as terminal on 4 of 6 random attempts.
+Condition 2 is not optional decoration -- an implementation that checked
+only condition 1 would produce real false positives (measured; see design
+notes).
 
-Retries: up to `cfg.isosingular_verify_retries` attempts, each with a FRESH
-random hyperplane draw (per Hauenstein-Wampler's own stated reliability
-recommendation for Algorithm 6.3 -- "perform this test multiple times using
-different `L` and `lambda`" -- NOT Bertini1's literal same-draw retry,
-`isosingular.c:389-397`, already found unsound in fixed Float64 precision
-with no AMP escalation). **Correction (2026-07-23)**: an earlier version of
-this note claimed every real case resolved in exactly 1 attempt -- retracted
-after this project's own Ambiguous-forcing investigation measured attempts of
-1,2,1,4,1,1,4,1,1,1 across 10 fresh trials on a comparable case (see
-`test_solver.jl`'s HANDLE ground-truth test and its own commit history). The
-real, guaranteed invariant is `1 <= attempts <= cfg.isosingular_verify_retries`,
-not a fixed count; see `cfg.isosingular_verify_retries`'s own docstring for
-why the default is kept generous, as an untested-case safety margin.
+Retries: up to `cfg.isosingular_verify_retries` attempts, each with a
+FRESH random hyperplane draw (per Hauenstein-Wampler's own stated
+reliability recommendation for Algorithm 6.3 -- "perform this test
+multiple times using different `L` and `lambda`" -- NOT Bertini1's literal
+same-draw retry, `isosingular.c:389-397`, already found unsound in fixed
+Float64 precision with no AMP escalation). The guaranteed invariant is `1
+<= attempts <= cfg.isosingular_verify_retries`, not a fixed count -- see
+`cfg.isosingular_verify_retries`'s own docstring for why the default is
+kept generous.
 
-`d == 0` short-circuits to `Verified` with no tracking at all -- validated
-identically on both the Whitney umbrella tip's and the cusp's own round-2
-states (`estimate_corank == 0`, confirmed by two independent methods in each
-case, `F_original` residual exactly `0.0` in both).
+`d == 0` short-circuits to `Verified` with no tracking at all.
 
-`rng` (2026-07-23, Audit 1 Item 1 fix): the fresh hyperplane draw at each
-retry (`randn(rng, d, nv)`) now accepts a caller-seedable RNG, matching the
+`rng`: the fresh hyperplane draw at each retry (`randn(rng, d, nv)`)
+accepts a caller-seedable RNG, matching the
 `random_orthogonal_matrix`/`decompose_3d_surface` convention elsewhere in
-this codebase, instead of silently using `Random.default_rng()` with no way
-for a caller to reproduce a specific run. This is the real fix for the
-RNG-brittle-test-assertion class of bug: callers that need a deterministic
-`verdict`/`attempts`/`rounds` value for testing should pass a seeded `rng`
-(e.g. `Xoshiro(1)`) rather than relaxing the assertion to a range.
+this codebase, instead of silently using `Random.default_rng()` with no
+way for a caller to reproduce a specific run. Callers that need a
+deterministic `verdict`/`attempts`/`rounds` value for testing should pass
+a seeded `rng` (e.g. `Xoshiro(1)`).
+
+See `docs/DESIGN_NOTES.md` §isosingular-deflation, Stage 3, for: the
+rejected equation-discarding/`R(f)=A*f` alternatives and their measured
+false-positive rates; the retracted "always 1 attempt" claim and the
+10-trial measurement that corrected it.
 """
 function verify_isosingular_dimension(
     F_current::System,
@@ -494,18 +462,12 @@ analogue of [`IsosingularVerdict`](@ref), which only ever describes a
 single round.
 
 Deliberately uses `Ambiguous`, not `Inconclusive`, for its middle value --
-`Solver.jl` is a single flat namespace (everything here is `include`d into
-one module, no submodule separation), and a first version of this enum
-reused `Inconclusive` verbatim from [`IsosingularVerdict`](@ref). That
-silently shadowed the earlier binding at module scope: every bare
-`Inconclusive` reference in the file, including inside the
-already-shipped [`verify_isosingular_dimension`](@ref), started
-resolving to *this* enum's value instead, and the `vr.verdict ==
-Inconclusive` comparison inside this file's own orchestration loop
-below would have silently always been `false` (comparing across two
-different enum types, which Julia allows and just returns `false` for --
-no error, no warning). Caught before ever being tested, not after --
-renamed instead of qualified, so the possibility can't recur.
+a first version of this enum reused `Inconclusive` verbatim from
+[`IsosingularVerdict`](@ref), which silently collided with it (this is a
+single flat namespace with no submodule separation). See
+`docs/DESIGN_NOTES.md` "The ResolveVerdict/IsosingularVerdict
+enum-naming-collision near-miss" for the full account and the
+naming convention it established going forward.
 
 - `Resolved`: the isosingular local dimension was found -- either
   trivially (corank reached `0`) or via a [`verify_isosingular_dimension`](@ref)
@@ -569,41 +531,22 @@ not yet", or verification returned `NotTerminal`), call `deflate_once`
 and continue, up to `cfg.max_deflations` rounds before returning
 `Exhausted`.
 
-**The one-extra-round cost of a real (nonzero) plateau, confirmed
-directly, not assumed**: `_corank_plateau_hint` needs to see a repeated
-value to recognize a plateau, so a genuine nonzero-limit case always
-costs one deflation round beyond where the corank first reaches its
-true limit. Concretely, on the Whitney umbrella handle: `corank_sequence
-== [3, 1, 1]`, `rounds == 2` -- corank already reached its terminal value
-`1` after round 1 (`F1`, 4 equations), but the loop cannot know that yet
-(`[3,1]` has no repeat) and must deflate once more (`F2`, 8 equations)
-before `_corank_plateau_hint([3,1,1])` finally sees the repeat and
-triggers verification. This is not a cost that appears for a `d==0`
-resolution (node/cusp/tip below) -- corank hitting `0` always triggers
-verification on the SAME round it's first observed, no repeat needed.
+A genuine nonzero-limit plateau always costs one deflation round beyond
+where the corank first reaches its true limit (`_corank_plateau_hint`
+needs to see a repeated value to recognize a plateau) -- this cost does
+not appear for a `d==0` resolution, which always triggers verification on
+the SAME round it's first observed. `cfg.max_deflations = 10` is, on the
+identical footing as `cfg.isosingular_verify_retries`, an explicit safety
+margin for cases this project hasn't exercised yet -- not a value any
+ground-truth case has needed more than a fifth of. See
+`docs/DESIGN_NOTES.md` §isosingular-deflation, Stage 4a, for the measured
+round-count table across every ground-truth case and later Stage 4c
+validation data.
 
-**Round counts, measured directly against every ground-truth case
-available in this project, not estimated**:
-
-| case | corank_sequence | rounds | verdict |
-|---|---|---|---|
-| node (bare curve) | `[2, 0]` | 1 | Resolved, dim 0 |
-| cusp (bare curve) | `[2, 1, 0]` | 2 | Resolved, dim 0 |
-| Whitney umbrella tip | `[3, 2, 0]` | 2 | Resolved, dim 0 |
-| Whitney umbrella handle | `[3, 1, 1]` | 2 | Resolved, dim 1 |
-
-Maximum observed: 2 rounds. `cfg.max_deflations = 10` is therefore, on
-the identical footing as `cfg.isosingular_verify_retries`, an explicit
-safety margin for cases this project hasn't exercised yet (deeper
-singularities, real surfaces under Stage 4c) -- not a value any
-ground-truth case has ever needed more than a fifth of.
-
-`rng` (2026-07-23, Audit 1 Item 1 fix): threaded straight through to the
-internal [`verify_isosingular_dimension`](@ref) call, so a caller who needs
-a reproducible `verdict`/`rounds` on a case whose plateau lands on a
-nonzero corank (the HANDLE case above, the only one of the four
-ground-truth cases that reaches the randomized retry loop rather than the
-`d==0` short-circuit) can pass a seeded `rng` for a deterministic result.
+`rng`: threaded straight through to the internal
+[`verify_isosingular_dimension`](@ref) call, so a caller who needs a
+reproducible `verdict`/`rounds` on a case whose plateau lands on a
+nonzero corank can pass a seeded `rng` for a deterministic result.
 """
 function resolve_isosingular_dimension(
     F_original::System,

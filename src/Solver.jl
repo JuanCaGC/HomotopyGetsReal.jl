@@ -626,20 +626,20 @@ run against `F_original`, and the result is stored in that vertex's `metadata`
 and unchecked.
 
 **Stage 4c gate (2026-07)**: before running `resolve_isosingular_dimension`, this function
-also checks [`_deflation_applicable`](@ref)(F_original, x, cfg). This is necessary because
+also checks `_deflation_applicable(F_original, x, cfg)`. This is necessary because
 `v_type == Singular` here is classified against `Faug` (this function's own local
 pre-augmented-or-auto-augmented system), which is a DIFFERENT matrix than `F_original`
 whenever the two differ -- a point can be `Faug`-singular via a higher-order degeneracy
-(e.g. a projection fold) while `F_original`'s own bare Jacobian stays full rank there,
-which is not a point `deflate_once` can process at all. Found via a real crash on the
-Taubin heart fixture's crit-slices (`ArgumentError: deflate_once: minorSize=2 exceeds
-available rows`), not invented speculatively -- see `_deflation_applicable`'s own
-docstring for the full derivation, including why the naively-obvious gate (`corank(
-F_original) > 0`) does NOT work. When the gate returns `false`, the candidate's `v_type`
-and every other field are left exactly as they would be with `deflate = false`: only the
-deflation *attempt* is skipped, no `isosingular_*` metadata keys are added, and there is no
-reclassification. `intersect_bounding_object` does not need this gate; see its own
-docstring.
+(e.g. a projection fold) while `F_original` itself is perfectly regular there (its own
+bare Jacobian stays full rank), which is not a point `deflate_once` can process at all.
+Found via a real crash on the Taubin heart fixture's crit-slices (`ArgumentError:
+deflate_once: minorSize=2 exceeds available rows`), not invented speculatively -- see
+`_deflation_applicable`, in its own docstring, for the full derivation, including why the
+naively-obvious gate (`corank(F_original) > 0`) does NOT work. When the gate returns
+`false`, the candidate's `v_type` and every other field are left exactly as they would be
+with `deflate = false`: only the deflation *attempt* is skipped, no `isosingular_*`
+metadata keys are added, and there is no reclassification. `intersect_bounding_object`
+does not need this gate; see its own docstring.
 
 `F_original` has NO default value usable for deflation, on purpose, and this is checked at
 runtime (Julia has no compile-time-conditional-mandatory keyword): `deflate = true` with

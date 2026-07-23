@@ -449,4 +449,58 @@ for (label, f_, argtypes) in (
     println("Base.return_types $label -> ", only(rt), is_concrete ? "  (concrete)" : "  (NOT concrete: GeometryBasics.Mesh's own `where _A`)")
 end
 
+println()
+println("=" ^ 70)
+println("9. Clustering.cluster_points_indexed in isolation")
+println("=" ^ 70)
+
+# Direct unit coverage (2026-07-23, Audit 1 Item 3a/6 follow-up): previously exercised
+# only indirectly through weld_mesh, its sole caller in the whole codebase. Confirmed
+# during Audit 1 to be a genuinely general point-cloud clustering primitive with no
+# weld_mesh-specific assumptions baked in (no mesh/triangle/topology references anywhere
+# in its body, no vertex-type merge policy the way cluster_vertices has) -- these tests
+# exercise it standalone, matching cluster_vertices' own "isolation" test pattern
+# (test_solver.jl, section 5) and cluster_scalars' (test_topology.jl, section 2).
+
+# Same tol=1e-3 near-dupes-vs-separate shape as cluster_vertices' own fixture, on plain
+# Vector{Float64} points instead of NativeVertex -- points 1,2,3 should merge, 4 stays
+# separate.
+pts_loose = [
+    [1.0, 1.0],
+    [1.00001, 0.99999],
+    [1.00002, 1.00001],
+    [5.0, 5.0],
+]
+reps_loose, membership_loose = cluster_points_indexed(pts_loose, 1e-3)
+println("With tol=1e-3 (near-dupes 1,2,3 merge; 4 stays separate):")
+println("  representatives: ", reps_loose)
+println("  membership: ", membership_loose)
+@test length(reps_loose) == 2
+@test membership_loose[1] == membership_loose[2] == membership_loose[3]
+@test membership_loose[4] != membership_loose[1]
+
+# Centroid check: the merged cluster's representative must be the mean of its members
+# (matching cluster_vertices' own centroid rule), not e.g. the first point encountered.
+expected_centroid = (pts_loose[1] .+ pts_loose[2] .+ pts_loose[3]) ./ 3
+@test reps_loose[membership_loose[1]] ≈ expected_centroid atol = 1e-12
+@test reps_loose[membership_loose[4]] == pts_loose[4]
+println("cluster_points_indexed centroid + membership map confirmed for the tol>0 grid-bucketing path.")
+
+# tol<=0: the documented degenerate-tol fallback (exhaustive scan, only EXACT duplicates
+# merge) -- a separate code path from the grid-bucketing branch above, exercised directly.
+pts_exact = [[1.0, 1.0], [1.0, 1.0], [1.0 + 1e-9, 1.0]]
+reps_exact, membership_exact = cluster_points_indexed(pts_exact, 0.0)
+println("With tol=0.0 (exhaustive-scan fallback; only EXACT duplicates 1,2 merge, 3 is not exact):")
+println("  representatives: ", reps_exact)
+println("  membership: ", membership_exact)
+@test length(reps_exact) == 2
+@test membership_exact[1] == membership_exact[2]
+@test membership_exact[3] != membership_exact[1]
+
+# Empty input: the function's own explicit n==0 early return.
+reps_empty, membership_empty = cluster_points_indexed(Vector{Float64}[], 1e-3)
+@test isempty(reps_empty)
+@test isempty(membership_empty)
+println("cluster_points_indexed(tol<=0 fallback, empty input) confirmed.")
+
 end

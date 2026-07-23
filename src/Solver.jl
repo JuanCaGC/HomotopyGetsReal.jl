@@ -583,7 +583,9 @@ function _newton_polish(F::System, x0::Vector{Complex{T}}, cfg::HomotopyConfig{T
 end
 
 """
-    compute_critical_points(F::System, cfg::HomotopyConfig{T}) where {T<:AbstractFloat}
+    compute_critical_points(F::System, cfg::HomotopyConfig{T};
+                              deflate::Bool = false,
+                              F_original::Union{Nothing,System} = nothing) where {T<:AbstractFloat}
         -> Vector{NativeVertex{T}}
 
 Find and classify critical points of a polynomial system as `NativeVertex` records.
@@ -592,8 +594,42 @@ Call with either a square 0-dimensional system (e.g. a pre-augmented curve criti
 system) or a single equation in three variables (a raw surface; the z-projection critical
 system is built internally). Solutions are path-tracked, classified as `Critical` or
 `Singular`, and deduplicated with `cfg.vertex_match_tol`.
+
+**Isosingular deflation, Stage 4b (2026-07), diagnostic-only**: when `deflate = true`, every
+`Singular`-classified candidate additionally gets [`resolve_isosingular_dimension`](@ref)
+run against `F_original`, and the result is stored in that vertex's `metadata`
+(`:isosingular_verdict`, `:isosingular_dimension`, `:isosingular_deflation_sequence`) --
+`coordinates`, `v_type`, and every other existing return value are untouched. `false`
+(the default) is the exact pre-Stage-4 code path -- no extra solves, `F_original` unused
+and unchecked.
+
+`F_original` has NO default value usable for deflation, on purpose, and this is checked at
+runtime (Julia has no compile-time-conditional-mandatory keyword): `deflate = true` with
+`F_original === nothing` throws `ArgumentError` immediately, in EITHER branch below (the
+pre-augmented curve case and the auto-augmented surface case alike) -- not just the branch
+where inferring `F_original = F` would happen to be wrong. This is deliberately stricter
+than "default correctly where it's safe, guard only where it isn't": the auto-augmented
+surface branch (`ne==1,nv==3`) could technically default `F_original` to `F` correctly
+(that IS the bare surface already), but the pre-augmented curve branch (`ne==nv`) cannot --
+`F` there is already `Faug`, and deflating against it would silently target the
+projection-critical system instead of the true bare curve, the exact distinction this
+whole feature's first investigation spent its effort establishing matters. Rather than let
+correctness depend on which branch a future caller happens to be in, no branch gets a
+silently-inferred default; every `deflate = true` caller states `F_original` explicitly,
+always. `deflate = false` (the default) never evaluates this guard at all, so no existing
+non-deflating call site is affected by its existence.
 """
-function compute_critical_points(F::System, cfg::HomotopyConfig{T}) where {T<:AbstractFloat}
+function compute_critical_points(
+    F::System,
+    cfg::HomotopyConfig{T};
+    deflate::Bool = false,
+    F_original::Union{Nothing,System} = nothing,
+) where {T<:AbstractFloat}
+    deflate && F_original === nothing && throw(ArgumentError(
+        "compute_critical_points: F_original must be given explicitly when deflate=true " *
+        "(no default -- see the docstring's note on why neither branch gets an inferred one).",
+    ))
+
     # Accept square F (caller-pre-augmented curve case) or 1 eq / 3 vars (auto-augment surface).
     nv = length(F.variables)
     ne = length(F.expressions)
@@ -629,6 +665,13 @@ function compute_critical_points(F::System, cfg::HomotopyConfig{T}) where {T<:Ab
         v_type = _classify_vertex_type(info, cfg, expected_rank, Critical)
         metadata = Dict{Symbol,Any}(:jacobian_rank => info.rank, :singular_values => info.singular_values)
 
+        if deflate && v_type == Singular
+            rr = resolve_isosingular_dimension(F_original, x, cfg)
+            metadata[:isosingular_verdict] = rr.verdict
+            metadata[:isosingular_dimension] = rr.isosingular_dimension
+            metadata[:isosingular_deflation_sequence] = rr.corank_sequence
+        end
+
         push!(candidates, NativeVertex(cfg, next_id, x, v_type; metadata = metadata))
         next_id += 1
     end
@@ -637,7 +680,9 @@ function compute_critical_points(F::System, cfg::HomotopyConfig{T}) where {T<:Ab
 end
 
 """
-    intersect_bounding_object(F::System, cfg::HomotopyConfig{T}) where {T<:AbstractFloat}
+    intersect_bounding_object(F::System, cfg::HomotopyConfig{T};
+                                deflate::Bool = false,
+                                F_original::Union{Nothing,System} = nothing) where {T<:AbstractFloat}
         -> Vector{NativeVertex{T}}
 
 Find curve–bounding-box intersection points and return them as `NativeVertex` records.
@@ -646,8 +691,28 @@ Find curve–bounding-box intersection points and return them as `NativeVertex` 
 with two or three variables). Each variable is fixed at its `cfg.bbox_*` bounds in turn;
 real solutions inside the box are classified as `Boundary` or `Singular` and
 deduplicated with `cfg.vertex_match_tol`.
+
+**Isosingular deflation, Stage 4b (2026-07), diagnostic-only**: identical contract to
+[`compute_critical_points`](@ref)'s own `deflate`/`F_original` -- see that docstring for
+the full rationale. Note this function's own `F` is already the bare, never-augmented
+curve/surface equation (unlike `compute_critical_points`'s pre-augmented branch), so a
+default of `F_original = F` would in fact always be safe here. It is intentionally NOT
+given one anyway: the same explicit, no-inferred-default rule applies uniformly to both
+functions, rather than one function being strict and the other permissive depending on
+which happens to be safe -- consistency of the rule matters more here than the marginal
+convenience of a default this one function alone could have gotten away with.
 """
-function intersect_bounding_object(F::System, cfg::HomotopyConfig{T}) where {T<:AbstractFloat}
+function intersect_bounding_object(
+    F::System,
+    cfg::HomotopyConfig{T};
+    deflate::Bool = false,
+    F_original::Union{Nothing,System} = nothing,
+) where {T<:AbstractFloat}
+    deflate && F_original === nothing && throw(ArgumentError(
+        "intersect_bounding_object: F_original must be given explicitly when deflate=true " *
+        "(no default -- see the docstring's note on why).",
+    ))
+
     # Raw surfaces (1 eq, 3 vars) are out of scope: a face intersection is a curve, not isolated points.
     nv = length(F.variables)
     ne = length(F.expressions)
@@ -719,6 +784,13 @@ function intersect_bounding_object(F::System, cfg::HomotopyConfig{T}) where {T<:
                     :fixed_variable => Symbol(fixed_var),
                     :fixed_value => T(bound_val),
                 )
+
+                if deflate && v_type == Singular
+                    rr = resolve_isosingular_dimension(F_original, full, cfg)
+                    metadata[:isosingular_verdict] = rr.verdict
+                    metadata[:isosingular_dimension] = rr.isosingular_dimension
+                    metadata[:isosingular_deflation_sequence] = rr.corank_sequence
+                end
 
                 push!(candidates, NativeVertex(cfg, next_id, full, v_type; metadata = metadata))
                 next_id += 1

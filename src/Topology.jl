@@ -282,15 +282,22 @@ function sample_edge(edge::Edge{T}, cfg::HomotopyConfig{T}) where {T<:AbstractFl
 end
 
 """
-    decompose_1d_curve(F::System, cfg::HomotopyConfig{T}) where {T<:AbstractFloat}
+    decompose_1d_curve(F::System, cfg::HomotopyConfig{T}; deflate::Bool = false) where {T<:AbstractFloat}
         -> (vertices::Vector{NativeVertex{T}}, edges::Vector{Edge{T}})
 
 Decompose a raw plane curve into vertices and resampled edges.
 
 Finds critical and boundary vertices, merges coincident ones, connects adjacent x-intervals
 via midslice witnesses, and returns equidistantly sampled edges.
+
+**Isosingular deflation, Stage 4b (2026-07), diagnostic-only**: `deflate = true` passes
+`deflate = true, F_original = F` through to both [`compute_critical_points`](@ref) (called
+here on `F_aug`, the y-critical-augmented system, NOT the bare curve) and
+[`intersect_bounding_object`](@ref) (called here on `F` directly, already the bare curve) --
+`F` itself, this function's own raw argument, is exactly the `F_original` both need, and is
+already in scope here regardless. `false` (the default) is the exact pre-Stage-4 code path.
 """
-function decompose_1d_curve(F::System, cfg::HomotopyConfig{T}) where {T<:AbstractFloat}
+function decompose_1d_curve(F::System, cfg::HomotopyConfig{T}; deflate::Bool = false) where {T<:AbstractFloat}
     # Pipeline: critical + boundary vertices -> cluster_vertices -> cluster_scalars on x
     # -> compute_midslice + connect_the_dots! per interval -> sample_edge on each edge.
     length(F.variables) == 2 && length(F.expressions) == 1 || throw(ArgumentError(
@@ -301,8 +308,8 @@ function decompose_1d_curve(F::System, cfg::HomotopyConfig{T}) where {T<:Abstrac
     f = F.expressions[1]
 
     F_aug = System([f, differentiate(f, y_var)], F.variables)
-    crit_vertices = compute_critical_points(F_aug, cfg)
-    bnd_vertices = intersect_bounding_object(F, cfg)
+    crit_vertices = compute_critical_points(F_aug, cfg; deflate = deflate, F_original = F)
+    bnd_vertices = intersect_bounding_object(F, cfg; deflate = deflate, F_original = F)
 
     offset = isempty(crit_vertices) ? 0 : maximum(v.id for v in crit_vertices)
     bnd_renumbered = NativeVertex{T}[

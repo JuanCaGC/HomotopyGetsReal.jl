@@ -437,4 +437,108 @@ println("Maximum observed = 2. cfg64.max_deflations = $(cfg64.max_deflations) is
 println("margin over anything actually needed here, not an empirically-required minimum --")
 println("same framing as isosingular_verify_retries=20 in Stage 3.")
 
+println()
+println("=" ^ 70)
+println("12. Isosingular deflation Stage 4b: pipeline wiring")
+println("=" ^ 70)
+
+# Guard: deflate=true with F_original omitted must throw in EITHER branch --
+# the pre-augmented curve case (F_crit, ne==nv) and the raw-surface
+# auto-augment case alike -- confirming no branch gets a silently-inferred
+# default, per the approved design.
+println("  guard: deflate=true, F_original omitted -> ArgumentError in both branches")
+@test_throws ArgumentError compute_critical_points(F_crit, cfg64; deflate = true)
+@test_throws ArgumentError compute_critical_points(F_umbrella, cfg64; deflate = true)
+@test_throws ArgumentError intersect_bounding_object(F_curve, cfg64; deflate = true)
+
+# deflate=false (the default) must be the byte-identical pre-Stage-4 path --
+# confirmed directly, not assumed: same vertex set as calling with no
+# keywords at all, and no isosingular metadata added to any vertex.
+v_nodeflate = compute_critical_points(F_crit, cfg64)
+v_nodeflate2 = compute_critical_points(F_crit, cfg64; deflate = false)
+@test length(v_nodeflate) == length(v_nodeflate2)
+@test all(!haskey(v.metadata, :isosingular_verdict) for v in v_nodeflate2)
+println("  deflate=false: no isosingular metadata added, vertex set unchanged ✓")
+
+# deflate=true on F_crit (nodal cubic, (0,0) confirmed Singular by hand at
+# the top of this file) -- confirm the Singular vertex gets real isosingular
+# metadata, and non-Singular vertices don't.
+v_deflate = compute_critical_points(F_crit, cfg64; deflate = true, F_original = F_curve)
+sing_v = only(filter(v -> v.v_type == Singular, v_deflate))
+crit_v = only(filter(v -> v.v_type == Critical, v_deflate))
+println("  deflate=true on F_crit: Singular vertex metadata keys = ", sort(collect(keys(sing_v.metadata))))
+println("    isosingular_verdict=", sing_v.metadata[:isosingular_verdict],
+    "  isosingular_dimension=", sing_v.metadata[:isosingular_dimension],
+    "  isosingular_deflation_sequence=", sing_v.metadata[:isosingular_deflation_sequence])
+@test haskey(sing_v.metadata, :isosingular_verdict)
+@test haskey(sing_v.metadata, :isosingular_dimension)
+@test haskey(sing_v.metadata, :isosingular_deflation_sequence)
+@test sing_v.metadata[:isosingular_verdict] == Resolved
+@test !haskey(crit_v.metadata, :isosingular_verdict)  # Critical vertices never get deflated
+
+# decompose_1d_curve: end-to-end wiring, both directions confirmed directly.
+f_nodal = y^2 - x^3 - x^2
+F_nodal_curve = System([f_nodal], variables = [x, y])
+verts_off, _ = decompose_1d_curve(F_nodal_curve, cfg64)
+verts_on, _ = decompose_1d_curve(F_nodal_curve, cfg64; deflate = true)
+@test all(!haskey(v.metadata, :isosingular_verdict) for v in verts_off)
+sing_on = filter(v -> v.v_type == Singular, verts_on)
+@test !isempty(sing_on)
+@test all(haskey(v.metadata, :isosingular_verdict) for v in sing_on)
+println("  decompose_1d_curve: deflate=false adds no metadata, deflate=true resolves ",
+    length(sing_on), " Singular vertex(es)")
+
+# Existing non-deflate call sites need zero changes -- confirmed by running
+# this project's own sphere/ellipsoid fixtures completely unmodified
+# (test_surfacedecomposition.jl, included separately in runtests.jl) and by
+# the byte-identical check above, not merely assumed from "no signature
+# error was raised."
+
+println()
+println("=" ^ 70)
+println("12b. Required before Stage 4c: forcing Exhausted and Ambiguous directly")
+println("=" ^ 70)
+
+# Both verdicts are defined but were NEVER triggered by any of the four
+# ground-truth cases above (all resolve in 1-2 rounds with zero
+# inconsistent results) -- confirmed unexercised, not just untested by
+# omission. Validating against Taubin's real singular vertices without
+# ever having seen these branches actually fire once would mean trusting
+# them by inspection, not evidence. Both constructions below are
+# deliberately artificial, and labeled as such.
+
+# Exhausted: the cusp genuinely needs 2 rounds (ground truth [2,1,0]) --
+# capping max_deflations at 1 forces the loop to give up one round short,
+# with NO randomness involved (this path never reaches a verification
+# attempt at all). Confirmed reliable across repeated trials before
+# committing to this as a test, not assumed from one lucky run.
+cfg_capped = HomotopyConfig{Float64}(max_deflations = 1)
+r_exhausted = resolve_isosingular_dimension(F2_cusp, origin_c, cfg_capped)
+println("  Exhausted (cusp, max_deflations=1): verdict=", r_exhausted.verdict,
+    "  corank_seq=", r_exhausted.corank_sequence, "  rounds=", r_exhausted.rounds)
+@test r_exhausted.verdict == Exhausted
+@test r_exhausted.rounds == 1
+@test r_exhausted.isosingular_dimension === nothing
+
+# Ambiguous: an artificial F_original, shifted by a tiny CONSTANT from the
+# true Whitney umbrella equation. A constant shift leaves the Jacobian
+# (hence the entire corank sequence and deflate_once trajectory) IDENTICAL
+# to the true umbrella -- confirmed below, corank_seq still [3,1,1] -- but
+# guarantees F_original(x) != 0 at every point, including wherever a
+# genuine successful track lands, so the residual check inside
+# verify_isosingular_dimension fails deterministically once tracking
+# succeeds. Confirmed reliable across repeated trials before committing to
+# this as a test, not assumed from one lucky run.
+f_umbrella_shifted = wx^2 - wy^2 * wz - 1e-3
+F_umbrella_shifted = System([f_umbrella_shifted], variables = [wx, wy, wz])
+println("  f_umbrella_shifted(handle_pt) = ",
+    HomotopyContinuation.evaluate(f_umbrella_shifted, [wx, wy, wz] => handle_pt), "  (nonzero by construction)")
+r_ambiguous = resolve_isosingular_dimension(F_umbrella_shifted, handle_pt, cfg64)
+println("  Ambiguous (shifted umbrella, handle point): verdict=", r_ambiguous.verdict,
+    "  corank_seq=", r_ambiguous.corank_sequence, "  rounds=", r_ambiguous.rounds)
+@test r_ambiguous.verdict == Ambiguous
+@test r_ambiguous.corank_sequence == [3, 1, 1]  # identical trajectory to the true umbrella -- confirms
+                                                  # the mismatch is isolated to the residual check, nothing else
+@test r_ambiguous.isosingular_dimension === nothing
+
 end

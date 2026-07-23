@@ -26,6 +26,25 @@
 # `Visuals.jl` since `plot_surface_decomposition`'s methods take
 # `decompose_3d_surface`'s/`weld_mesh`'s own return types directly (no
 # `using` needed within a flat module).
+#
+# Convention (2026-07, isosingular deflation Stage 4a): because this is one
+# flat namespace, two `@enum` blocks anywhere in `src/` can collide on a
+# member name with no compile error -- Julia's `==` across two different
+# enum types just silently returns `false` rather than erroring, so a
+# collision doesn't announce itself; it quietly breaks whichever comparison
+# assumed the wrong one was in scope. This nearly happened between
+# `IsosingularVerdict.Inconclusive` (Solver.jl, Stage 3) and a first draft of
+# `ResolveVerdict`'s own `Inconclusive` (Stage 4a) -- caught only by
+# re-deriving the docstring's own example by hand, not by any check. Before
+# adding any new `@enum` to this module: grep the whole `src/` tree for
+# every candidate member name first, and prefix multi-value "verdict"-shaped
+# enums with a short tag tied to their own owning function (e.g.
+# `ResolveResolved`/`ResolveAmbiguous`/`ResolveExhausted`, not bare
+# `Resolved`/`Ambiguous`/`Exhausted`) rather than relying on a word simply
+# sounding unlikely to collide -- that's exactly what `Inconclusive` sounded
+# like the first time too. Not applied retroactively to
+# `IsosingularVerdict`/`ResolveVerdict`'s own already-shipped, exported
+# members; applies going forward.
 
 module HomotopyGetsReal
 

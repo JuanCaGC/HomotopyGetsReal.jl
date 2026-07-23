@@ -31,6 +31,7 @@ so `HomotopyConfig{BigFloat}()` gets full-precision literals.
 - `singular_value_threshold`: Threshold for classifying a vertex as `Singular`.
 - `path_tracker_precision`: Requested precision for HomotopyContinuation path tracking.
 - `patch_transversality_cos_tol`: Cosine threshold for re-anchoring skewed z-sweep patches.
+- `projection_orthonormality_tol`: Acceptance threshold for `norm(Q'Q - I)` when validating a user-supplied projection matrix.
 
 ## Knobs
 
@@ -63,6 +64,17 @@ so `HomotopyConfig{BigFloat}()` gets full-precision literals.
     # singular_value_threshold for this fired one hop too late on asymmetric-ellipsoid regression
     # because that scale tracks equation magnitude, not patch skew. Default 0.9 ≈ 26° rotation.
     patch_transversality_cos_tol::T = T(0.9)
+    # projection_orthonormality_tol (2026-07-23, Audit 1 Item 4/2a fix): acceptance
+    # threshold for a user-supplied projection matrix's orthonormality defect,
+    # norm(Q'Q - I), inside Projection._resolve_projection. Previously a bare Float64
+    # literal (1e-8) with no cfg parameter to source it from at all -- this preserves
+    # that exact, already-working default while making it genuinely configurable, per
+    # this file's own "every numerical tolerance threaded through HomotopyConfig"
+    # commitment. Deliberately its own field, not a reuse of jacobian_rank_tol (same
+    # default magnitude today, but a different physical quantity -- a matrix-identity
+    # defect, not a Jacobian singular-value cutoff); see this file's own header comment
+    # on why mixing differently-scoped tolerances is a known bug source here.
+    projection_orthonormality_tol::T = T(1e-8)
     max_path_steps::Int = 1000
     bbox_x::Tuple{T,T} = (T(-4.0), T(4.0))
     bbox_y::Tuple{T,T} = (T(-4.0), T(4.0))

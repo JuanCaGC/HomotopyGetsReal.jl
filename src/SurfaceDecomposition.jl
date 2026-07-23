@@ -1980,7 +1980,7 @@ function decompose_3d_surface(
     # structure is chart-frame; Q is not recoverable by the caller for
     # :random), then world-mapped here alongside everything else.
     if projection !== nothing
-        Q = _resolve_projection(projection, rng)
+        Q = _resolve_projection(projection, rng, cfg)
         F_chart = _rotate_system(F, Q)
         _verify_projection_ok(F_chart, cfg)
         cfg_chart = _chart_config(cfg, Q)

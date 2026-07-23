@@ -59,7 +59,7 @@ function random_orthogonal_matrix(::Type{T}, n::Int; rng::Random.AbstractRNG = R
 end
 
 """
-    _resolve_projection(projection, rng) -> Matrix{Float64}
+    _resolve_projection(projection, rng, cfg::HomotopyConfig{T}) where {T<:AbstractFloat} -> Matrix{Float64}
 
 Build or validate the projection matrix for [`decompose_3d_surface`](@ref):
 `:random` draws a fresh Haar-uniform SO(3) rotation from `rng`; a 3x3
@@ -67,8 +67,17 @@ orthonormal, det = +1 matrix is accepted as-is (converted to Float64 -- the
 substitution precision path tracking uses anyway); anything else throws an
 `ArgumentError`. Reflections (det < 0) are rejected rather than auto-fixed;
 see the module header for the winding-convention rationale.
+
+`cfg` (2026-07-23, Audit 1 Item 4/2a fix): the orthonormality acceptance
+threshold now comes from `cfg.projection_orthonormality_tol` instead of a
+bare `1e-8` literal with no way for a caller to source it from `cfg` at
+all -- same default value as before, genuinely configurable now. Compared
+against the Float64-computed `ortho_defect` via `Float64(cfg....)`, matching
+this codebase's established `btol64`-style pattern (see
+`intersect_bounding_object`) for a T-generic tolerance gating a strictly
+Float64-only check.
 """
-function _resolve_projection(projection, rng::Random.AbstractRNG)
+function _resolve_projection(projection, rng::Random.AbstractRNG, cfg::HomotopyConfig{T}) where {T<:AbstractFloat}
     if projection === :random
         return random_orthogonal_matrix(Float64, 3; rng = rng)
     elseif projection isa AbstractMatrix
@@ -77,9 +86,10 @@ function _resolve_projection(projection, rng::Random.AbstractRNG)
         ))
         Q = Matrix{Float64}(projection)
         ortho_defect = norm(Q' * Q - I)
-        ortho_defect <= 1e-8 || throw(ArgumentError(
+        ortho_tol64 = Float64(cfg.projection_orthonormality_tol)
+        ortho_defect <= ortho_tol64 || throw(ArgumentError(
             "decompose_3d_surface: projection matrix is not orthonormal " *
-            "(norm(Q'Q - I) = $(ortho_defect) > 1e-8).",
+            "(norm(Q'Q - I) = $(ortho_defect) > $(ortho_tol64)).",
         ))
         det(Q) > 0 || throw(ArgumentError(
             "decompose_3d_surface: projection matrix has det = $(det(Q)) < 0 (a reflection), which " *

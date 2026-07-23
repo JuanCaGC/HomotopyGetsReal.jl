@@ -235,4 +235,65 @@ println("  deflation_stabilized([1,1,1])  = ", deflation_stabilized([1, 1, 1]))
 @test deflation_stabilized([1, 1, 1]) == false
 @test_throws ArgumentError deflation_stabilized([1, 2])
 
+println()
+println("=" ^ 70)
+println("9. Isosingular deflation Stage 2: deflate_once")
+println("=" ^ 70)
+
+# Same node/cusp singularities as section 8, now sliced with one generic
+# line L=x+2y through the origin (BertiniReal's witness-point convention --
+# a bare 1-equation curve has only 1 Jacobian row, so minorSize=2 has no
+# rows to draw from; deflate_once's ArgumentError guard for this is
+# exercised explicitly below, first, before the real witness systems).
+#
+# Node:  {f=y^2-x^2, L=x+2y}.  J=[[-2x,2y],[1,2]].  At (0,0): [[0,0],[1,2]]
+#   -> rank 1 -> corank = 2-1 = 1 (matches section 8's bare-curve corank).
+#   minorSize=2: the only minor is det(J) = -2x*2 - 2y*1 = -4x-2y =: g1.
+#   Deflated J = [[0,0],[1,2],[-4,-2]] at origin -> rank 2 (rows 2,3
+#   independent: det[[1,2],[-4,-2]]=6) -> corank_new = 2-2 = 0.
+#
+# Cusp:  {f=y^2-x^3, L=x+2y}.  J=[[-3x^2,2y],[1,2]].  At (0,0): same [[0,0],[1,2]]
+#   -> corank = 1.  Only minor: det(J) = -3x^2*2 - 2y*1 = -6x^2-2y =: g1.
+#   Deflated J = [[0,0],[1,2],[0,-2]] at origin -> rank 2
+#   (det[[1,2],[0,-2]]=-2) -> corank_new = 0.
+
+println("Setup: same node/cusp, sliced with generic line L=x+2y through (0,0)")
+
+L = xs + 2 * ys
+F_node_witness = System([f_node, L], variables = [xs, ys])
+F_cusp_witness = System([f_cusp, L], variables = [xs, ys])
+origin = ComplexF64[0, 0]
+
+# Guard check: the bare curve's Jacobian has only 1 row, so it can only ever
+# supply minorSize<=1 -- but at the ORIGIN itself, deflate_once's own default
+# (expected_rank=nv=2) makes corank=2 there (rank(J)=0), which collapses
+# minorSize back down to 1 (trivially satisfiable with 1 row) -- NOT where
+# the guard fires. It fires at a SMOOTH point of the bare curve instead,
+# e.g. (1,1): rank(J)=1 there (full row rank, a genuinely regular point of
+# the curve), so corank=2-1=1 (not yet "isolated" in the ambient sense) and
+# minorSize=2-1+1=2 -- which the bare curve's single row cannot supply.
+println("  bare curve (no slicing line) at a SMOOTH point (1,1) correctly rejected:")
+try
+    deflate_once(F_node, ComplexF64[1, 1], cfg64)
+    println("    UNEXPECTED: did not throw")
+catch e
+    println("    ", sprint(showerror, e))
+end
+@test_throws ArgumentError deflate_once(F_node, ComplexF64[1, 1], cfg64)
+
+F_node_defl, c_node_new = deflate_once(F_node_witness, origin, cfg64)
+F_cusp_defl, c_cusp_new = deflate_once(F_cusp_witness, origin, cfg64)
+
+println("  node deflated system: ", F_node_defl)
+println("  node corank sequence: [", estimate_corank(F_node_witness, origin, cfg64), ", ", c_node_new, "]  (hand: [1,0])")
+println("  cusp deflated system: ", F_cusp_defl)
+println("  cusp corank sequence: [", estimate_corank(F_cusp_witness, origin, cfg64), ", ", c_cusp_new, "]  (hand: [1,0])")
+
+@test length(F_node_defl.expressions) == 3
+@test length(F_cusp_defl.expressions) == 3
+@test c_node_new == 0
+@test c_cusp_new == 0
+@test deflation_stabilized([estimate_corank(F_node_witness, origin, cfg64), c_node_new]) == true
+@test deflation_stabilized([estimate_corank(F_cusp_witness, origin, cfg64), c_cusp_new]) == true
+
 end

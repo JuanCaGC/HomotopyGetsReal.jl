@@ -152,6 +152,92 @@ function deflation_stabilized(corank_sequence::AbstractVector{<:Integer})
 end
 
 """
+    deflate_once(F::System, x0::AbstractVector, cfg::HomotopyConfig{T};
+                  expected_rank::Int = length(F.variables)) where {T<:AbstractFloat}
+        -> (F_new::System, corank_new::Int)
+
+Isosingular deflation Stage 2 primitive (2026-07): a single deflation iteration,
+the Julia/HC.jl-native analogue of `createMatlabDeflation`/`deflate_no_subst.m`
+(`src/symbolics/isosingular.cpp:315-478`, `matlab_codes/deflate_no_subst.m:110-173`)
+-- symbolic minor construction via `HomotopyContinuation.jacobian`/`LinearAlgebra.det`
+instead of shelling out to MATLAB/Python.
+
+Appends every `minorSize`-sized minor of `jacobian(F)` that is not the
+identically-zero polynomial (`iszero(expand(det(...)))` -- a structural
+zero-polynomial test, NOT a numerical test at `x0`: by definition of rank,
+*every* `minorSize`-sized minor vanishes numerically at a corank-`c`
+singular point when `minorSize = rank(J)+1`, so filtering on value-at-`x0`
+would exclude everything; BertiniReal's own filter, `simplify(det(...)) ~= 0`
+in Matlab, is the same structural test, just via a different CAS). `minorSize`
+is derived from the current corank at `x0` via [`estimate_corank`](@ref)
+(`minorSize = expected_rank - corank + 1`, matching `isosingular.cpp:195`'s
+formula with no homogenizing-patch correction, since HC.jl works affinely).
+
+Throws `ArgumentError` if `x0` is already full rank at `F` (corank 0 --
+nothing to deflate) or if `minorSize` exceeds `F`'s available rows or
+columns (`length(F.expressions)` / `length(F.variables)`) -- the latter is
+not a bug to work around, it is `deflate_once` telling you `F` is not yet a
+valid witness-point system.
+
+**Design implication for future pipeline wiring (Stages 3-4), noted now so
+it isn't rediscovered from scratch later**: `deflate_once` assumes `F`
+already includes enough generic slicing hyperplanes to be a 0-dimensional
+witness-point system at `x0` -- BertiniReal's own convention (see the `P`
+patch equation in its Griffis-Duffy fixture, `test/curve/griffisduffy/input`)
+and the reason this function's docstring calls `F` a witness system, not
+just "the curve/surface equation". `compute_critical_points` and
+`decompose_1d_curve`/`decompose_3d_surface` only ever hand this function the
+BARE curve/surface equation(s) -- when a `Singular`-classified vertex is
+routed into deflation, a new step, not yet implemented, must first construct
+a generic slicing hyperplane through that point and augment `F` with it
+*before* calling `deflate_once`. Confirmed necessary by hand: a bare single
+plane-curve equation has only 1 Jacobian row, so it can never supply the
+`minorSize=2` this function's own default `expected_rank = length(F.variables)`
+demands away from the singular point itself (at a SMOOTH point, `rank(J)=1`,
+so `corank=1` and `minorSize=2`; `test_solver.jl`'s guard-check confirms the
+`ArgumentError` fires there) -- note this guard does NOT fire at the singular
+point itself with this default, since `rank(J)=0` there collapses
+`minorSize` back down to a trivially-satisfiable `1`; that degenerate case
+happens to still "deflate" (via two independent 1x1 minors, i.e. the bare
+partials) but is not genuine isosingular deflation and should not be relied
+upon -- another reason a real slicing hyperplane is needed before wiring
+this into the pipeline, not just for the row-count guard.
+"""
+function deflate_once(
+    F::System,
+    x0::AbstractVector,
+    cfg::HomotopyConfig{T};
+    expected_rank::Int = length(F.variables),
+) where {T<:AbstractFloat}
+    corank = estimate_corank(F, x0, cfg; expected_rank = expected_rank)
+    corank > 0 || throw(ArgumentError(
+        "deflate_once: system is already full rank (corank 0) at this point -- nothing to deflate.",
+    ))
+
+    ne = length(F.expressions)
+    nv = length(F.variables)
+    minor_size = expected_rank - corank + 1
+
+    minor_size <= ne && minor_size <= nv || throw(ArgumentError(
+        "deflate_once: minorSize=$minor_size exceeds available rows ($ne equations) or " *
+        "columns ($nv variables) -- F is not yet a 0-dimensional witness-point system; " *
+        "see the docstring's note on generic slicing hyperplanes.",
+    ))
+
+    J = jacobian(F)
+    new_eqs = Expression[]
+    for rows in combinations(1:ne, minor_size), cols in combinations(1:nv, minor_size)
+        minor = expand(det(J[rows, cols]))
+        iszero(minor) && continue
+        push!(new_eqs, minor)
+    end
+
+    F_new = System(vcat(F.expressions, new_eqs), variables = F.variables)
+    corank_new = estimate_corank(F_new, x0, cfg; expected_rank = expected_rank)
+    return F_new, corank_new
+end
+
+"""
     _newton_polish(F::System, x0::Vector{Complex{T}}, cfg::HomotopyConfig{T}) where {T<:AbstractFloat}
 
 Refines `x0` (a solution of the square system `F`, typically obtained

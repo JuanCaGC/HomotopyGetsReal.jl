@@ -43,6 +43,7 @@ so `HomotopyConfig{BigFloat}()` gets full-precision literals.
 - `z_mid_gradient_ratio_tol`: Minimum patch-direction strength ratio for accepting a slice.
 - `min_slab_width`: Resolution floor for z-slab boundaries; closer critical z-values are merged.
 - `incidence_snap_tol_ratio`: Chord-error-aware distance ratio gating Phase 9b snap-unification/continuity.
+- `isosingular_verify_retries`: Retry budget for `verify_isosingular_dimension`'s fresh-hyperplane attempts.
 """
 @with_kw struct HomotopyConfig{T<:AbstractFloat}
     # critical_point_tol: solution quality at compute_critical_points ("did the solver converge?").
@@ -105,4 +106,15 @@ so `HomotopyConfig{BigFloat}()` gets full-precision literals.
     # one boundary alone) — see decompose_3d_surface's Phase 9b docstring section
     # and weld_mesh's for the full evidence trail.
     incidence_snap_tol_ratio::T = T(1.5)
+    # isosingular_verify_retries: retry budget for verify_isosingular_dimension (Stage 3,
+    # 2026-07) -- how many fresh-random-hyperplane attempts before an unresolved round
+    # reports Inconclusive rather than NotTerminal. Every real case checked during this
+    # feature's investigation (node/cusp, Whitney umbrella handle and tip, at every round
+    # tested) resolved in exactly 1 attempt -- verified or cleanly rejected -- with zero
+    # instances where a second attempt was actually needed to reach a correct verdict.
+    # Default 20 (matching Bertini1's isosingularDimTest maxIts, isosingular.c:336) is
+    # therefore adopted purely as an untested-case safety margin for harder surfaces Stage 4
+    # hasn't exercised yet, NOT because this project's own evidence ever required more than
+    # one attempt. Revisit if real Stage 4 data ever shows retries actually being consumed.
+    isosingular_verify_retries::Int = 20
 end

@@ -224,16 +224,20 @@ println("  cusp  corank at (1,1) = $c_cusp_smooth  (hand-computed: 0)")
 @test c_cusp_origin == 1
 @test c_cusp_smooth == 0
 
-println("  deflation_stabilized([1,1,0])  = ", deflation_stabilized([1, 1, 0]))
-println("  deflation_stabilized([1,0])    = ", deflation_stabilized([1, 0]))
-println("  deflation_stabilized([])       = ", deflation_stabilized(Int[]))
-println("  deflation_stabilized([1,1,1])  = ", deflation_stabilized([1, 1, 1]))
+println("  HomotopyGetsReal._corank_plateau_hint([1,1,0])  = ", HomotopyGetsReal._corank_plateau_hint([1, 1, 0]))
+println("  HomotopyGetsReal._corank_plateau_hint([1,0])    = ", HomotopyGetsReal._corank_plateau_hint([1, 0]))
+println("  HomotopyGetsReal._corank_plateau_hint([])       = ", HomotopyGetsReal._corank_plateau_hint(Int[]))
+println("  HomotopyGetsReal._corank_plateau_hint([1,1,1])  = ", HomotopyGetsReal._corank_plateau_hint([1, 1, 1]))
 
-@test deflation_stabilized([1, 1, 0]) == true
-@test deflation_stabilized([1, 0]) == true
-@test deflation_stabilized(Int[]) == false
-@test deflation_stabilized([1, 1, 1]) == false
-@test_throws ArgumentError deflation_stabilized([1, 2])
+@test HomotopyGetsReal._corank_plateau_hint([1, 1, 0]) == true
+@test HomotopyGetsReal._corank_plateau_hint([1, 0]) == true
+@test HomotopyGetsReal._corank_plateau_hint(Int[]) == false
+# Corrected 2026-07: [1,1,1] is a genuine plateau (last two entries equal) --
+# real data (the Whitney umbrella handle, [3,1,1,1,1]) confirms this repeats
+# forever, not "not yet stabilized". The old deflation_stabilized asserted
+# false here; that was the confirmed bug this rename fixes.
+@test HomotopyGetsReal._corank_plateau_hint([1, 1, 1]) == true
+@test_throws ArgumentError HomotopyGetsReal._corank_plateau_hint([1, 2])
 
 println()
 println("=" ^ 70)
@@ -299,7 +303,70 @@ println("  cusp corank sequence: [", estimate_corank(F_cusp_witness, origin, cfg
 @test length(F_cusp_defl.expressions) == 3
 @test c_node_new == 0
 @test c_cusp_new == 0
-@test deflation_stabilized([estimate_corank(F_node_witness, origin, cfg64; expected_rank = length(F_node_witness.variables)), c_node_new]) == true
-@test deflation_stabilized([estimate_corank(F_cusp_witness, origin, cfg64; expected_rank = length(F_cusp_witness.variables)), c_cusp_new]) == true
+@test HomotopyGetsReal._corank_plateau_hint([estimate_corank(F_node_witness, origin, cfg64; expected_rank = length(F_node_witness.variables)), c_node_new]) == true
+@test HomotopyGetsReal._corank_plateau_hint([estimate_corank(F_cusp_witness, origin, cfg64; expected_rank = length(F_cusp_witness.variables)), c_cusp_new]) == true
+
+println()
+println("=" ^ 70)
+println("10. Isosingular deflation Stage 3: verify_isosingular_dimension")
+println("=" ^ 70)
+
+# Ground-truth cases from this feature's own investigation (2026-07), each
+# re-run here as a permanent regression test rather than left as one-off
+# scratch evidence: Whitney umbrella handle/tip (surface, N=3) and the bare
+# (unsliced) cusp curve (N=2). All three were validated with a full
+# terminal/non-terminal table before this function was approved for
+# implementation -- see Solver.jl's own docstring for the false-positive
+# evidence behind the F_original residual check and the rejection of
+# R(f)=A*f randomization.
+
+println("Setup: Whitney umbrella f = x^2 - y^2*z, handle=(0,0,1), tip=(0,0,0)")
+
+@var wx wy wz
+f_umbrella = wx^2 - wy^2 * wz
+F_umbrella = System([f_umbrella], variables = [wx, wy, wz])
+handle_pt = ComplexF64[0, 0, 1]
+tip_pt = ComplexF64[0, 0, 0]
+er3 = 3
+
+F1_handle, d1_handle = deflate_once(F_umbrella, handle_pt, cfg64; expected_rank = er3)
+r_handle = verify_isosingular_dimension(F1_handle, F_umbrella, handle_pt, d1_handle, cfg64)
+println("  handle round1 (corank=$d1_handle): verdict=", r_handle.verdict, "  attempts=", r_handle.attempts)
+@test r_handle.verdict == Verified
+@test r_handle.attempts == 1
+@test r_handle.inconsistent_count == 0
+
+r_handle_wrong_d = verify_isosingular_dimension(F1_handle, F_umbrella, handle_pt, 2, cfg64)
+println("  handle round1, WRONG candidate d=2: verdict=", r_handle_wrong_d.verdict)
+@test r_handle_wrong_d.verdict != Verified
+
+F1_tip, d1_tip = deflate_once(F_umbrella, tip_pt, cfg64; expected_rank = er3)
+r_tip1 = verify_isosingular_dimension(F1_tip, F_umbrella, tip_pt, d1_tip, cfg64)
+println("  tip round1 (corank=$d1_tip, KNOWN non-terminal per [3,2,0]): verdict=", r_tip1.verdict)
+@test r_tip1.verdict != Verified
+
+F2_tip, d2_tip = deflate_once(F1_tip, tip_pt, cfg64; expected_rank = er3)
+r_tip2 = verify_isosingular_dimension(F2_tip, F_umbrella, tip_pt, d2_tip, cfg64)
+println("  tip round2 (corank=$d2_tip, trivially terminal): verdict=", r_tip2.verdict, "  attempts=", r_tip2.attempts)
+@test r_tip2.verdict == Verified
+@test r_tip2.attempts == 0
+@test r_tip2.endpoint == Complex{Float64}.(tip_pt)
+
+println()
+println("Setup: bare cusp curve f = y^2 - x^3 (unsliced, N=2)")
+F2_cusp = System([f_cusp], variables = [xs, ys])
+er2 = 2
+origin_c = ComplexF64[0, 0]
+
+F1c, d1c = deflate_once(F2_cusp, origin_c, cfg64; expected_rank = er2)
+r_cusp1 = verify_isosingular_dimension(F1c, F2_cusp, origin_c, d1c, cfg64)
+println("  cusp round1 (corank=$d1c, KNOWN non-terminal per [2,1,0]): verdict=", r_cusp1.verdict)
+@test r_cusp1.verdict != Verified
+
+F2c, d2c = deflate_once(F1c, origin_c, cfg64; expected_rank = er2)
+r_cusp2 = verify_isosingular_dimension(F2c, F2_cusp, origin_c, d2c, cfg64)
+println("  cusp round2 (corank=$d2c, trivially terminal): verdict=", r_cusp2.verdict, "  attempts=", r_cusp2.attempts)
+@test r_cusp2.verdict == Verified
+@test r_cusp2.attempts == 0
 
 end

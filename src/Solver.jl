@@ -127,38 +127,48 @@ function estimate_corank(
 end
 
 """
-    deflation_stabilized(corank_sequence::AbstractVector{<:Integer}) -> Bool
+    _corank_plateau_hint(corank_sequence::AbstractVector{<:Integer}) -> Bool
 
-Isosingular-deflation Stage 1 primitive: mirrors the two-part check
-`isosingular_deflation`'s outer loop performs on BertiniReal's corank sequence
-(`src/symbolics/isosingular.cpp:53-97`):
+Isosingular-deflation Stage 3 primitive (2026-07, renamed from
+`deflation_stabilized`): a cheap, NECESSARY-BUT-NOT-SUFFICIENT pre-filter over
+a corank sequence -- not an authoritative stabilization test. That role now
+belongs to [`verify_isosingular_dimension`](@ref), which actually verifies
+smoothness at a candidate dimension via slice-moving continuation, matching
+Hauenstein-Wampler's Definition 5.18 ("the isosingular local dimension of `x`
+is the LIMIT of the deflation sequence") and the paper's own explicit warning
+(Section 6): *"a necessary condition for stabilization is that two
+consecutive terms in the deflation sequence must be equal, but this is not
+sufficient"* -- their own `f_{k,l}=[x^k,y^l]` counterexample family proves a
+sequence can plateau for multiple rounds and still decrease further.
 
-1. The sequence must be nonincreasing -- BertiniReal treats an increase as a
-   hard error (`isosingular.cpp:80-85`, "the deflation sequence must be a
-   nonincreasing sequence"), not merely "not yet stabilized". Violated here by
-   throwing `ArgumentError`, for the same reason: an increase signals a
-   numerical failure in the corank estimate itself, not a legitimate
-   deflation state.
-2. Deflation has succeeded once the corank reaches `0` -- a regular
-   (full-rank) point of the current (possibly already-deflated) system, at
-   which Newton's method is once again quadratically convergent. This is the
-   standard Leykin-Verschelde-Zhao termination criterion; BertiniReal's own
-   `success` flag is computed inside Bertini1's closed internals
-   (`witnessGeneration`/`isosingular_summary`, not visible in `bertini_real`'s
-   own source), so this equivalence is asserted from the published theory, not
-   verified line-for-line against Bertini1 itself.
+This function checks only the necessary half: Lemma 3.4's nonincreasing
+invariant (`N >= d_k >= d_{k+1} >= 0`; thrown as `ArgumentError` on violation,
+matching `isosingular.cpp:80-85`'s identical check), plus a plateau signal
+(ends in `0`, or its last two entries are equal). A `true` result means "worth
+spending a real verification on this round," never "confirmed stabilized."
+Intended use: skip [`verify_isosingular_dimension`](@ref) entirely when this
+returns `false` -- the corank strictly decreased from the prior round, so by
+Lemma 3.4 alone we already know this round isn't terminal, with no need to pay
+for a homotopy track to learn what the integer sequence already told us.
 
-Returns `false` (not yet stabilized) for an empty or nonzero-terminated
-sequence.
+Corrected 2026-07: a prior version of this function (`deflation_stabilized`)
+returned `false` for `[1,1,1]`, treating "ends in 0" as the only success
+signal. That was wrong on two counts -- retracted after finding it
+contradicted both Definition 5.18 directly and this project's own
+Whitney-umbrella-handle data (a real `deflate_once` trace holding at corank 1
+for 4 consecutive rounds, `[3,1,1,1,1]`). `[1,1,1]` now correctly returns
+`true`.
 """
-function deflation_stabilized(corank_sequence::AbstractVector{<:Integer})
+function _corank_plateau_hint(corank_sequence::AbstractVector{<:Integer})
     for i in 2:length(corank_sequence)
         corank_sequence[i] <= corank_sequence[i-1] || throw(ArgumentError(
-            "corank sequence must be nonincreasing (BertiniReal isosingular.cpp:80-85); " *
-            "got $(corank_sequence[i-1]) -> $(corank_sequence[i]) at step $i",
+            "corank sequence must be nonincreasing (Hauenstein-Wampler Lemma 3.4; " *
+            "isosingular.cpp:80-85); got $(corank_sequence[i-1]) -> $(corank_sequence[i]) at step $i",
         ))
     end
-    return !isempty(corank_sequence) && last(corank_sequence) == 0
+    isempty(corank_sequence) && return false
+    last(corank_sequence) == 0 && return true
+    return length(corank_sequence) >= 2 && last(corank_sequence) == corank_sequence[end-1]
 end
 
 """
@@ -189,29 +199,26 @@ columns (`length(F.expressions)` / `length(F.variables)`) -- the latter is
 not a bug to work around, it is `deflate_once` telling you `F` is not yet a
 valid witness-point system.
 
-**Design implication for future pipeline wiring (Stages 3-4), noted now so
-it isn't rediscovered from scratch later**: `deflate_once` assumes `F`
-already includes enough generic slicing hyperplanes to be a 0-dimensional
-witness-point system at `x0` -- BertiniReal's own convention (see the `P`
-patch equation in its Griffis-Duffy fixture, `test/curve/griffisduffy/input`)
-and the reason this function's docstring calls `F` a witness system, not
-just "the curve/surface equation". `compute_critical_points` and
-`decompose_1d_curve`/`decompose_3d_surface` only ever hand this function the
-BARE curve/surface equation(s) -- when a `Singular`-classified vertex is
-routed into deflation, a new step, not yet implemented, must first construct
-a generic slicing hyperplane through that point and augment `F` with it
-*before* calling `deflate_once`. Confirmed necessary by hand: a bare single
-plane-curve equation has only 1 Jacobian row, so it can never supply the
-`minorSize=2` this function's own default `expected_rank = length(F.variables)`
-demands away from the singular point itself (at a SMOOTH point, `rank(J)=1`,
-so `corank=1` and `minorSize=2`; `test_solver.jl`'s guard-check confirms the
-`ArgumentError` fires there) -- note this guard does NOT fire at the singular
-point itself with this default, since `rank(J)=0` there collapses
-`minorSize` back down to a trivially-satisfiable `1`; that degenerate case
-happens to still "deflate" (via two independent 1x1 minors, i.e. the bare
-partials) but is not genuine isosingular deflation and should not be relied
-upon -- another reason a real slicing hyperplane is needed before wiring
-this into the pipeline, not just for the row-count guard.
+**Correction, 2026-07 (retracts this docstring's own prior claim)**: an
+earlier version of this note assumed `F` must already include generic
+slicing hyperplanes before `deflate_once` is usable -- a "construct a
+witness slice first" pipeline stage was proposed on that basis and then
+directly investigated. It was confirmed unnecessary: `deflate_once` called
+directly on the BARE, unsliced curve/surface equation (Whitney umbrella
+`x^2-y^2*z`, both the handle `(0,0,1)` and tip `(0,0,0)`) reproduces the
+Hauenstein-Wampler `D_det` operator's own published deflation sequences
+exactly (`{3,1,1,...}` and `{3,2,0,...}`), using this function's own default
+`expected_rank = length(F.variables)` with no slice, no witness-point
+construction, and no other change. The `minorSize=2`-exceeds-1-row failure
+this note used to cite as evidence a slice was required is real (that guard
+still fires, correctly, at a SMOOTH point of a bare curve, `rank(J)=1`), but
+it does not mean a slice is needed in general -- it means `deflate_once` was
+being asked a question (is this an isolated point?) that a smooth point of a
+positive-dimensional variety can never answer yes to, independent of
+slicing. `compute_critical_points`, `decompose_1d_curve`, and
+`decompose_3d_surface` may hand this function the bare curve/surface
+equation directly; no intermediate slicing step is needed before Stage 3/4
+wiring.
 """
 function deflate_once(
     F::System,
@@ -245,6 +252,167 @@ function deflate_once(
     F_new = System(vcat(F.expressions, new_eqs), variables = F.variables)
     corank_new = estimate_corank(F_new, x0, cfg; expected_rank = expected_rank)
     return F_new, corank_new
+end
+
+"""
+    IsosingularVerdict
+
+Three-way outcome of [`verify_isosingular_dimension`](@ref) -- deliberately
+not a `Bool`. Collapsing "confirmed non-terminal" and "no clean answer either
+way" into a single `false` would hide exactly the distinction that mattered
+in this feature's own investigation: a demonstrated 4-of-6 false-positive
+rate under naive `R(f)=A*f` randomization, on a case (the cusp curve's round
+1) with a mathematically certain non-terminal answer.
+
+- `Verified`: `d` is confirmed as the isosingular local dimension at this
+  round -- either trivially (`d == 0`, an already-isolated point) or via a
+  slice-moving homotopy track that both completed successfully AND landed on
+  a point satisfying the ORIGINAL system to within tolerance.
+- `NotTerminal`: every retry attempt cleanly failed to track -- no attempt
+  succeeded, and none reported an inconsistent success either. Real,
+  repeated evidence this round is not yet stabilized; keep deflating.
+- `Inconclusive`: the retry budget was exhausted without a clean verdict.
+  Any single attempt reporting tracker-success with a residual outside
+  tolerance against the original system forces this outcome immediately,
+  regardless of how many clean rejections surround it -- one inconsistent
+  result is itself the signal, not noise to retry away.
+"""
+@enum IsosingularVerdict Verified NotTerminal Inconclusive
+
+"""
+    VerifyResult{T<:AbstractFloat}
+
+Return type of [`verify_isosingular_dimension`](@ref).
+
+- `verdict::IsosingularVerdict`
+- `endpoint::Union{Nothing,Vector{Complex{T}}}`: the verified point, set only
+  when `verdict == Verified`; `nothing` otherwise.
+- `attempts::Int`: retry attempts actually used (`0` for the `d == 0`
+  trivial case).
+- `inconsistent_count::Int`: number of attempts that reported tracker-success
+  but failed the original-system residual check -- a count, not just a flag,
+  so a caller can see how bad the inconsistency was, not merely that it
+  happened.
+"""
+struct VerifyResult{T<:AbstractFloat}
+    verdict::IsosingularVerdict
+    endpoint::Union{Nothing,Vector{Complex{T}}}
+    attempts::Int
+    inconsistent_count::Int
+end
+
+"""
+    verify_isosingular_dimension(F_current::System, F_original::System, x0::AbstractVector,
+                                   d::Int, cfg::HomotopyConfig{T}) where {T<:AbstractFloat}
+        -> VerifyResult{T}
+
+Isosingular-deflation Stage 3 primitive (2026-07): verifies whether `d` (the
+current corank of `F_current` at `x0`) is the TERMINAL isosingular local
+dimension, via a Julia/HC.jl-native analogue of Bertini1's `isosingularDimTest`
+(`isosingular.c:328-450`) and Hauenstein-Wampler's Algorithm 6.3 -- a
+slice-moving parameter-continuation track, not a numeric-sequence pattern
+match (see [`_corank_plateau_hint`](@ref) for why that alone is insufficient,
+per Definition 5.18 and the paper's own `f_{k,l}` counterexample family).
+
+`F_current` and `F_original` are deliberately separate, both required,
+never inferred from one another: `F_current` (the accumulated, possibly
+already-deflated system) is what the moving hyperplanes get appended to for
+tracking; `F_original` (the bare, undeflated defining equation(s)) is what
+the final acceptance residual is checked against. Conflating these into one
+argument was exactly the class of bug this signature is designed to make
+impossible to write by accident.
+
+Construction (validated against all three ground-truth cases available in
+this project -- node/cusp, Whitney umbrella handle and tip, every round
+tested, terminal and non-terminal): build `d` generic real hyperplanes
+`L_i(x) = sum_j a_ij*(x_j - x0_j)` through `x0` (random real Gaussian
+`a_ij`, matching `random_orthogonal_matrix`'s precedent for genericity, not
+complex -- `x0` is always real by construction here, coming from a
+real-classified vertex), append them to the FULL, UNMODIFIED `F_current` --
+no equation discarding, no `R(f)=A*f` randomization. Both alternatives were
+tried and rejected: discarding equations before tracking/certifying produces
+false positives (demonstrated directly on the Whitney umbrella handle);
+`R(f)=A*f` randomization produces a demonstrated 4-of-6 false-positive rate
+on the cusp's known-non-terminal round 1 (residuals 0.08-1.79 against the
+original system, on tracks that reported `return_code == :success`). Tracks
+via a parameter homotopy from `start_parameters = 0` (the hyperplanes' value
+at `x0`, by construction) to a fixed nonzero `target_parameters`.
+
+Acceptance requires BOTH conditions, checked explicitly and never silently
+combined into one boolean:
+1. The tracked path's `return_code == :success`.
+2. The tracked endpoint satisfies `F_original` to within
+   `cfg.critical_point_tol` -- checked against the ORIGINAL system, never
+   `F_current` or the augmented tracking system.
+
+Condition 2 is not optional decoration -- see the false-positive rate cited
+above. An implementation that checked only condition 1 would have wrongly
+verified the cusp's round 1 as terminal on 4 of 6 random attempts.
+
+Retries: up to `cfg.isosingular_verify_retries` attempts, each with a FRESH
+random hyperplane draw (per Hauenstein-Wampler's own stated reliability
+recommendation for Algorithm 6.3 -- "perform this test multiple times using
+different `L` and `lambda`" -- NOT Bertini1's literal same-draw retry,
+`isosingular.c:389-397`, already found unsound in fixed Float64 precision
+with no AMP escalation). Every real case checked in this project's own
+investigation resolved in exactly 1 attempt; see `cfg.isosingular_verify_retries`'s
+own docstring for why the default is nonetheless kept larger, as an
+untested-case safety margin rather than an empirically-required minimum.
+
+`d == 0` short-circuits to `Verified` with no tracking at all -- validated
+identically on both the Whitney umbrella tip's and the cusp's own round-2
+states (`estimate_corank == 0`, confirmed by two independent methods in each
+case, `F_original` residual exactly `0.0` in both).
+"""
+function verify_isosingular_dimension(
+    F_current::System,
+    F_original::System,
+    x0::AbstractVector,
+    d::Int,
+    cfg::HomotopyConfig{T},
+) where {T<:AbstractFloat}
+    if d == 0
+        return VerifyResult{T}(Verified, Complex{T}.(x0), 0, 0)
+    end
+
+    nv = length(F_current.variables)
+    orig_tol = Float64(cfg.critical_point_tol)
+    x0_c = ComplexF64.(x0)
+    inconsistent_count = 0
+
+    for attempt in 1:cfg.isosingular_verify_retries
+        A = randn(d, nv)
+        s = Variable.(:__verify_dimension_s, 1:d)
+        hyps = [
+            sum(A[i, j] * (F_current.variables[j] - x0_c[j]) for j in 1:nv) - s[i]
+            for i in 1:d
+        ]
+        Faug = System(vcat(F_current.expressions, hyps), variables = F_current.variables, parameters = s)
+
+        start_par = zeros(ComplexF64, d)
+        target_par = fill(ComplexF64(1.0), d)
+
+        result = solve(
+            Faug, [x0_c];
+            start_parameters = start_par, target_parameters = target_par, show_progress = false,
+        )
+        pr = only(path_results(result))
+
+        if pr.return_code == :success
+            resid = maximum(abs, HomotopyContinuation.evaluate(
+                F_original.expressions, F_original.variables => pr.solution,
+            ))
+            if resid <= orig_tol
+                return VerifyResult{T}(Verified, Complex{T}.(pr.solution), attempt, inconsistent_count)
+            else
+                inconsistent_count += 1
+                return VerifyResult{T}(Inconclusive, nothing, attempt, inconsistent_count)
+            end
+        end
+        # clean rejection (return_code != :success) -- retry with a fresh draw
+    end
+
+    return VerifyResult{T}(NotTerminal, nothing, cfg.isosingular_verify_retries, inconsistent_count)
 end
 
 """

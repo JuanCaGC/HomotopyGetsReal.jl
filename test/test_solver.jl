@@ -209,10 +209,10 @@ f_cusp = ys^2 - xs^3
 F_node = System([f_node], variables = [xs, ys])
 F_cusp = System([f_cusp], variables = [xs, ys])
 
-c_node_origin = estimate_corank(F_node, ComplexF64[0, 0], cfg64)
-c_node_smooth = estimate_corank(F_node, ComplexF64[1, 1], cfg64)
-c_cusp_origin = estimate_corank(F_cusp, ComplexF64[0, 0], cfg64)
-c_cusp_smooth = estimate_corank(F_cusp, ComplexF64[1, 1], cfg64)
+c_node_origin = estimate_corank(F_node, ComplexF64[0, 0], cfg64; expected_rank = length(F_node.expressions))
+c_node_smooth = estimate_corank(F_node, ComplexF64[1, 1], cfg64; expected_rank = length(F_node.expressions))
+c_cusp_origin = estimate_corank(F_cusp, ComplexF64[0, 0], cfg64; expected_rank = length(F_cusp.expressions))
+c_cusp_smooth = estimate_corank(F_cusp, ComplexF64[1, 1], cfg64; expected_rank = length(F_cusp.expressions))
 
 println("  node  corank at (0,0) = $c_node_origin  (hand-computed: 1)")
 println("  node  corank at (1,1) = $c_node_smooth  (hand-computed: 0)")
@@ -284,16 +284,22 @@ end
 F_node_defl, c_node_new = deflate_once(F_node_witness, origin, cfg64)
 F_cusp_defl, c_cusp_new = deflate_once(F_cusp_witness, origin, cfg64)
 
+# expected_rank = length(F_*_witness.variables) here, NOT .expressions -- matching
+# deflate_once's own internal convention (its default), which is what c_node_new/
+# c_cusp_new were actually computed against. Numerically identical to
+# length(F_*_witness.expressions) since these witness systems are square (2 eq,
+# 2 vars) either way, but stating the convention that's actually semantically
+# correct rather than the one that's only numerically accidental here.
 println("  node deflated system: ", F_node_defl)
-println("  node corank sequence: [", estimate_corank(F_node_witness, origin, cfg64), ", ", c_node_new, "]  (hand: [1,0])")
+println("  node corank sequence: [", estimate_corank(F_node_witness, origin, cfg64; expected_rank = length(F_node_witness.variables)), ", ", c_node_new, "]  (hand: [1,0])")
 println("  cusp deflated system: ", F_cusp_defl)
-println("  cusp corank sequence: [", estimate_corank(F_cusp_witness, origin, cfg64), ", ", c_cusp_new, "]  (hand: [1,0])")
+println("  cusp corank sequence: [", estimate_corank(F_cusp_witness, origin, cfg64; expected_rank = length(F_cusp_witness.variables)), ", ", c_cusp_new, "]  (hand: [1,0])")
 
 @test length(F_node_defl.expressions) == 3
 @test length(F_cusp_defl.expressions) == 3
 @test c_node_new == 0
 @test c_cusp_new == 0
-@test deflation_stabilized([estimate_corank(F_node_witness, origin, cfg64), c_node_new]) == true
-@test deflation_stabilized([estimate_corank(F_cusp_witness, origin, cfg64), c_cusp_new]) == true
+@test deflation_stabilized([estimate_corank(F_node_witness, origin, cfg64; expected_rank = length(F_node_witness.variables)), c_node_new]) == true
+@test deflation_stabilized([estimate_corank(F_cusp_witness, origin, cfg64; expected_rank = length(F_cusp_witness.variables)), c_cusp_new]) == true
 
 end

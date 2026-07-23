@@ -81,7 +81,7 @@ end
 
 """
     estimate_corank(F::System, point::AbstractVector, cfg::HomotopyConfig{T};
-                     expected_rank::Int = length(F.expressions)) where {T<:AbstractFloat}
+                     expected_rank::Int) where {T<:AbstractFloat}
         -> Int
 
 Isosingular-deflation Stage 1 primitive (2026-07 investigation): the Julia/HC.jl
@@ -92,25 +92,35 @@ internal numerical-rank/SVD test, not visible in `bertini_real`'s own source); t
 reimplements the same quantity directly on top of [`jacobian_rank_info`](@ref),
 which already computes a genuinely `T`-generic SVD-based rank.
 
-`corank = expected_rank - rank(J)`. Defaults `expected_rank` to `length(F.expressions)`
-(full row rank == smooth/transversal point), matching the convention
-[`intersect_bounding_object`](@ref) already uses when calling
-[`_classify_vertex_type`](@ref) on a bare curve system; pass `expected_rank`
-explicitly for a pre-augmented or pre-sliced system where a different rank is
-the regular-point baseline.
+`corank = expected_rank - rank(J)`. `expected_rank` is a MANDATORY keyword, no
+default (2026-07 hardening, following a witness-slice-anchoring investigation):
+this function now serves two genuinely different, co-equal conventions with no
+single sensible default between them --
+[`intersect_bounding_object`](@ref)/`_classify_vertex_type`'s "full ROW rank ==
+smooth point" convention (`expected_rank = length(F.expressions)`, meaningful on
+a bare, possibly-underdetermined curve/surface equation) versus
+[`deflate_once`](@ref)'s "full COLUMN rank == isolated point in ambient space"
+convention (`expected_rank = length(F.variables)`, the one confirmed correct
+against the Hauenstein-Wampler `D_det` construction). These coincide only when
+`F` is square (as `Faug` always is) and diverge for every bare, single-equation
+curve/surface -- exactly what deflation is called on. A prior version of this
+function defaulted to the row-rank convention; that default was silently wrong
+for column-rank callers relying on it, discovered via a verification run whose
+own print statement used the default instead of matching `deflate_once`'s
+internal choice. Every call site must now state its convention explicitly.
 
 Note the scope boundary: this is a purely first-order (single-Jacobian-evaluation)
 quantity. It cannot by itself distinguish singularities that share the same
-first-order corank (e.g. a node vs. a cusp both report corank 1) -- doing so
-needs either a further deflation iteration (appending the minor equations and
-re-evaluating; Stage 2+, not implemented here) or higher-order data. This is
+first-order corank (e.g. a node vs. a cusp both report corank 1 under the
+row-rank convention) -- doing so needs either a further deflation iteration
+(appending the minor equations and re-evaluating) or higher-order data. This is
 expected behavior, not a bug -- see the Stage 1 verification in `test_solver.jl`.
 """
 function estimate_corank(
     F::System,
     point::AbstractVector,
     cfg::HomotopyConfig{T};
-    expected_rank::Int = length(F.expressions),
+    expected_rank::Int,
 ) where {T<:AbstractFloat}
     info = jacobian_rank_info(F, point, cfg)
     return expected_rank - info.rank

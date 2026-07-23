@@ -1,4 +1,5 @@
 @testset "Solver (Phase 2)" begin
+using Random
 
 println("=" ^ 70)
 println("Setup: nodal cubic f(x,y) = y^2 - x^3 - x^2")
@@ -330,26 +331,44 @@ tip_pt = ComplexF64[0, 0, 0]
 er3 = 3
 
 F1_handle, d1_handle = deflate_once(F_umbrella, handle_pt, cfg64; expected_rank = er3)
-r_handle = verify_isosingular_dimension(F1_handle, F_umbrella, handle_pt, d1_handle, cfg64)
+# Seeded (2026-07-23, Audit 1 Item 1 fix): verify_isosingular_dimension's fresh-hyperplane
+# draw now accepts an rng, so this HANDLE ground-truth case -- the one case among the four
+# that reaches the randomized retry loop rather than the d==0 short-circuit (see
+# resolve_isosingular_dimension's own docstring) -- gets a genuinely reproducible verdict
+# instead of an empirically-usually-true one. Xoshiro(1) chosen for consistency with this
+# file's other seeded calls (deflate_once/estimate_corank tests elsewhere use plain
+# ComplexF64 literals, but the Whitney umbrella / rotated-projection tests in this project
+# already standardize on Xoshiro(1) as the default reproducibility seed).
+r_handle = verify_isosingular_dimension(F1_handle, F_umbrella, handle_pt, d1_handle, cfg64; rng = Xoshiro(1))
 println("  handle round1 (corank=$d1_handle): verdict=", r_handle.verdict, "  attempts=", r_handle.attempts)
 @test r_handle.verdict == Verified
 # attempts-to-first-success is a random variable by construction (fresh random
-# hyperplanes drawn per retry) -- not a deterministic constant. This project's
-# own Ambiguous-forcing investigation measured attempts of 1,2,1,4,1,1,4,1,1,1
-# across 10 fresh trials on a comparable case; the true invariant the design
-# guarantees is that a Verified result used somewhere between 1 and
-# isosingular_verify_retries attempts, not any single exact count.
+# hyperplanes drawn per retry) -- not a deterministic constant in general. Now that
+# rng=Xoshiro(1) is fixed above, THIS specific assertion is reproducible in principle, but
+# kept as a range rather than pinned to the one value Xoshiro(1) happens to produce today:
+# this project's own Ambiguous-forcing investigation measured attempts of 1,2,1,4,1,1,4,1,1,1
+# across 10 fresh (unseeded) trials on a comparable case, so the guaranteed invariant is
+# `1 <= attempts <= isosingular_verify_retries`, not any single exact count -- pinning to
+# Xoshiro(1)'s specific draw would silently start failing again the moment anything
+# upstream of this call (e.g. a HomotopyContinuation.jl version bump) changes how the seed
+# stream gets consumed, for no correctness benefit over the range check.
 @test 1 <= r_handle.attempts <= cfg64.isosingular_verify_retries
 @test r_handle.inconsistent_count == 0
 
-r_handle_wrong_d = verify_isosingular_dimension(F1_handle, F_umbrella, handle_pt, 2, cfg64)
+r_handle_wrong_d = verify_isosingular_dimension(F1_handle, F_umbrella, handle_pt, 2, cfg64; rng = Xoshiro(1))
 println("  handle round1, WRONG candidate d=2: verdict=", r_handle_wrong_d.verdict)
-@test r_handle_wrong_d.verdict != Verified
+# Verified live (not assumed): this is Inconclusive, not NotTerminal -- a genuine tracking
+# scenario distinct from tip1/cusp1 below. d=2 over-constrains a locally 1-dimensional
+# kernel (the true corank here is 1, per d1_handle above), so a track that DOES succeed
+# lands off F_original's true surface and fails the residual check (Inconclusive), rather
+# than every attempt cleanly failing to track at all (NotTerminal, tip1/cusp1's case, where
+# d is the CORRECT current corank, just not yet the terminal one).
+@test r_handle_wrong_d.verdict == Inconclusive
 
 F1_tip, d1_tip = deflate_once(F_umbrella, tip_pt, cfg64; expected_rank = er3)
-r_tip1 = verify_isosingular_dimension(F1_tip, F_umbrella, tip_pt, d1_tip, cfg64)
+r_tip1 = verify_isosingular_dimension(F1_tip, F_umbrella, tip_pt, d1_tip, cfg64; rng = Xoshiro(1))
 println("  tip round1 (corank=$d1_tip, KNOWN non-terminal per [3,2,0]): verdict=", r_tip1.verdict)
-@test r_tip1.verdict != Verified
+@test r_tip1.verdict == NotTerminal
 
 F2_tip, d2_tip = deflate_once(F1_tip, tip_pt, cfg64; expected_rank = er3)
 r_tip2 = verify_isosingular_dimension(F2_tip, F_umbrella, tip_pt, d2_tip, cfg64)
@@ -360,17 +379,17 @@ println("  tip round2 (corank=$d2_tip, trivially terminal): verdict=", r_tip2.ve
 
 println()
 println("Setup: bare cusp curve f = y^2 - x^3 (unsliced, N=2)")
-F2_cusp = System([f_cusp], variables = [xs, ys])
+F_cusp_raw = System([f_cusp], variables = [xs, ys])
 er2 = 2
 origin_c = ComplexF64[0, 0]
 
-F1c, d1c = deflate_once(F2_cusp, origin_c, cfg64; expected_rank = er2)
-r_cusp1 = verify_isosingular_dimension(F1c, F2_cusp, origin_c, d1c, cfg64)
+F1c, d1c = deflate_once(F_cusp_raw, origin_c, cfg64; expected_rank = er2)
+r_cusp1 = verify_isosingular_dimension(F1c, F_cusp_raw, origin_c, d1c, cfg64; rng = Xoshiro(1))
 println("  cusp round1 (corank=$d1c, KNOWN non-terminal per [2,1,0]): verdict=", r_cusp1.verdict)
-@test r_cusp1.verdict != Verified
+@test r_cusp1.verdict == NotTerminal
 
 F2c, d2c = deflate_once(F1c, origin_c, cfg64; expected_rank = er2)
-r_cusp2 = verify_isosingular_dimension(F2c, F2_cusp, origin_c, d2c, cfg64)
+r_cusp2 = verify_isosingular_dimension(F2c, F_cusp_raw, origin_c, d2c, cfg64)
 println("  cusp round2 (corank=$d2c, trivially terminal): verdict=", r_cusp2.verdict, "  attempts=", r_cusp2.attempts)
 @test r_cusp2.verdict == Verified
 @test r_cusp2.attempts == 0
@@ -420,7 +439,7 @@ end
 
 replay_and_check(F_node, origin, 2, resolve_isosingular_dimension(F_node, origin, cfg64);
     label = "NODE", expect_eq_counts = [3])
-replay_and_check(F2_cusp, origin_c, er2, resolve_isosingular_dimension(F2_cusp, origin_c, cfg64);
+replay_and_check(F_cusp_raw, origin_c, er2, resolve_isosingular_dimension(F_cusp_raw, origin_c, cfg64);
     label = "CUSP", expect_eq_counts = [3, 6])
 replay_and_check(F_umbrella, tip_pt, er3, resolve_isosingular_dimension(F_umbrella, tip_pt, cfg64);
     label = "TIP", expect_eq_counts = [4, 15])
@@ -430,7 +449,13 @@ replay_and_check(F_umbrella, tip_pt, er3, resolve_isosingular_dimension(F_umbrel
 # its true limit at round 1, but the hint can't recognize a plateau
 # from a single value -- it needs the SAME value to repeat, so round 2
 # happens purely to confirm the plateau before verification ever runs).
-r_handle_full = resolve_isosingular_dimension(F_umbrella, handle_pt, cfg64)
+# Seeded (2026-07-23, Audit 1 Item 1 fix): this is the one ground-truth case whose
+# plateau lands on a NONZERO corank, so resolve_isosingular_dimension's own internal
+# verify_isosingular_dimension call genuinely reaches the randomized retry loop (see
+# that function's docstring) rather than the deterministic d==0 short-circuit every
+# other case here takes. rounds==2 and verdict==Resolved below are therefore only
+# reproducible with a fixed rng, not empirically-usually-true without one.
+r_handle_full = resolve_isosingular_dimension(F_umbrella, handle_pt, cfg64; rng = Xoshiro(1))
 @test r_handle_full.corank_sequence == [3, 1, 1]
 @test r_handle_full.corank_sequence[2] == r_handle_full.corank_sequence[1] - 2  # true limit (1) reached at round 1 already...
 @test r_handle_full.corank_sequence[3] == r_handle_full.corank_sequence[2]      # ...but NOT recognized as a plateau until round 2 repeats it
@@ -519,7 +544,7 @@ println("=" ^ 70)
 # attempt at all). Confirmed reliable across repeated trials before
 # committing to this as a test, not assumed from one lucky run.
 cfg_capped = HomotopyConfig{Float64}(max_deflations = 1)
-r_exhausted = resolve_isosingular_dimension(F2_cusp, origin_c, cfg_capped)
+r_exhausted = resolve_isosingular_dimension(F_cusp_raw, origin_c, cfg_capped)
 println("  Exhausted (cusp, max_deflations=1): verdict=", r_exhausted.verdict,
     "  corank_seq=", r_exhausted.corank_sequence, "  rounds=", r_exhausted.rounds)
 @test r_exhausted.verdict == Exhausted
@@ -539,7 +564,11 @@ f_umbrella_shifted = wx^2 - wy^2 * wz - 1e-3
 F_umbrella_shifted = System([f_umbrella_shifted], variables = [wx, wy, wz])
 println("  f_umbrella_shifted(handle_pt) = ",
     HomotopyContinuation.evaluate(f_umbrella_shifted, [wx, wy, wz] => handle_pt), "  (nonzero by construction)")
-r_ambiguous = resolve_isosingular_dimension(F_umbrella_shifted, handle_pt, cfg64)
+# Seeded (2026-07-23, Audit 1 Item 1 fix): same reasoning as r_handle_full above -- the
+# handle point's plateau reaches the randomized retry loop, so a fixed rng makes
+# verdict==Ambiguous below reproducible rather than merely "confirmed reliable across
+# repeated (unseeded) trials."
+r_ambiguous = resolve_isosingular_dimension(F_umbrella_shifted, handle_pt, cfg64; rng = Xoshiro(1))
 println("  Ambiguous (shifted umbrella, handle point): verdict=", r_ambiguous.verdict,
     "  corank_seq=", r_ambiguous.corank_sequence, "  rounds=", r_ambiguous.rounds)
 @test r_ambiguous.verdict == Ambiguous

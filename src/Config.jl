@@ -108,14 +108,17 @@ so `HomotopyConfig{BigFloat}()` gets full-precision literals.
     incidence_snap_tol_ratio::T = T(1.5)
     # isosingular_verify_retries: retry budget for verify_isosingular_dimension (Stage 3,
     # 2026-07) -- how many fresh-random-hyperplane attempts before an unresolved round
-    # reports Inconclusive rather than NotTerminal. Every real case checked during this
-    # feature's investigation (node/cusp, Whitney umbrella handle and tip, at every round
-    # tested) resolved in exactly 1 attempt -- verified or cleanly rejected -- with zero
-    # instances where a second attempt was actually needed to reach a correct verdict.
-    # Default 20 (matching Bertini1's isosingularDimTest maxIts, isosingular.c:336) is
-    # therefore adopted purely as an untested-case safety margin for harder surfaces Stage 4
-    # hasn't exercised yet, NOT because this project's own evidence ever required more than
-    # one attempt. Revisit if real Stage 4 data ever shows retries actually being consumed.
+    # reports Inconclusive rather than NotTerminal. Correction (2026-07-23, Audit 1 Item 7):
+    # an earlier version of this comment claimed every real case resolved in exactly 1
+    # attempt with zero instances of a second attempt ever being needed -- retracted after
+    # this project's own Ambiguous-forcing investigation measured attempts of
+    # 1,2,1,4,1,1,4,1,1,1 across 10 fresh trials on a comparable case, and a live run
+    # observing attempts=3 (see test_solver.jl's HANDLE ground-truth test and commit
+    # dc93320's "Fix over-specified attempts assertion" for the direct evidence). Attempts
+    # vary genuinely, typically low (1-4 observed) but not fixed. Default 20 (matching
+    # Bertini1's isosingularDimTest maxIts, isosingular.c:336) is a safety margin sized well
+    # above the observed range, not an empirical non-requirement -- retries are genuinely
+    # consumed on real cases, just not anywhere near the full budget.
     isosingular_verify_retries::Int = 20
     # max_deflations: round budget for resolve_isosingular_dimension (Stage 4a, 2026-07) --
     # how many deflate_once rounds before an unresolved point reports Exhausted rather than

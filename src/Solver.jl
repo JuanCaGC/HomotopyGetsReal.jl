@@ -411,22 +411,36 @@ random hyperplane draw (per Hauenstein-Wampler's own stated reliability
 recommendation for Algorithm 6.3 -- "perform this test multiple times using
 different `L` and `lambda`" -- NOT Bertini1's literal same-draw retry,
 `isosingular.c:389-397`, already found unsound in fixed Float64 precision
-with no AMP escalation). Every real case checked in this project's own
-investigation resolved in exactly 1 attempt; see `cfg.isosingular_verify_retries`'s
-own docstring for why the default is nonetheless kept larger, as an
-untested-case safety margin rather than an empirically-required minimum.
+with no AMP escalation). **Correction (2026-07-23)**: an earlier version of
+this note claimed every real case resolved in exactly 1 attempt -- retracted
+after this project's own Ambiguous-forcing investigation measured attempts of
+1,2,1,4,1,1,4,1,1,1 across 10 fresh trials on a comparable case (see
+`test_solver.jl`'s HANDLE ground-truth test and its own commit history). The
+real, guaranteed invariant is `1 <= attempts <= cfg.isosingular_verify_retries`,
+not a fixed count; see `cfg.isosingular_verify_retries`'s own docstring for
+why the default is kept generous, as an untested-case safety margin.
 
 `d == 0` short-circuits to `Verified` with no tracking at all -- validated
 identically on both the Whitney umbrella tip's and the cusp's own round-2
 states (`estimate_corank == 0`, confirmed by two independent methods in each
 case, `F_original` residual exactly `0.0` in both).
+
+`rng` (2026-07-23, Audit 1 Item 1 fix): the fresh hyperplane draw at each
+retry (`randn(rng, d, nv)`) now accepts a caller-seedable RNG, matching the
+`random_orthogonal_matrix`/`decompose_3d_surface` convention elsewhere in
+this codebase, instead of silently using `Random.default_rng()` with no way
+for a caller to reproduce a specific run. This is the real fix for the
+RNG-brittle-test-assertion class of bug: callers that need a deterministic
+`verdict`/`attempts`/`rounds` value for testing should pass a seeded `rng`
+(e.g. `Xoshiro(1)`) rather than relaxing the assertion to a range.
 """
 function verify_isosingular_dimension(
     F_current::System,
     F_original::System,
     x0::AbstractVector,
     d::Int,
-    cfg::HomotopyConfig{T},
+    cfg::HomotopyConfig{T};
+    rng::Random.AbstractRNG = Random.default_rng(),
 ) where {T<:AbstractFloat}
     if d == 0
         return VerifyResult{T}(Verified, Complex{T}.(x0), 0, 0)
@@ -438,7 +452,7 @@ function verify_isosingular_dimension(
     inconsistent_count = 0
 
     for attempt in 1:cfg.isosingular_verify_retries
-        A = randn(d, nv)
+        A = randn(rng, d, nv)
         s = Variable.(:__verify_dimension_s, 1:d)
         hyps = [
             sum(A[i, j] * (F_current.variables[j] - x0_c[j]) for j in 1:nv) - s[i]
@@ -583,11 +597,19 @@ the identical footing as `cfg.isosingular_verify_retries`, an explicit
 safety margin for cases this project hasn't exercised yet (deeper
 singularities, real surfaces under Stage 4c) -- not a value any
 ground-truth case has ever needed more than a fifth of.
+
+`rng` (2026-07-23, Audit 1 Item 1 fix): threaded straight through to the
+internal [`verify_isosingular_dimension`](@ref) call, so a caller who needs
+a reproducible `verdict`/`rounds` on a case whose plateau lands on a
+nonzero corank (the HANDLE case above, the only one of the four
+ground-truth cases that reaches the randomized retry loop rather than the
+`d==0` short-circuit) can pass a seeded `rng` for a deterministic result.
 """
 function resolve_isosingular_dimension(
     F_original::System,
     x0::AbstractVector,
-    cfg::HomotopyConfig{T},
+    cfg::HomotopyConfig{T};
+    rng::Random.AbstractRNG = Random.default_rng(),
 ) where {T<:AbstractFloat}
     nv = length(F_original.variables)
     F_current = F_original
@@ -597,7 +619,7 @@ function resolve_isosingular_dimension(
     while true
         d = corank_seq[end]
         if d == 0 || _corank_plateau_hint(corank_seq)
-            vr = verify_isosingular_dimension(F_current, F_original, x0, d, cfg)
+            vr = verify_isosingular_dimension(F_current, F_original, x0, d, cfg; rng = rng)
             if vr.verdict == Verified
                 return ResolveResult{T}(Resolved, d, vr.endpoint, corank_seq, rounds, F_current)
             elseif vr.verdict == Inconclusive

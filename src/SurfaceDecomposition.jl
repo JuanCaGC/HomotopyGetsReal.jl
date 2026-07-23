@@ -60,7 +60,7 @@ function compute_critical_z_slices(F::System, cfg::HomotopyConfig{T}) where {T<:
 end
 
 """
-    slice_at_z(F::System, z_val::T, cfg::HomotopyConfig{T}) where {T<:AbstractFloat}
+    slice_at_z(F::System, z_val::T, cfg::HomotopyConfig{T}; deflate::Bool = false) where {T<:AbstractFloat}
         -> (vertices_3d::Vector{NativeVertex{T}}, edges_3d::Vector{Edge{T}})
 
 Decompose the plane curve f(x, y, z_val) = 0 and lift it to 3D at fixed z.
@@ -70,6 +70,17 @@ Substitutes `z => z_val`, runs [`decompose_1d_curve`](@ref) on the resulting
 and edge sample. Vertex and edge ids are local to this call; renumber before
 combining slices (as [`decompose_3d_surface`](@ref) does).
 
+**Isosingular deflation, Stage 4c (2026-07)**: `deflate` passes straight through
+to `decompose_1d_curve(F_2d, cfg; deflate = deflate)` -- `F_2d` (this function's
+own per-slice 2-variable substitution, built below) is automatically what
+`decompose_1d_curve` uses as its `F_original`, per its own existing Stage 4b
+wiring; no separate `F_original` argument is needed or threaded here. This is
+deliberate, not an oversight: a vertex flagged `Singular` here was flagged
+because the 2D SLICE curve `f(x,y,z_val)=0` has a rank-deficient Jacobian --
+deflating against the 3-variable surface `F` instead would ask a different,
+higher-dimensional question (see [`_surface_critical_vertices`](@ref), which
+asks exactly that question, separately and deliberately).
+
 # Arguments
 - `F::System`: surface system (`length(F.expressions) == 1`, `nvariables(F) == 3`).
 - `z_val::T`: slice height.
@@ -78,7 +89,7 @@ combining slices (as [`decompose_3d_surface`](@ref) does).
 # Returns
 A tuple of 3D vertices and edges at the given z.
 """
-function slice_at_z(F::System, z_val::T, cfg::HomotopyConfig{T}) where {T<:AbstractFloat}
+function slice_at_z(F::System, z_val::T, cfg::HomotopyConfig{T}; deflate::Bool = false) where {T<:AbstractFloat}
     length(F.variables) == 3 && length(F.expressions) == 1 || throw(ArgumentError(
         "slice_at_z: expected F with exactly 1 equation in exactly 3 variables " *
         "(a raw surface); got $(length(F.expressions)) equation(s) in $(length(F.variables)) variable(s).",
@@ -89,7 +100,7 @@ function slice_at_z(F::System, z_val::T, cfg::HomotopyConfig{T}) where {T<:Abstr
     f_2d = subs(f, z_var => Float64(z_val))
     F_2d = System([f_2d], variables = [x_var, y_var])
 
-    vertices_2d, edges_2d = decompose_1d_curve(F_2d, cfg)
+    vertices_2d, edges_2d = decompose_1d_curve(F_2d, cfg; deflate = deflate)
 
     # decompose_1d_curve restarts ids near 1 each call; callers must offset before concatenating.
     vertices_3d = NativeVertex{T}[
@@ -375,7 +386,7 @@ observed, beyond `vertex_match_tol`); the resulting sub-resolution sliver
 slabs are merged upstream by `cfg.min_slab_width` in `_slab_bounds`, not
 handled here.
 """
-function _robust_slice_at_z(F::System, patch::NamedTuple, z_bottom::T, z_top::T, cfg::HomotopyConfig{T}) where {T<:AbstractFloat}
+function _robust_slice_at_z(F::System, patch::NamedTuple, z_bottom::T, z_top::T, cfg::HomotopyConfig{T}; deflate::Bool = false) where {T<:AbstractFloat}
     width = z_top - z_bottom
     max_multiple = max(1, floor(Int, T(0.45) / cfg.z_mid_retry_frac))
 
@@ -411,6 +422,11 @@ function _robust_slice_at_z(F::System, patch::NamedTuple, z_bottom::T, z_top::T,
         ref_min = T(Inf)
         ref_has_singular = false
         for z_ref in (z_bottom + T(0.25) * width, z_top - T(0.25) * width)
+            # deflate NOT threaded here on purpose: these reference slices exist only for
+            # the topology/gradient gate comparisons below (ref_has_singular, ref_max/
+            # ref_min) -- their own vertices are never returned to the caller, so deflating
+            # them would be pure wasted cost with no vertex ever surviving to carry the
+            # diagnostic metadata anywhere.
             v_ref, edges_ref = slice_at_z(F, z_ref, cfg)
             ref_has_singular |= any(v -> v.v_type == Singular, v_ref)
             for e in _eligible_edges(v_ref, edges_ref)
@@ -447,15 +463,23 @@ function _robust_slice_at_z(F::System, patch::NamedTuple, z_bottom::T, z_top::T,
 
     _suspect(vertices, edges) = _topology_suspect(vertices) || _gradient_suspect(vertices, edges)
 
+    # deflate IS threaded to both the primary attempt below and every retry candidate,
+    # not only the one that ends up accepted -- a deliberate simplicity-over-cost
+    # tradeoff: re-running slice_at_z a second time (once cheaply to pass the suspect
+    # gate, once with deflate only after acceptance) would double the tracking cost on
+    # the accepted slice in the (already rare -- 3 of Taubin's 5 slabs need zero
+    # retries at all) common case, to save cost only on the rare retried-and-rejected
+    # candidate. Worth revisiting if real surface validation ever shows retries firing
+    # often enough for the wasted cost to matter.
     z_mid = (z_bottom + z_top) / T(2)
-    vertices_3d, edges_3d = slice_at_z(F, z_mid, cfg)
+    vertices_3d, edges_3d = slice_at_z(F, z_mid, cfg; deflate = deflate)
     _suspect(vertices_3d, edges_3d) || return vertices_3d, edges_3d, z_mid
 
     for k in 1:cfg.max_z_mid_retries
         multiple = T(min(cld(k, 2), max_multiple))
         sign = isodd(k) ? T(1) : T(-1)
         z_try = (z_bottom + z_top) / T(2) + sign * multiple * cfg.z_mid_retry_frac * width
-        vertices_3d, edges_3d = slice_at_z(F, z_try, cfg)
+        vertices_3d, edges_3d = slice_at_z(F, z_try, cfg; deflate = deflate)
         if !_suspect(vertices_3d, edges_3d)
             return vertices_3d, edges_3d, z_try
         end
@@ -657,9 +681,12 @@ never from the registry's (possibly merge-averaged) stored copy. Measured on
 every fixture (fixed-axis and rotated Taubin included): nodal/saddle-type
 crit-slices decompose like the nodal-cubic fixture, fold-type extremes come
 back empty or as isolated `Singular` vertices, and nothing throws.
+
+**Isosingular deflation, Stage 4c (2026-07)**: `deflate` passes straight through
+to `slice_at_z`, same contract as everywhere else in this chain.
 """
-function _decompose_crit_slice(F::System, z_c::T, j::Int, cfg::HomotopyConfig{T}, vertex_registry::VertexRegistry{T}, e_offset::Int) where {T<:AbstractFloat}
-    vertices_raw, edges_raw = slice_at_z(F, z_c, cfg)
+function _decompose_crit_slice(F::System, z_c::T, j::Int, cfg::HomotopyConfig{T}, vertex_registry::VertexRegistry{T}, e_offset::Int; deflate::Bool = false) where {T<:AbstractFloat}
+    vertices_raw, edges_raw = slice_at_z(F, z_c, cfg; deflate = deflate)
     local_ids = Dict{Int,Int}(v.id => register!(vertex_registry, v) for v in vertices_raw)
     vertices = NativeVertex{T}[
         NativeVertex{T}(id = local_ids[v.id], coordinates = v.coordinates, v_type = v.v_type, metadata = v.metadata)
@@ -679,7 +706,7 @@ function _decompose_crit_slice(F::System, z_c::T, j::Int, cfg::HomotopyConfig{T}
 end
 
 """
-    _surface_critical_vertices(F, cfg) -> Vector{NativeVertex{T}}
+    _surface_critical_vertices(F, cfg; deflate::Bool = false) -> Vector{NativeVertex{T}}
 
 The surface's 3D critical points (the same `compute_critical_points` call
 `compute_critical_z_slices` makes internally), needed as fold-type landing
@@ -687,9 +714,17 @@ anchors. Called ONCE per `incidence = true` decomposition — an extra
 ~seconds-scale solve that keeps the `incidence = false` call chain
 byte-identical; deduplicating it with `_slab_bounds`'s internal call is a
 deliberately deferred optimization.
+
+**Isosingular deflation, Stage 4c (2026-07)**: `deflate = true` passes
+`F_original = F` explicitly to `compute_critical_points` -- `F` here is always
+the bare 3-variable surface (never pre-augmented; `compute_critical_points`'s
+own auto-augment branch, `ne==1 && nv==3`, is what fires), so this is the
+SURFACE-level diagnostic: a vertex flagged here answers "is this point
+isolated/regular as a point of the 3D surface", the complementary question to
+[`slice_at_z`](@ref)'s per-slice diagnostic, not the same one asked twice.
 """
-_surface_critical_vertices(F::System, cfg::HomotopyConfig{T}) where {T<:AbstractFloat} =
-    compute_critical_points(F, cfg)
+_surface_critical_vertices(F::System, cfg::HomotopyConfig{T}; deflate::Bool = false) where {T<:AbstractFloat} =
+    compute_critical_points(F, cfg; deflate = deflate, F_original = F)
 
 """
     _assign_landings(landings, cs, crit_vertices, z_c, cfg) -> Vector{ColumnLanding{T}}
@@ -1830,7 +1865,8 @@ function _naked_mesh_edges(mesh::GeometryBasics.Mesh)
 end
 
 """
-    decompose_3d_surface(F::System, cfg::HomotopyConfig{T}; projection = nothing, rng = Random.default_rng()) where {T<:AbstractFloat}
+    decompose_3d_surface(F::System, cfg::HomotopyConfig{T}; projection = nothing, rng = Random.default_rng(),
+                           incidence = false, deflate = false) where {T<:AbstractFloat}
         -> (vertices, edges, faces, mesh)
 
 Decompose a real algebraic surface into vertices, edges, faces, and a welded mesh.
@@ -1885,6 +1921,21 @@ one `GeometryBasics.Mesh`. This is the 3D analogue of [`decompose_1d_curve`](@re
   ~16 s decompose (4 crit-slices + one extra critical-point solve for fold
   anchors; snapping/splitting themselves are comparatively negligible, no
   new solves).
+- `deflate` (Stage 4c, 2026-07): `false` (default) is the exact pre-Stage-4
+  code path -- confirmed byte-identical, not assumed (existing sphere/
+  ellipsoid fixtures pass unmodified with this keyword never mentioned).
+  `true` threads `deflate = true` down through `_robust_slice_at_z`/
+  `_decompose_crit_slice`/`slice_at_z`/`decompose_1d_curve` (every
+  `Singular` vertex from a z-slice gets diagnosed against that slice's own
+  2-variable curve, `F_original = F_2d`) and, when `incidence = true` also,
+  through `_surface_critical_vertices` (every 3D fold-anchor critical point
+  gets diagnosed against the full 3-variable `F` directly) -- see
+  `slice_at_z`'s and `_surface_critical_vertices`'s own docstrings for why
+  these are two deliberately DIFFERENT questions, not the same one asked
+  twice, and can legitimately disagree on the same physical point.
+  Diagnostic-only: `metadata[:isosingular_verdict]`/`:isosingular_dimension`/
+  `:isosingular_deflation_sequence` are added to `Singular` vertices;
+  nothing about `coordinates`, `v_type`, edges, faces, or the mesh changes.
 
 # Known limitation: generic projections over singular curves
 When a projection makes a positive-dimensional singular curve of the surface
@@ -1894,9 +1945,14 @@ Measured (rotated Taubin heart, seed 1, 2026-07): median world-`|f|` residual
 `6e-9` over 2617 mesh points, but ~2.5% of points exceed `1e-4` (max `0.26`),
 ALL confined to `|z_world| <= 0.14` around the singular plane (the surface
 spans `|z| <= 1.24`). Away from the singular locus the decomposition is
-unaffected. Decomposing singular curves themselves (BertiniReal's
-deflation/singular-curve machinery) is future work; see also
-`_robust_slice_at_z`'s Phase 8 amendments section.
+unaffected. `deflate = true` (Stage 4c, 2026-07) diagnoses individual
+`Singular` vertices' isosingular local dimension but does not itself change
+mesh quality in this band -- it is diagnostic-only (see `deflate`'s own
+entry above); actually USING that diagnosis to improve mesh quality here
+(e.g. replacing a vertex's coordinates with a deflation-verified endpoint)
+remains future work, narrower in scope than "decomposing singular curves"
+was originally stated as. See also `_robust_slice_at_z`'s Phase 8
+amendments section.
 
 # Returns
 A 4-tuple `(vertices, edges, faces, mesh)` of types
@@ -1909,6 +1965,7 @@ function decompose_3d_surface(
     projection::Union{Nothing,Symbol,AbstractMatrix} = nothing,
     rng::Random.AbstractRNG = Random.default_rng(),
     incidence::Bool = false,
+    deflate::Bool = false,
 ) where {T<:AbstractFloat}
     length(F.variables) == 3 && length(F.expressions) == 1 || throw(ArgumentError(
         "decompose_3d_surface: expected F with exactly 1 equation in exactly 3 variables " *
@@ -1928,11 +1985,11 @@ function decompose_3d_surface(
         _verify_projection_ok(F_chart, cfg)
         cfg_chart = _chart_config(cfg, Q)
         if incidence
-            vc, ec, fc, mc, inc = decompose_3d_surface(F_chart, cfg_chart; incidence = true)
+            vc, ec, fc, mc, inc = decompose_3d_surface(F_chart, cfg_chart; incidence = true, deflate = deflate)
             wv, we, wf, wm = _map_to_world(vc, ec, fc, mc, Q)
             return wv, we, wf, wm, _map_incidence_to_world(inc, Q)
         else
-            chart_result = decompose_3d_surface(F_chart, cfg_chart)
+            chart_result = decompose_3d_surface(F_chart, cfg_chart; deflate = deflate)
             return _map_to_world(chart_result..., Q)
         end
     end
@@ -1974,7 +2031,7 @@ function decompose_3d_surface(
 
     # Phase 9a/9b bookkeeping (all empty and untouched when incidence = false).
     crit_slice_cache = Dict{Int,CritSlice{T}}()
-    fold_anchors = incidence ? _surface_critical_vertices(F, cfg) : NativeVertex{T}[]
+    fold_anchors = incidence ? _surface_critical_vertices(F, cfg; deflate = deflate) : NativeVertex{T}[]
     face_bottom_edges = Dict{Int,Vector{Int}}()
     face_top_edges = Dict{Int,Vector{Int}}()
     face_bottom_anchor = Dict{Int,Int}()
@@ -1996,7 +2053,7 @@ function decompose_3d_surface(
         haskey(crit_slice_cache, j) && return crit_slice_cache[j]
         # vertex_registry is always non-nothing here: _crit_slice_for! is only
         # ever invoked from the incidence = true branch below.
-        cs = _decompose_crit_slice(F, z_bounds[j], j, cfg, vertex_registry, e_hwm)
+        cs = _decompose_crit_slice(F, z_bounds[j], j, cfg, vertex_registry, e_hwm; deflate = deflate)
         e_hwm = max(e_hwm, maximum(e.id for e in cs.edges; init = e_hwm))
         for e in cs.edges
             edge_spacing[e.id] = _edge_spacing(e)
@@ -2034,7 +2091,7 @@ function decompose_3d_surface(
         # is deliberately dropped, not ported to HomotopyConfig. _robust_slice_at_z
         # may return a nearby z_mid if the midpoint slice fails its gates; track_face
         # must use that same z_mid, not re-derive (z_bottom+z_top)/2.
-        vertices_2d, edges_2d, z_mid = _robust_slice_at_z(F, patch, z_bottom, z_top, cfg)
+        vertices_2d, edges_2d, z_mid = _robust_slice_at_z(F, patch, z_bottom, z_top, cfg; deflate = deflate)
 
         # Each slice_at_z / decompose_1d_curve restarts ids near 1. Concatenating
         # slabs without offsets would collide namespaces. Edge ids: offset by

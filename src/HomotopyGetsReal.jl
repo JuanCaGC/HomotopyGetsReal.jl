@@ -45,6 +45,28 @@
 # like the first time too. Not applied retroactively to
 # `IsosingularVerdict`/`ResolveVerdict`'s own already-shipped, exported
 # members; applies going forward.
+#
+# Note (2026-07, isosingular deflation Stage 4c validation): established-normal
+# round counts for `resolve_isosingular_dimension`, for future reference if a
+# deeper or unexplained round count ever shows up elsewhere and someone needs
+# to know whether that's within observed range or new. Every ground-truth case
+# through Stage 3/4a resolved in 1-2 rounds. The Taubin heart fixture's full
+# Stage 4c validation (individually inspecting all 22 real firings during a
+# `decompose_3d_surface(...; deflate=true)` run, not just the ones surviving to
+# final output) found 17 of 22 at 1 round, but 5 genuine outliers at 4 rounds
+# (`corank_seq=[2,1,1,1,0]`), all at the slice-level critical points x=(±1,0)
+# -- the heart's left/right-most z-slice extremes. All 22 still resolved
+# cleanly (`Resolved`, zero `Ambiguous`/`Exhausted`/`attempts>=15`), so 4
+# rounds at a genuine local degeneracy is confirmed normal behavior, not a
+# red flag by itself -- but it's a real, non-spurious deviation from the [1,2]
+# range seen everywhere else, worth knowing about before assuming a similar
+# count elsewhere is a bug. Separately, every one of those 22 firings resolved
+# to `isosingular_dimension=0`, and every `d=0` resolution has `attempts=0` by
+# construction (`verify_isosingular_dimension` needs zero hyperplanes when
+# `d=0`, so its retry mechanism never runs) -- the soft-flag attempts range of
+# [1,4] used during this validation was only ever scoped to `d>=1` cases that
+# actually exercise that retry loop; `attempts=0` at `d=0` is not itself
+# evidence of anything and should not be treated as a flag in future runs.
 
 module HomotopyGetsReal
 

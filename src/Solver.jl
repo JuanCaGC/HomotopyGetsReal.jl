@@ -255,6 +255,63 @@ function deflate_once(
 end
 
 """
+    _deflation_applicable(F_original::System, x0::AbstractVector, cfg::HomotopyConfig{T};
+                            expected_rank::Int = length(F_original.variables)) where {T<:AbstractFloat}
+        -> Bool
+
+Isosingular-deflation Stage 4c primitive (2026-07): true iff [`deflate_once`](@ref)'s own
+precondition on `F_original` at `x0` would actually hold -- either the point is already
+regular there (`corank == 0`, handled trivially by
+[`resolve_isosingular_dimension`](@ref)/[`verify_isosingular_dimension`](@ref) with no
+track needed at all), or `minor_size = rank(J)+1 <= min(length(F_original.expressions),
+length(F_original.variables))`, exactly `deflate_once`'s own `ArgumentError` guard.
+
+**Why this exists, and why `corank > 0` alone (the originally proposed gate) is wrong**:
+found via a real crash on the Taubin heart fixture's own crit-slices, not invented
+speculatively. `compute_critical_points`'s `deflate = true` path triggers on `v_type ==
+Singular`, which is classified against `Faug` (the caller's pre-augmented curve system,
+or the auto-built `[f,f_x,f_y]` surface system) -- NOT against `F_original`'s own bare
+Jacobian. A point can be `Faug`-singular (e.g. a fold w.r.t. the x-projection, where
+`Faug`'s own square Jacobian is rank-deficient) while `F_original` itself is perfectly
+regular there (nonzero gradient, just a higher-order-degenerate critical point in one
+projection direction -- concretely reproduced by `f = x - y^3` at the origin: `f_y =
+-3y^2 = 0` there, so `Faug = [f,f_y]` has a singular 2x2 Jacobian, but `f_x = 1 != 0`, so
+`F_original`'s own 1x2 Jacobian has full rank 1). For a bare, single-equation
+`F_original` the maximum achievable rank is 1, so under the ambient (`expected_rank =
+nv`) convention `corank` can NEVER reach `0` for such a system regardless of whether the
+point is genuinely singular -- confirmed directly: `corank == 1` at BOTH the fold point
+above and at any ordinary smooth point of a bare curve. `corank > 0` therefore excludes
+nothing; the actual crash-preventing condition is on `minor_size`, not on `corank`'s bare
+sign.
+
+**Cost, measured, not assumed**: on a case that genuinely exercises tracking (the Whitney
+umbrella handle, not a case that resolves via the free `corank == 0` shortcut), this
+check costs ~0.008ms against a real `resolve_isosingular_dimension` resolution's
+~1486ms -- roughly 200,000x cheaper. Safe to call unconditionally for every
+`Singular`-classified vertex; no cheaper pre-check is needed.
+
+**Why `intersect_bounding_object` needs no equivalent gate**: it classifies `Singular`
+using `expected_rank = length(F.expressions)` directly on `F` itself -- the SAME matrix
+that becomes `F_original` for deflation, never augmented. `v_type == Singular` there means
+`rank < expected_rank`, i.e. `rank + 1 <= expected_rank`, i.e. `minor_size <=
+length(F.expressions)` -- `deflate_once`'s precondition, guaranteed by construction. This
+gap is specific to `compute_critical_points`'s classify-against-`Faug` pattern, not
+something that can also silently exist wherever classification and the deflation target
+are already the same matrix.
+"""
+function _deflation_applicable(
+    F_original::System,
+    x0::AbstractVector,
+    cfg::HomotopyConfig{T};
+    expected_rank::Int = length(F_original.variables),
+) where {T<:AbstractFloat}
+    d = estimate_corank(F_original, x0, cfg; expected_rank = expected_rank)
+    d == 0 && return true
+    minor_size = expected_rank - d + 1
+    return minor_size <= length(F_original.expressions) && minor_size <= length(F_original.variables)
+end
+
+"""
     IsosingularVerdict
 
 Three-way outcome of [`verify_isosingular_dimension`](@ref) -- deliberately
@@ -603,6 +660,22 @@ run against `F_original`, and the result is stored in that vertex's `metadata`
 (the default) is the exact pre-Stage-4 code path -- no extra solves, `F_original` unused
 and unchecked.
 
+**Stage 4c gate (2026-07)**: before running `resolve_isosingular_dimension`, this function
+also checks [`_deflation_applicable`](@ref)(F_original, x, cfg). This is necessary because
+`v_type == Singular` here is classified against `Faug` (this function's own local
+pre-augmented-or-auto-augmented system), which is a DIFFERENT matrix than `F_original`
+whenever the two differ -- a point can be `Faug`-singular via a higher-order degeneracy
+(e.g. a projection fold) while `F_original`'s own bare Jacobian stays full rank there,
+which is not a point `deflate_once` can process at all. Found via a real crash on the
+Taubin heart fixture's crit-slices (`ArgumentError: deflate_once: minorSize=2 exceeds
+available rows`), not invented speculatively -- see `_deflation_applicable`'s own
+docstring for the full derivation, including why the naively-obvious gate (`corank(
+F_original) > 0`) does NOT work. When the gate returns `false`, the candidate's `v_type`
+and every other field are left exactly as they would be with `deflate = false`: only the
+deflation *attempt* is skipped, no `isosingular_*` metadata keys are added, and there is no
+reclassification. `intersect_bounding_object` does not need this gate; see its own
+docstring.
+
 `F_original` has NO default value usable for deflation, on purpose, and this is checked at
 runtime (Julia has no compile-time-conditional-mandatory keyword): `deflate = true` with
 `F_original === nothing` throws `ArgumentError` immediately, in EITHER branch below (the
@@ -665,7 +738,7 @@ function compute_critical_points(
         v_type = _classify_vertex_type(info, cfg, expected_rank, Critical)
         metadata = Dict{Symbol,Any}(:jacobian_rank => info.rank, :singular_values => info.singular_values)
 
-        if deflate && v_type == Singular
+        if deflate && v_type == Singular && _deflation_applicable(F_original, x, cfg)
             rr = resolve_isosingular_dimension(F_original, x, cfg)
             metadata[:isosingular_verdict] = rr.verdict
             metadata[:isosingular_dimension] = rr.isosingular_dimension
@@ -701,6 +774,15 @@ given one anyway: the same explicit, no-inferred-default rule applies uniformly 
 functions, rather than one function being strict and the other permissive depending on
 which happens to be safe -- consistency of the rule matters more here than the marginal
 convenience of a default this one function alone could have gotten away with.
+
+**Stage 4c gate -- not needed here**: unlike `compute_critical_points`, this function does
+NOT call `_deflation_applicable` before deflating. Its `v_type` is classified directly
+against `F` itself (`jacobian_rank_info(F, full, cfg)` with `expected_rank =
+length(F.expressions)`), and `F` is exactly what callers pass as `F_original` -- never a
+separately-augmented matrix. `v_type == Singular` here therefore already means `rank(J_F) <
+length(F.expressions)`, i.e. `minor_size = rank+1 <= length(F.expressions)`, which is
+`deflate_once`'s own precondition, guaranteed by construction rather than needing a
+separate runtime check.
 """
 function intersect_bounding_object(
     F::System,

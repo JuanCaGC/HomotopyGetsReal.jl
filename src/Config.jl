@@ -117,4 +117,11 @@ so `HomotopyConfig{BigFloat}()` gets full-precision literals.
     # hasn't exercised yet, NOT because this project's own evidence ever required more than
     # one attempt. Revisit if real Stage 4 data ever shows retries actually being consumed.
     isosingular_verify_retries::Int = 20
+    # max_deflations: round budget for resolve_isosingular_dimension (Stage 4a, 2026-07) --
+    # how many deflate_once rounds before an unresolved point reports Exhausted rather than
+    # Resolved/Inconclusive. See resolve_isosingular_dimension's own docstring for the
+    # measured round counts across every ground-truth case (node, cusp, Whitney umbrella
+    # handle and tip) -- default kept as an explicit safety margin, on the same footing as
+    # isosingular_verify_retries above, not as an empirically-required minimum.
+    max_deflations::Int = 10
 end

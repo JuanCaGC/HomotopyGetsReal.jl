@@ -416,6 +416,147 @@ function verify_isosingular_dimension(
 end
 
 """
+    ResolveVerdict
+
+Outcome of [`resolve_isosingular_dimension`](@ref) -- the multi-round
+analogue of [`IsosingularVerdict`](@ref), which only ever describes a
+single round.
+
+Deliberately uses `Ambiguous`, not `Inconclusive`, for its middle value --
+`Solver.jl` is a single flat namespace (everything here is `include`d into
+one module, no submodule separation), and a first version of this enum
+reused `Inconclusive` verbatim from [`IsosingularVerdict`](@ref). That
+silently shadowed the earlier binding at module scope: every bare
+`Inconclusive` reference in the file, including inside the
+already-shipped [`verify_isosingular_dimension`](@ref), started
+resolving to *this* enum's value instead, and the `vr.verdict ==
+Inconclusive` comparison inside this file's own orchestration loop
+below would have silently always been `false` (comparing across two
+different enum types, which Julia allows and just returns `false` for --
+no error, no warning). Caught before ever being tested, not after --
+renamed instead of qualified, so the possibility can't recur.
+
+- `Resolved`: the isosingular local dimension was found -- either
+  trivially (corank reached `0`) or via a [`verify_isosingular_dimension`](@ref)
+  call that returned `Verified`.
+- `Ambiguous`: some round's verification returned `Inconclusive` --
+  propagated up immediately, not retried at the orchestration level (a
+  single inconsistent round is a reason to stop and look, not to keep
+  deflating past it).
+- `Exhausted`: `cfg.max_deflations` rounds were spent without ever
+  reaching `Resolved` or `Ambiguous` -- distinct from `Ambiguous` on
+  purpose: this means the corank sequence never stabilized long enough
+  to even trigger a verification attempt, not that a verification
+  attempt gave a mixed signal.
+"""
+@enum ResolveVerdict Resolved Ambiguous Exhausted
+
+"""
+    ResolveResult{T<:AbstractFloat}
+
+Return type of [`resolve_isosingular_dimension`](@ref).
+
+- `verdict::ResolveVerdict`
+- `isosingular_dimension::Union{Nothing,Int}`: set only when `verdict == Resolved`.
+- `endpoint::Union{Nothing,Vector{Complex{T}}}`: set only when `verdict == Resolved`.
+- `corank_sequence::Vector{Int}`: the full `d_0, d_1, ..., d_rounds` trace --
+  kept for diagnostics regardless of verdict, not just on success.
+- `rounds::Int`: number of `deflate_once` calls actually performed.
+- `F_final::System`: the system in force when the loop stopped (`F_original`
+  itself if `rounds == 0`). Not consumed anywhere yet -- Stage 4a is
+  diagnostic-only -- but kept on the result rather than discarded, since
+  a future precision-improvement stage would need exactly this.
+"""
+struct ResolveResult{T<:AbstractFloat}
+    verdict::ResolveVerdict
+    isosingular_dimension::Union{Nothing,Int}
+    endpoint::Union{Nothing,Vector{Complex{T}}}
+    corank_sequence::Vector{Int}
+    rounds::Int
+    F_final::System
+end
+
+"""
+    resolve_isosingular_dimension(F_original::System, x0::AbstractVector, cfg::HomotopyConfig{T}) where {T<:AbstractFloat}
+        -> ResolveResult{T}
+
+Isosingular-deflation Stage 4a primitive (2026-07): the orchestrator Stage
+3 deliberately didn't build -- ties [`estimate_corank`](@ref),
+[`_corank_plateau_hint`](@ref), [`deflate_once`](@ref), and
+[`verify_isosingular_dimension`](@ref) together into a single call that
+resolves a point's isosingular local dimension (Hauenstein-Wampler
+Definition 5.18) from a corank sequence's first entry through to a
+verified terminal round.
+
+Loop, once per round: if the current corank is `0`, or
+`_corank_plateau_hint` says the sequence might have stabilized, call
+`verify_isosingular_dimension` on the CURRENT (possibly already-deflated)
+system against the ORIGINAL `F_original` -- `Verified` returns `Resolved`
+immediately; `Inconclusive` returns `Ambiguous` immediately, not
+retried at this level. Otherwise (`_corank_plateau_hint` says "definitely
+not yet", or verification returned `NotTerminal`), call `deflate_once`
+and continue, up to `cfg.max_deflations` rounds before returning
+`Exhausted`.
+
+**The one-extra-round cost of a real (nonzero) plateau, confirmed
+directly, not assumed**: `_corank_plateau_hint` needs to see a repeated
+value to recognize a plateau, so a genuine nonzero-limit case always
+costs one deflation round beyond where the corank first reaches its
+true limit. Concretely, on the Whitney umbrella handle: `corank_sequence
+== [3, 1, 1]`, `rounds == 2` -- corank already reached its terminal value
+`1` after round 1 (`F1`, 4 equations), but the loop cannot know that yet
+(`[3,1]` has no repeat) and must deflate once more (`F2`, 8 equations)
+before `_corank_plateau_hint([3,1,1])` finally sees the repeat and
+triggers verification. This is not a cost that appears for a `d==0`
+resolution (node/cusp/tip below) -- corank hitting `0` always triggers
+verification on the SAME round it's first observed, no repeat needed.
+
+**Round counts, measured directly against every ground-truth case
+available in this project, not estimated**:
+
+| case | corank_sequence | rounds | verdict |
+|---|---|---|---|
+| node (bare curve) | `[2, 0]` | 1 | Resolved, dim 0 |
+| cusp (bare curve) | `[2, 1, 0]` | 2 | Resolved, dim 0 |
+| Whitney umbrella tip | `[3, 2, 0]` | 2 | Resolved, dim 0 |
+| Whitney umbrella handle | `[3, 1, 1]` | 2 | Resolved, dim 1 |
+
+Maximum observed: 2 rounds. `cfg.max_deflations = 10` is therefore, on
+the identical footing as `cfg.isosingular_verify_retries`, an explicit
+safety margin for cases this project hasn't exercised yet (deeper
+singularities, real surfaces under Stage 4c) -- not a value any
+ground-truth case has ever needed more than a fifth of.
+"""
+function resolve_isosingular_dimension(
+    F_original::System,
+    x0::AbstractVector,
+    cfg::HomotopyConfig{T},
+) where {T<:AbstractFloat}
+    nv = length(F_original.variables)
+    F_current = F_original
+    corank_seq = Int[estimate_corank(F_current, x0, cfg; expected_rank = nv)]
+    rounds = 0
+
+    while true
+        d = corank_seq[end]
+        if d == 0 || _corank_plateau_hint(corank_seq)
+            vr = verify_isosingular_dimension(F_current, F_original, x0, d, cfg)
+            if vr.verdict == Verified
+                return ResolveResult{T}(Resolved, d, vr.endpoint, corank_seq, rounds, F_current)
+            elseif vr.verdict == Inconclusive
+                return ResolveResult{T}(Ambiguous, nothing, nothing, corank_seq, rounds, F_current)
+            end
+            # NotTerminal (only reachable when d > 0, since d == 0 always verifies
+            # trivially) -- fall through and deflate further.
+        end
+        rounds >= cfg.max_deflations && return ResolveResult{T}(Exhausted, nothing, nothing, corank_seq, rounds, F_current)
+        F_current, d_new = deflate_once(F_current, x0, cfg; expected_rank = nv)
+        push!(corank_seq, d_new)
+        rounds += 1
+    end
+end
+
+"""
     _newton_polish(F::System, x0::Vector{Complex{T}}, cfg::HomotopyConfig{T}) where {T<:AbstractFloat}
 
 Refines `x0` (a solution of the square system `F`, typically obtained

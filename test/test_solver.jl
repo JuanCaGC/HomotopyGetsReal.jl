@@ -369,4 +369,72 @@ println("  cusp round2 (corank=$d2c, trivially terminal): verdict=", r_cusp2.ver
 @test r_cusp2.verdict == Verified
 @test r_cusp2.attempts == 0
 
+println()
+println("=" ^ 70)
+println("11. Isosingular deflation Stage 4a: resolve_isosingular_dimension")
+println("=" ^ 70)
+
+# Same four ground-truth cases as Section 10, now run through the full
+# orchestrator rather than by hand. Two things get asserted beyond the
+# verdict, per explicit requirement before Stage 4a is considered
+# complete: (a) the ACTUAL rounds/corank_sequence, not the informal
+# "1-2 rounds" estimate from the Stage 4 proposal, and (b) the equation
+# count at EVERY intermediate round, independently replayed via
+# deflate_once and cross-checked against F_final -- this project already
+# had one real equation-count runaway (3162 equations by round 4 on the
+# handle, from an earlier unbounded loop before _corank_plateau_hint
+# existed), so a bounded-growth assertion belongs here, not just a
+# verdict check that a future regression removing the plateau gate
+# could still pass while silently exploding again.
+
+println("cfg64.max_deflations = ", cfg64.max_deflations)
+
+function replay_and_check(F_original, x0, er, result; label = "", expect_eq_counts = Int[])
+    println("  ", label, ": verdict=", result.verdict, "  dim=", result.isosingular_dimension,
+        "  rounds=", result.rounds, "  corank_seq=", result.corank_sequence,
+        "  F_final eq count=", length(result.F_final.expressions))
+
+    # Independent replay: re-run deflate_once step by step from scratch and
+    # confirm both the per-round equation counts (bounded, matching what's
+    # already been measured) and that the replay's own final system agrees
+    # exactly with resolve_isosingular_dimension's own F_final.
+    Fcur = F_original
+    eq_counts = Int[length(Fcur.expressions)]
+    for _ in 1:result.rounds
+        Fcur, _ = deflate_once(Fcur, x0, cfg64; expected_rank = er)
+        push!(eq_counts, length(Fcur.expressions))
+    end
+    println("    independently replayed per-round equation counts: ", eq_counts)
+
+    @test eq_counts == vcat([length(F_original.expressions)], expect_eq_counts)
+    @test all(<(50), eq_counts)  # bounded-growth guard -- catches a runaway long before 3162
+    @test length(Fcur.expressions) == length(result.F_final.expressions)
+    @test result.verdict == Resolved
+end
+
+replay_and_check(F_node, origin, 2, resolve_isosingular_dimension(F_node, origin, cfg64);
+    label = "NODE", expect_eq_counts = [3])
+replay_and_check(F2_cusp, origin_c, er2, resolve_isosingular_dimension(F2_cusp, origin_c, cfg64);
+    label = "CUSP", expect_eq_counts = [3, 6])
+replay_and_check(F_umbrella, tip_pt, er3, resolve_isosingular_dimension(F_umbrella, tip_pt, cfg64);
+    label = "TIP", expect_eq_counts = [4, 15])
+
+# HANDLE gets its own block: this is the one case that exercises
+# _corank_plateau_hint's one-extra-round cost directly (corank reaches
+# its true limit at round 1, but the hint can't recognize a plateau
+# from a single value -- it needs the SAME value to repeat, so round 2
+# happens purely to confirm the plateau before verification ever runs).
+r_handle_full = resolve_isosingular_dimension(F_umbrella, handle_pt, cfg64)
+@test r_handle_full.corank_sequence == [3, 1, 1]
+@test r_handle_full.corank_sequence[2] == r_handle_full.corank_sequence[1] - 2  # true limit (1) reached at round 1 already...
+@test r_handle_full.corank_sequence[3] == r_handle_full.corank_sequence[2]      # ...but NOT recognized as a plateau until round 2 repeats it
+@test r_handle_full.rounds == 2  # one full extra deflate_once round paid specifically for that confirmation
+replay_and_check(F_umbrella, handle_pt, er3, r_handle_full; label = "HANDLE", expect_eq_counts = [4, 8])
+
+println()
+println("Round counts across all four ground-truth cases: node=1, cusp=2, tip=2, handle=2.")
+println("Maximum observed = 2. cfg64.max_deflations = $(cfg64.max_deflations) is a 5x safety")
+println("margin over anything actually needed here, not an empirically-required minimum --")
+println("same framing as isosingular_verify_retries=20 in Stage 3.")
+
 end

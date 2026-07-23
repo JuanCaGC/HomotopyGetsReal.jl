@@ -65,6 +65,8 @@ export jacobian_rank_info, compute_critical_points, intersect_bounding_object
 export estimate_corank, deflate_once
 export IsosingularVerdict, Verified, NotTerminal, Inconclusive
 export VerifyResult, verify_isosingular_dimension
+export ResolveVerdict, Resolved, Ambiguous, Exhausted
+export ResolveResult, resolve_isosingular_dimension
 
 # PathTracking.jl
 export is_near_singular, build_tracker, track_path, track_bidirectional

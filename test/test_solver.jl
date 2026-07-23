@@ -333,7 +333,13 @@ F1_handle, d1_handle = deflate_once(F_umbrella, handle_pt, cfg64; expected_rank 
 r_handle = verify_isosingular_dimension(F1_handle, F_umbrella, handle_pt, d1_handle, cfg64)
 println("  handle round1 (corank=$d1_handle): verdict=", r_handle.verdict, "  attempts=", r_handle.attempts)
 @test r_handle.verdict == Verified
-@test r_handle.attempts == 1
+# attempts-to-first-success is a random variable by construction (fresh random
+# hyperplanes drawn per retry) -- not a deterministic constant. This project's
+# own Ambiguous-forcing investigation measured attempts of 1,2,1,4,1,1,4,1,1,1
+# across 10 fresh trials on a comparable case; the true invariant the design
+# guarantees is that a Verified result used somewhere between 1 and
+# isosingular_verify_retries attempts, not any single exact count.
+@test 1 <= r_handle.attempts <= cfg64.isosingular_verify_retries
 @test r_handle.inconsistent_count == 0
 
 r_handle_wrong_d = verify_isosingular_dimension(F1_handle, F_umbrella, handle_pt, 2, cfg64)

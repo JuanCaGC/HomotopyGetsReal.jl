@@ -1,4 +1,5 @@
 @testset "Taubin heart (Phase 5 slow)" begin
+using Random
 
 """
     _instrumented_sweep_hop!(hop_path, patch, cfg, state, y0, p0, p1, budget, tols, inner_bisections, outer_bisections)

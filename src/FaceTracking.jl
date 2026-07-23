@@ -161,6 +161,11 @@ result into an already-concrete context (`patch_direction`'s own
 `weld_mesh`'s `T[gx, gy, gz]` typed-array-literal construction).
 """
 function _gradient_at(patch::NamedTuple, x0::T, y0::T, z0::T, cfg::HomotopyConfig{T}) where {T<:AbstractFloat}
+    # cfg is intentionally unused here (bits comes from T, not any cfg field) --
+    # kept in the signature for parity with this file's other patch/T-generic
+    # evaluators (_residual_at, _project_to_slice), which DO need cfg. Flagged
+    # for a future cleanup pass rather than silently dropped, since removing it
+    # would break that shared calling convention.
     bits = precision(T)
     vars = [patch.x_var, patch.y_var, patch.z_var]
     vals = Complex{T}[Complex{T}(x0), Complex{T}(y0), Complex{T}(z0)]
@@ -181,6 +186,9 @@ not merely "did the patch stay transversal", which
 the identical evaluation path rather than duplicating it.
 """
 function _residual_at(patch::NamedTuple, x0::T, y0::T, z0::T, cfg::HomotopyConfig{T}) where {T<:AbstractFloat}
+    # cfg is intentionally unused here too (see _gradient_at's identical note) --
+    # kept for the same shared-signature parity reason, flagged rather than
+    # silently dropped.
     bits = precision(T)
     vars = [patch.x_var, patch.y_var, patch.z_var]
     vals = Complex{T}[Complex{T}(x0), Complex{T}(y0), Complex{T}(z0)]
@@ -542,6 +550,11 @@ function sweep_face_bidirectional(
     # Tracks directly to z_bottom/z_top (no epsilon pullback). Directions do not
     # share a tracker; adaptive re-anchoring in _sweep_direction handles
     # transversality drift on general surfaces.
+    # F is intentionally unused here -- it's only forwarded from track_face for
+    # signature parity with this file's other F-taking trackers, but
+    # _sweep_direction (below) never takes F at all; all surface evaluation
+    # goes through patch. Flagged for a future cleanup pass (drop F from both
+    # this signature and track_face's) rather than silently dropped.
     n_side = cfg.midslice_sample_density
     z_mid64 = Float64(z_mid)
 
@@ -586,6 +599,10 @@ function track_face(
 ) where {T<:AbstractFloat}
     # sample_edge polylines may be off-curve; re-project anchors before sweeping.
     # Triangulation: diagonal v1-v3 per quad; degenerate triangles dropped locally.
+    # F is only forwarded to sweep_face_bidirectional below, which itself never
+    # uses it (see that function's own note) -- effectively unused in this
+    # file's actual computation, kept for now since callers already pass the
+    # surface system here. Flagged for a future cleanup pass.
     n_curve = length(edge.sampled_points)
     n_curve >= 1 || throw(ArgumentError("track_face: edge $(edge.id) has no sampled points to sweep"))
     n_side = cfg.midslice_sample_density

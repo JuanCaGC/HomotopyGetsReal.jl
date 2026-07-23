@@ -324,14 +324,14 @@ end
 Phase 10: a PERSISTENT, cross-call vertex-identity substrate — unlike
 [`cluster_vertices`](@ref), which deduplicates a single batch of vertices
 and then discards its own bookkeeping, a `VertexRegistry` accumulates
-vertices ACROSS MULTIPLE SEPARATE CALLS (e.g. one call per slab, plus one
-per shared crit-slice, in `decompose_3d_surface`'s slab loop — wiring
-deferred to a later stage), assigning the SAME id to any two candidates
-that land within `tol` of an already-registered vertex — even though
-those candidates come from numerically INDEPENDENT computations (e.g. a
-slab's own `decompose_1d_curve` call and the shared crit-slice's own
-`slice_at_z` call, both converging on "the same" critical point at a
-shared z-boundary).
+vertices ACROSS MULTIPLE SEPARATE CALLS (one call per slab, plus one per
+shared crit-slice, in `decompose_3d_surface`'s slab loop), assigning the
+SAME id to any two candidates that land within `tol` of an
+already-registered vertex — even though those candidates come from
+numerically INDEPENDENT computations (e.g. a slab's own
+`decompose_1d_curve` call and the shared crit-slice's own `slice_at_z`
+call, both converging on "the same" critical point at a shared
+z-boundary).
 
 This is the gap `cluster_vertices` was explicitly anticipated to extend
 into (see this file's own header, written in Phase 2), but a genuinely
@@ -342,9 +342,14 @@ against a growing store, one [`register!`](@ref) call at a time
 eventually contribute to the same canonical vertex.
 
 Stage 1 (this struct + `register!`): a pure, standalone data structure,
-exercised only by its own unit tests (`test/test_vertex_registry.jl`).
-Nothing in `decompose_3d_surface` constructs or calls a `VertexRegistry`
-yet — that wiring is a deliberately separate, later stage.
+exercised by its own unit tests (`test/test_vertex_registry.jl`).
+
+Stage 2 (wired): `decompose_3d_surface(...; incidence = true)` constructs
+one `VertexRegistry` per call and routes every slab's and every
+`_decompose_crit_slice`'s vertex ids through `register!` instead of the
+positional `v_hwm` offset scheme (see `decompose_3d_surface`'s own Phase
+10 comment). `incidence = false` never constructs one and stays on the
+offset scheme unchanged.
 
 # Fields
 - `vertices`: canonical, deduplicated entries; `vertices[id]` is the entry

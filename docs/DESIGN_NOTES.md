@@ -542,3 +542,62 @@ residual `6e-9` over 2617 mesh points, but ~2.5% of points exceed `1e-4`
 (max `0.26`), ALL confined to `|z_world| <= 0.14` around the singular
 plane (the surface spans `|z| <= 1.24`). Away from the singular locus the
 decomposition is unaffected.
+
+
+---
+
+## Generic projection support (Phase 8) — `src/Projection.jl`
+
+*(See also "Known limitation: generic projections over singular curves"
+under "Surface decomposition, Phases 8-9" — that entry is a DIFFERENT
+investigation, mesh-quality degradation near a singular locus AFTER a
+projection is applied, not this section's construction/validation of the
+projection itself.)*
+
+### `random_orthogonal_matrix`'s Haar-uniformity verification
+
+Plain LAPACK `qr()` of a Gaussian matrix is not itself Haar-distributed;
+the sign-correction step (multiplying columns by the signs of `diag(R)`)
+is what restores Haar measure on O(n). Verified empirically (20k
+samples): det always +1, `||mean(column)||` consistent with the
+1/sqrt(N) null, `E[(col)_z^2] = 0.3323` vs 1/3 for uniform.
+
+### `projection_orthonormality_tol` — the Audit 1 Item 4/2a fix
+
+*(Canonical entry — consolidates what were previously two near-duplicate
+copies of the same fix history, one in `Config.jl`'s
+`projection_orthonormality_tol` field comment and one in
+`_resolve_projection`'s own docstring. Neither source site owns this
+account; both point here.)*
+
+Before 2026-07-23 (Audit 1, Item 4/2a), the orthonormality acceptance
+threshold inside `_resolve_projection` (`norm(Q'Q - I) <= tol`) was a
+bare `1e-8` Float64 literal, with no `HomotopyConfig` field to source it
+from at all — a gap against this project's own "every numerical
+tolerance threaded through `HomotopyConfig`" commitment (see
+`Config.jl`'s own header). Fixed by adding
+`cfg.projection_orthonormality_tol`, preserving the exact
+already-working `1e-8` default while making it genuinely configurable.
+Deliberately its own field rather than a reuse of `jacobian_rank_tol`
+(same default magnitude at the time, but a different physical quantity —
+a matrix-identity defect, not a Jacobian singular-value cutoff).
+
+### `_verify_projection_ok`'s degeneracy-discrimination measurements
+
+Measured: `z - x^2` with `Q = I` flagged (probe max exactly 0), a 1e-9
+near-degenerate rotation flagged (ratio 6e-10), a 1e-7 rotation passes,
+and the sphere / Taubin heart / cylinder all pass.
+
+## Plotting (Phase 6) — `src/Visuals.jl`
+
+GLMakie was confirmed (empirically, not assumed) to render headlessly in
+this project's dev sandbox before this file was written — no CairoMakie
+fallback needed, `Project.toml`'s existing `GLMakie` dependency
+(already listed, never previously `using`d) was sufficient.
+
+### `_near_constant_colorrange`'s Phase 6 "02b" discovery
+
+Found via the Phase 6 "02b" investigation: a mathematically-exact-1.0
+quantity's Float32 round-off, ~6e-8 relative, auto-scaled a colorbar
+into full-spectrum speckle — confirmed via `radial_fn`'s printed
+min/max on the unit sphere: literally `0.99999994` to `1.0`.

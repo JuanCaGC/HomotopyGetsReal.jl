@@ -43,9 +43,9 @@ function random_orthogonal_matrix(::Type{T}, n::Int; rng::Random.AbstractRNG = R
     # convention biases the distribution); multiplying columns by the signs of
     # diag(R) restores Haar measure on O(n) (Mezzadri, Notices AMS 54 (2007)).
     # Negating one column when det < 0 is a measure-preserving right-translation
-    # of the det=-1 coset onto SO(n), so uniformity survives. Verified
-    # empirically (20k samples): det always +1, ||mean(column)|| consistent
-    # with the 1/sqrt(N) null, E[(col)_z^2] = 0.3323 vs 1/3 for uniform.
+    # of the det=-1 coset onto SO(n), so uniformity survives. See
+    # docs/DESIGN_NOTES.md, "Generic projection support (Phase 8)", for the
+    # empirical Haar-uniformity verification behind this construction.
     # Always generated in Float64 and converted to T, so chart systems built
     # from these entries keep exactly-Float64-representable coefficients (the
     # same precision boundary as path tracking; see Solver.jl's module header).
@@ -68,14 +68,14 @@ substitution precision path tracking uses anyway); anything else throws an
 `ArgumentError`. Reflections (det < 0) are rejected rather than auto-fixed;
 see the module header for the winding-convention rationale.
 
-`cfg` (2026-07-23, Audit 1 Item 4/2a fix): the orthonormality acceptance
-threshold now comes from `cfg.projection_orthonormality_tol` instead of a
-bare `1e-8` literal with no way for a caller to source it from `cfg` at
-all -- same default value as before, genuinely configurable now. Compared
-against the Float64-computed `ortho_defect` via `Float64(cfg....)`, matching
-this codebase's established `btol64`-style pattern (see
+The orthonormality acceptance threshold comes from
+`cfg.projection_orthonormality_tol`, compared against the
+Float64-computed `ortho_defect` via `Float64(cfg....)`, matching this
+codebase's established `btol64`-style pattern (see
 `intersect_bounding_object`) for a T-generic tolerance gating a strictly
-Float64-only check.
+Float64-only check. See `docs/DESIGN_NOTES.md`, "Generic projection
+support (Phase 8)", for why this field exists rather than a bare
+literal.
 """
 function _resolve_projection(projection, rng::Random.AbstractRNG, cfg::HomotopyConfig{T}) where {T<:AbstractFloat}
     if projection === :random
@@ -165,10 +165,9 @@ with a relative threshold of `cfg.jacobian_rank_tol` against the largest
 partial's probe magnitude. Deliberately scoped: `∂f'/∂z ≡ 0` is NOT checked
 (a chart-z-independent surface, e.g. a cylinder, has an empty critical system
 and decomposes fine), and positive-dimensional critical loci are left to the
-downstream machinery that already detects them. Measured discrimination:
-`z - x^2` with `Q = I` flagged (probe max exactly 0), a 1e-9 near-degenerate
-rotation flagged (ratio 6e-10), a 1e-7 rotation passes, and the sphere /
-Taubin heart / cylinder all pass.
+downstream machinery that already detects them. See `docs/DESIGN_NOTES.md`,
+"Generic projection support (Phase 8)", for the measured discrimination
+behind this design.
 """
 function _verify_projection_ok(F_chart::System, cfg::HomotopyConfig{T}) where {T<:AbstractFloat}
     vars = F_chart.variables

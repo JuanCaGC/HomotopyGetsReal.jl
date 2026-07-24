@@ -53,10 +53,8 @@
 # `separate_into_nonsingular_pieces`/OBJ-STL export (a new topological
 # feature, not plotting).
 #
-# GLMakie confirmed (empirically, not assumed) to render headlessly in
-# this project's dev sandbox before writing anything below -- no
-# CairoMakie fallback needed, `Project.toml`'s existing `GLMakie`
-# dependency (already listed, never previously `using`d) is sufficient.
+# See docs/DESIGN_NOTES.md, "Plotting (Phase 6)", for the GLMakie
+# headless-rendering confirmation behind this file's GLMakie dependency.
 
 const _VERTEX_COLORS = Dict(
     Critical => :red,
@@ -182,9 +180,8 @@ const _NEAR_CONSTANT_COLOR_WARNED = Ref(false)
 
 # Below this relative spread, `color_by`'s range is treated as numerical
 # noise rather than a meaningful signal -- see the `_near_constant_colorrange`
-# docstring for the empirical motivation (found via the 02b investigation:
-# a mathematically-exact-1.0 quantity's Float32 round-off, ~6e-8 relative,
-# auto-scaled a colorbar into full-spectrum speckle).
+# docstring for the design rationale, and docs/DESIGN_NOTES.md, "Plotting
+# (Phase 6)", for the discovery behind this default.
 const _COLOR_BY_MIN_REL_RANGE = 1e-4
 
 """
@@ -195,13 +192,12 @@ auto-scale the colorbar to it, as before); otherwise returns a `colorrange`
 tuple wide enough to stop Makie from stretching pure noise across the full
 `colormap`.
 
-Motivated directly by the Phase 6 `02b` investigation: `color_by`'s range
-gets compared against `hi`/`lo`'s own magnitude (not an absolute
-threshold), since "meaningful range" is scale-relative -- a surface
-sitting at `z ~ 1e6` with a `1e-1`-wide range is fine, while one at
-`z ~ 1.0` with a `6e-8`-wide range (exactly Float32 machine epsilon,
-confirmed via `radial_fn`'s printed min/max on the unit sphere: literally
-`0.99999994` to `1.0`) is not. When the ratio falls below
+`color_by`'s range gets compared against `hi`/`lo`'s own magnitude (not
+an absolute threshold), since "meaningful range" is scale-relative -- a
+surface sitting at `z ~ 1e6` with a `1e-1`-wide range is fine, while one
+at `z ~ 1.0` with a `6e-8`-wide range (exactly Float32 machine epsilon)
+is not. See `docs/DESIGN_NOTES.md`, "Plotting (Phase 6)", for the
+discovery behind this design. When the ratio falls below
 `_COLOR_BY_MIN_REL_RANGE`, emits a one-shot `@warn` (the same one-shot
 `Ref{Bool}`-latch pattern as [`plot_surface_decomposition`](@ref)'s
 `faces`-method winding warning) and returns a `colorrange` centered on the

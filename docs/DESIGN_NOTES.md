@@ -223,3 +223,64 @@ members): before adding any new `@enum` to this module, grep the whole
 `Resolved`/`Ambiguous`/`Exhausted`) rather than relying on a word simply
 sounding unlikely to collide — that's exactly what `Inconclusive` sounded
 like the first time too.
+
+---
+
+## Face tracking (Phase 5) — `src/FaceTracking.jl`
+
+### Patch construction: `compile=:none` over parametric `ParameterHomotopy`
+
+Patch equations are built with literal `x0,y0,a,b` coefficients baked in
+per anchor, via `build_tracker(...; compile = :none)`, rather than a
+single parametric patch with `x0,y0,a,b` threaded through as extra
+`ParameterHomotopy` parameters. This was benchmarked directly (Phase 5):
+across 15 structurally distinct systems, `compile = :all` cost ~5,700x
+what `compile = :none` cost, dominated by Julia re-specializing `track`'s
+call graph against each new `CompiledSystem` type; `:none`'s per-step
+tracking throughput was not worse for the small (1-2 equation) systems
+this pipeline builds. See `build_tracker`'s own docstring
+(`src/PathTracking.jl`) for the general `compile` tradeoff this choice
+draws on.
+
+### Adaptive re-anchoring
+
+**The ellipsoid discovery (2026-07).** A fixed literal patch line is only
+guaranteed to keep intersecting the level curve as `z` sweeps away from
+the anchor when the surface's gradient is radially symmetric about the
+axis the curve shrinks toward — true for a sphere (an algebraic
+coincidence of radial symmetry, not a general guarantee), false in
+general. This was found empirically while validating this file against
+an asymmetric ellipsoid (`x^2+4y^2+9z^2=1`, `scratch_phase5_check.jl`
+section 7): for a general surface the fixed line can lose transversal
+intersection with the curve entirely before reaching `z_bottom`/`z_top`,
+which no amount of `_track_path_segment!`-style bisection can fix, since
+the system genuinely has no nearby solution beyond that point rather than
+just a hard-to-resolve one.
+
+**Why both gates, confirmed empirically neither alone was sufficient.**
+Tracking anchor `(-0.722,0.346)` toward the ellipsoid's pole at `z=-1/3`:
+the transversality-drift (cosine) check alone re-anchors proactively, but
+a coarse `z_targets` grid (e.g. `midslice_sample_density = 8`) can still
+take one large single hop that crosses the entire remaining
+transversality margin in one step — measured with 8 hops toward `z=-1/3`,
+`cos_angle` was `0.72` after hop 6 (above even a generous re-anchor
+threshold), yet hop 7 already landed with `residual ≈ 0.076`. The
+residual-based bisection gate alone is also insufficient on its own,
+since without proactive re-anchoring a fixed patch line can lose
+transversal intersection entirely (see the ellipsoid discovery above),
+a failure the residual check has nothing to bisect against — there is no
+nearby solution to converge toward. Both mechanisms are needed together;
+see `_sweep_hop!`'s own docstring for the current two-gate mechanism.
+
+**The `_gradient_at` sign-error near-miss.** `_sweep_hop!` deliberately
+recomputes the anchor's raw gradient `(fx0,fy0)` via a direct
+`_gradient_at` call rather than reconstructing it from
+`patch_direction`'s `(a,b)=(fy0,-fx0)` return. This was found the hard
+way during validation: an earlier version reconstructed `(fx0,fy0)` by
+inverting `patch_direction`'s swap-and-negate, got the inversion wrong,
+and the bug was silent — it just negated the computed `cos_angle`,
+causing the transversality check to fire on literally every hop instead
+of only when genuinely needed, with no exception or test failure to flag
+it. The current direct-call rule (stated in `_sweep_hop!`'s own
+docstring) exists specifically to make that mistake structurally
+impossible to reintroduce by accident.

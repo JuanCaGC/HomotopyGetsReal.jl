@@ -24,49 +24,44 @@
 #      pair (so every hop keeps the same singularity-avoidance safety
 #      net) while guaranteeing at least one accepted point per hop.
 #
-# Confirmed architecture decision (Option B): the per-anchor patch
-# equation is built with LITERAL `x0,y0,a,b` coefficients (mirroring how
+# Architecture decision (Option B): the per-anchor patch equation is
+# built with LITERAL `x0,y0,a,b` coefficients (mirroring how
 # `compute_midslice`/`connect_the_dots!` already bake literal `x_mid`
 # values per interval), using `build_tracker(...; compile = :none)` --
 # NOT a parametric patch with `x0,y0,a,b` threaded as extra
-# ParameterHomotopy parameters. This was benchmarked directly: across 15
-# structurally distinct systems, `compile = :all` cost ~5,700x what
-# `compile = :none` cost (dominated by Julia re-specializing `track`'s
-# call graph against each new `CompiledSystem` type), and `:none`'s
-# per-step tracking throughput was not worse for the small (1-2
-# equation) systems this pipeline builds. See `build_tracker`'s own
-# docstring (src/PathTracking.jl) for the full writeup.
+# ParameterHomotopy parameters. See docs/DESIGN_NOTES.md, section "Face
+# tracking (Phase 5)" / "Patch construction", for the benchmark behind
+# this choice, and `build_tracker`'s own docstring (src/PathTracking.jl)
+# for the general `compile` tradeoff.
 #
-# ADAPTIVE RE-ANCHORING (discovered empirically while validating this
-# file, see `_sweep_direction`'s docstring for the full derivation): a
-# FIXED literal patch line is only guaranteed to keep intersecting the
-# level curve as z sweeps away from the anchor when the surface's
-# gradient is radially symmetric about the axis the curve shrinks toward
-# (true for a sphere, false in general -- e.g. an ellipsoid). For a
-# general surface, the fixed line can lose transversal intersection with
-# the curve entirely before reaching z_bottom/z_top, which NO amount of
-# `_track_path_segment!` bisection can fix (the system genuinely has no
-# nearby solution beyond that point, not just a hard-to-resolve one).
+# ADAPTIVE RE-ANCHORING: a FIXED literal patch line is only guaranteed to
+# keep intersecting the level curve as z sweeps away from the anchor when
+# the surface's gradient is radially symmetric about the axis the curve
+# shrinks toward (true for a sphere, false in general -- e.g. an
+# ellipsoid); otherwise the fixed line can lose transversal intersection
+# with the curve entirely before reaching z_bottom/z_top, which NO amount
+# of `_track_path_segment!` bisection can fix (the system genuinely has
+# no nearby solution beyond that point, not just a hard-to-resolve one).
 # `_sweep_direction`/`_sweep_hop!` (used by `sweep_face_bidirectional`)
-# guard against this with TWO complementary mechanisms, both needed
-# (confirmed empirically -- neither alone was sufficient): (1) a
-# dimensionless cosine-similarity check between the anchor's fixed
+# guard against this with TWO complementary mechanisms, both needed: (1)
+# a dimensionless cosine-similarity check between the anchor's fixed
 # gradient direction and the current local gradient
-# (`cfg.patch_transversality_cos_tol`, a NEW config field -- reusing
-# `jacobian_rank_tol`/`singular_value_threshold` was tried first and
-# found to reliably fire too late, see `HomotopyConfig`'s docstring for
-# the full empirical justification), which rebuilds a fresh, re-anchored
-# `build_face_tracker` at the current landing point whenever the margin
-# drifts too far; and (2) a residual-based bisection gate (reusing
-# `cfg.critical_point_tol`, no new field), which recursively halves a hop
-# whenever its landing fails the ground-truth `f≈0` surface-membership
-# check -- needed because right at a genuine z-critical target the level
-# curve degenerates to a point and NO choice of patch stays transversal,
-# so only shrinking the step size (mirroring `_track_path_segment!`'s own
-# bisection for the analogous 1D case) actually converges the tracked
-# point to the true limit. Both use `_project_to_slice`/`_residual_at`
-# (already needed for other reasons, see their own docstrings) to keep
-# re-anchored points genuinely on-curve.
+# (`cfg.patch_transversality_cos_tol`), which rebuilds a fresh,
+# re-anchored `build_face_tracker` at the current landing point whenever
+# the margin drifts too far; and (2) a residual-based bisection gate
+# (reusing `cfg.critical_point_tol`, no new field), which recursively
+# halves a hop whenever its landing fails the ground-truth `f≈0`
+# surface-membership check -- needed because right at a genuine
+# z-critical target the level curve degenerates to a point and NO choice
+# of patch stays transversal, so only shrinking the step size (mirroring
+# `_track_path_segment!`'s own bisection for the analogous 1D case)
+# actually converges the tracked point to the true limit. Both use
+# `_project_to_slice`/`_residual_at` (already needed for other reasons,
+# see their own docstrings) to keep re-anchored points genuinely
+# on-curve. See docs/DESIGN_NOTES.md, section "Face tracking (Phase 5)" /
+# "Adaptive re-anchoring", for the empirical case behind why both
+# mechanisms are needed, and `_sweep_hop!`/`_sweep_direction`'s own
+# docstrings for the current mechanism.
 #
 # Each of the two directions in `sweep_face_bidirectional` builds its OWN
 # tracker from the same starting anchor (NOT shared between directions --
@@ -334,56 +329,48 @@ end
 The bisection-and-re-anchoring engine behind [`_sweep_direction`](@ref).
 `state` is `(ph, tracker, fx0_64, fy0_64)` -- the CURRENT patch's tracker
 pair plus its anchor's raw gradient `(fx0,fy0) = _gradient_at(...)` at
-the anchor (deliberately NOT reconstructed from
-[`patch_direction`](@ref)'s `(a,b)=(fy0,-fx0)` return -- that would
-require correctly inverting the swap-and-negate, and a sign error there
-was caught empirically during validation: it silently negates the
-computed `cos_angle`, causing the transversality check to fire on
-literally every hop instead of only when genuinely needed. Calling
-[`_gradient_at`](@ref) directly for this one purpose costs one extra
-symbolic evaluation per re-anchor event, which is negligible next to
-[`build_face_tracker`](@ref)'s own `compile=:none` construction cost).
+the anchor. `(fx0,fy0)` MUST be captured directly here via
+[`_gradient_at`](@ref), not reconstructed from
+[`patch_direction`](@ref)'s `(a,b)=(fy0,-fx0)` return: that return is
+already swapped-and-negated, so an incorrect inversion silently negates
+the computed `cos_angle` with no exception or test failure to catch it
+(see `docs/DESIGN_NOTES.md`, section "Face tracking (Phase 5)" /
+"Adaptive re-anchoring", for how this was found). The extra
+[`_gradient_at`](@ref) call costs one symbolic evaluation per re-anchor
+event, negligible next to [`build_face_tracker`](@ref)'s own
+`compile=:none` construction cost.
 
 Two independent, complementary quality gates are checked at every
-accepted landing, addressing two DIFFERENT empirical failure modes found
-validating this file against an asymmetric ellipsoid
-(`x^2+4y^2+9z^2=1`, `scratch_phase5_check.jl` section 7):
+accepted landing (see `docs/DESIGN_NOTES.md`, section "Face tracking
+(Phase 5)" / "Adaptive re-anchoring", for the empirical case that both
+are needed together):
 
 1. **Transversality drift** (cosine check, `cfg.patch_transversality_cos_tol`,
    see `HomotopyConfig`'s docstring for the full derivation of why
    `H_sys`'s Jacobian determinant reduces to `-(fx*fx0+fy*fy0)`, the
    negative dot product of the current and anchor gradients restricted to
-   `x,y`): tracking anchor `(-0.722,0.346)` toward the ellipsoid's pole at
-   `z=-1/3`, the patch line eventually stops intersecting the level curve
-   at all once the curve's tangent has rotated far enough relative to the
-   anchor's fixed patch line (`|a*x0+b*y0| <= R*sqrt(a^2+b^2/4)` fails, in
-   quadric-specific algebra terms). Re-anchoring at a still-good landing
-   (`cos_angle` still comfortably positive) BEFORE this crossing avoids it
-   entirely in the common case.
+   `x,y`): once the curve's tangent has rotated far enough relative to
+   the anchor's fixed patch line, the patch line stops intersecting the
+   level curve at all. Re-anchoring at a still-good landing (`cos_angle`
+   still comfortably positive) BEFORE this crossing avoids it entirely in
+   the common case.
 2. **Residual quality** (`cfg.critical_point_tol`, reusing the existing
    "did the solver converge?" tolerance -- see `HomotopyConfig`'s three
    easy-to-confuse tolerances section -- no new field): even with
-   proactive re-anchoring, a COARSE `z_targets` grid (e.g.
-   `midslice_sample_density = 8`) can still take one large single hop
-   that crosses the *entire* remaining transversality margin in one step
-   (confirmed empirically: with 8 hops toward `z=-1/3`, `cos_angle` is
-   `0.72` after hop 6 -- above even a generous re-anchor threshold -- yet
-   hop 7 already lands with `residual ≈ 0.076`), and this failure mode
-   gets qualitatively WORSE, not better, right at a genuine
-   `compute_critical_z_slices` target itself: AT `z=z_bottom` exactly,
-   `(fx,fy)` vanishes identically (that is the z-slice's defining
-   property), so the level curve has shrunk to a single point and
-   `H_sys`'s Jacobian is genuinely singular there for EVERY choice of
-   patch, not just a poorly-re-anchored one. No amount of proactive
-   re-anchoring alone fixes this -- what actually fixes it is the same
-   remedy `_track_path_segment!` already uses for the analogous 1D
-   problem: **bisect the hop itself** when the landing's actual `|f|`
+   proactive re-anchoring, a COARSE `z_targets` grid can still take one
+   large single hop that crosses the *entire* remaining transversality
+   margin in one step, and this failure mode gets qualitatively WORSE,
+   not better, right at a genuine `compute_critical_z_slices` target
+   itself: AT `z=z_bottom` exactly, `(fx,fy)` vanishes identically (that
+   is the z-slice's defining property), so the level curve has shrunk to
+   a single point and `H_sys`'s Jacobian is genuinely singular there for
+   EVERY choice of patch, not just a poorly-re-anchored one. No amount of
+   proactive re-anchoring alone fixes this -- what actually fixes it is
+   the same remedy `_track_path_segment!` already uses for the analogous
+   1D problem: **bisect the hop itself** when the landing's actual `|f|`
    residual exceeds `cfg.critical_point_tol`, inserting a midpoint
    `z`-target and resolving each half recursively (mirroring
-   `_track_path_segment!`'s own `xm = (x0+x1)/2` pattern), which
-   empirically converges the tracked point arbitrarily close to the true
-   limiting point `(0,0)` as the hop width shrinks toward it, exactly as
-   `_track_path_segment!` converges toward genuine 1D critical points.
+   `_track_path_segment!`'s own `xm = (x0+x1)/2` pattern).
 
 Recursion is bounded by the shared `budget` (seeded from
 `cfg.max_path_steps`, one budget per top-level `z_targets` entry, reset
@@ -449,24 +436,23 @@ end
     _sweep_direction(patch::NamedTuple, x0::T, y0::T, z_start::T, z_targets::Vector{Float64}, cfg::HomotopyConfig{T}) where {T<:AbstractFloat}
         -> Vector{Vector{Float64}}
 
-**Adaptive re-anchoring + bisection**, added after an empirical failure
-discovered while validating this file against an asymmetric ellipsoid
-(`x^2 + 4y^2 + 9z^2 = 1`, `scratch_phase5_check.jl` section 7):
-[`build_face_tracker`](@ref)'s patch line is LITERAL -- fixed at the
-anchor's starting `(x0,y0)` and gradient -- and stays valid only as long
-as it keeps genuinely intersecting the level curve as `z` sweeps away.
-For a sphere this always holds (its gradient is exactly radial, so the
-patch line always passes through the axis the circle shrinks toward --
-an algebraic coincidence of radial symmetry, not a general guarantee).
-For a general surface it does NOT, and worse, the failure gets sharper
-rather than gentler right at a genuine `compute_critical_z_slices`
-target itself, where the level curve degenerates to a single point. See
-[`_sweep_hop!`](@ref)'s docstring for the full two-part derivation (a
-transversality-drift cosine check AND a residual-based bisection gate --
-genuinely different failure modes, both observed empirically, neither
-sufficient alone) and `HomotopyConfig`'s docstring for why the cosine
-check specifically needed a new field rather than reusing
-`jacobian_rank_tol`/`singular_value_threshold`.
+**Adaptive re-anchoring + bisection.** [`build_face_tracker`](@ref)'s
+patch line is LITERAL -- fixed at the anchor's starting `(x0,y0)` and
+gradient -- and stays valid only as long as it keeps genuinely
+intersecting the level curve as `z` sweeps away. For a sphere this always
+holds (its gradient is exactly radial, so the patch line always passes
+through the axis the circle shrinks toward -- an algebraic coincidence of
+radial symmetry, not a general guarantee). For a general surface it does
+NOT, and worse, the failure gets sharper rather than gentler right at a
+genuine `compute_critical_z_slices` target itself, where the level curve
+degenerates to a single point. See [`_sweep_hop!`](@ref)'s docstring for
+the full two-part mechanism (a transversality-drift cosine check AND a
+residual-based bisection gate, genuinely different failure modes, neither
+sufficient alone), `HomotopyConfig`'s docstring for why the cosine check
+specifically needed a new field rather than reusing
+`jacobian_rank_tol`/`singular_value_threshold`, and
+`docs/DESIGN_NOTES.md`, section "Face tracking (Phase 5)" / "Adaptive
+re-anchoring", for the empirical discovery behind this design.
 
 # Algorithm
 Walks `z_targets` one at a time (rather than delegating the whole list to
@@ -483,14 +469,12 @@ recursive bisection pattern for the analogous 1D problem. Only
 [`track_dense_path`](@ref) itself.
 
 Reconstruction (a fresh [`build_face_tracker`](@ref) call) only happens
-when the cosine check actually fires, and bisection only happens when
-the residual check fires -- both confirmed empirically RARE in the
-well-conditioned interior of a sweep and concentrated near genuine
-z-critical targets (poles) on the ellipsoid regression case -- so this
-stays a genuinely ADAPTIVE strategy, not unconditional per-hop
-rebuilding, keeping total `compile = :none` construction cost close to
-the original one-per-anchor design in the common case, per Phase 5's own
-`build_tracker` benchmark.
+when the cosine check actually fires, and bisection only happens when the
+residual check fires, so this stays a genuinely ADAPTIVE strategy, not
+unconditional per-hop rebuilding, keeping total `compile = :none`
+construction cost close to the original one-per-anchor design in the
+common case (see `docs/DESIGN_NOTES.md`, section "Face tracking
+(Phase 5)" / "Patch construction", for that cost tradeoff).
 """
 function _sweep_direction(
     patch::NamedTuple,

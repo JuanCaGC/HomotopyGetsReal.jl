@@ -9,7 +9,7 @@ Full documentation: [https://JuanCaGC.github.io/HomotopyGetsReal.jl](https://Jua
 
 ## Install
 
-Not yet registered in Julia’s General registry. Install from GitHub:
+Registered in Julia's General registry as v0.1.0; note this release predates several major features described in this repository (the isosingular deflation API, generic projection support, and incidence-based mesh welding — see `docs/DESIGN_NOTES.md` for what's changed since) — an updated release is planned. For the current feature set described below, install from GitHub instead of `Pkg.add("HomotopyGetsReal")`:
 
 ```julia
 using Pkg
@@ -68,7 +68,7 @@ using Pkg
 Pkg.test("HomotopyGetsReal")
 ```
 
-**Full suite** (adds `test_taubin.jl`, ~77s for Taubin alone in this environment):
+**Full suite** (adds `test_taubin.jl` and other slow-gated tests; 515 tests total, ~480s (~8 min) in this environment as of 2026-07):
 
 ```bash
 HOMOTOPYGETSREAL_RUN_SLOW_TESTS=1 julia --project -e 'using Pkg; Pkg.test()'

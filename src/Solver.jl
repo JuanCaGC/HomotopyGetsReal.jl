@@ -588,6 +588,24 @@ generic Newton iteration, using the low-level `bits = precision(T)`
 `T === Float64` (nothing to gain: `precision(Float64) == 53` is already
 what path tracking used). Stops when the residual norm is at most
 `cfg.critical_point_tol` or after 50 iterations.
+
+**Convergence rate near a multiple root (2026-07).** This is plain
+(unmodified) Newton iteration: quadratic near a point where `F`'s
+Jacobian is full rank (a simple root), but only LINEAR when the
+Jacobian is rank-deficient there (a multiple root -- exactly the points
+this pipeline classifies `Singular`). Confirmed empirically on this
+project's own node/cusp ground-truth fixtures (`f = y^2-x^2`/`f =
+y^2-x^3`, sliced by a generic line through the origin): residual shrinks
+by a roughly constant 0.25 factor per iteration near the singular root
+(41 iterations needed to reach `1e-40` from a `1e-8`-scale perturbation)
+versus genuine quadratic doubling for a nearby simple root of a
+comparable system (4 iterations for the same target). A
+`Singular`-classified vertex can therefore converge markedly slower, and
+may leave a residual only modestly under (or, for a poorly-conditioned
+start, just over) `cfg.critical_point_tol` after the fixed 50-iteration
+cap -- not a bug, an inherent property of unmodified Newton at a
+rank-deficient Jacobian; see the docstring of `_landing_confidence` for
+a caller that specifically accounts for this.
 """
 function _newton_polish(F::System, x0::Vector{Complex{T}}, cfg::HomotopyConfig{T}) where {T<:AbstractFloat}
     T === Float64 && return x0

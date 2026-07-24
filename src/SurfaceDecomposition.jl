@@ -839,19 +839,15 @@ single point has no chord spacing of its own) but is NOT additionally
 residual-gated: measured on the fixed-axis Taubin cusp, genuinely converging
 columns can carry surface residual `~2e-6` (just over the default
 `critical_point_tol = 1e-6`) purely from Newton's convergence rate slowing
-near a multiple root (the same phenomenon `_newton_polish`'s own docstring
-notes elsewhere in this codebase -- TODO(2026-07, found during the isosingular
-deflation Stage 4 investigation, not fixed there, logged here so it isn't
-lost: `_newton_polish`'s ACTUAL current docstring, `Solver.jl`, contains no
-such convergence-rate-near-a-multiple-root caveat; this citation doesn't
-currently resolve to anything. Either add the caveat there, or reword this
-sentence to stop citing it) -- not an off-surface signal the way it is
-for `:edge` landings, since a fold/point cell has no "incomplete branch
-representation" failure mode to guard against. Snapping such a point only
-IMPROVES its on-surface quality (it moves TO the cell's own, independently
-validated, near-machine-precision coordinates), so omitting the residual
-gate here carries no correctness risk once the distance ratio itself is
-sound. `:bbox`/`:none` landings are never confident.
+near a multiple root -- see [`_newton_polish`](@ref)'s own docstring (2026-07
+update) for the confirmed mechanism and a controlled node/cusp demonstration
+-- not an off-surface signal the way it is for `:edge` landings, since a
+fold/point cell has no "incomplete branch representation" failure mode to
+guard against. Snapping such a point only IMPROVES its on-surface quality (it
+moves TO the cell's own, independently validated, near-machine-precision
+coordinates), so omitting the residual gate here carries no correctness risk
+once the distance ratio itself is sound. `:bbox`/`:none` landings are never
+confident.
 """
 function _landing_confidence(
     point::AbstractVector{T},

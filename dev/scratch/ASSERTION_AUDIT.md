@@ -1,5 +1,15 @@
 # Assertion Audit — Phase 7 Test Conversion
 
+> **Archived, 2026-07 (Phase 7).** Documents the one-time scratch-script-
+> to-formal-test-suite conversion and the pass-count/timing baseline at
+> that moment (2026-07-07). The "FLAG FOR MANUAL REVIEW" item below (the
+> Taubin skip-gate design) was resolved long ago — the
+> `HOMOTOPYGETSREAL_RUN_SLOW_TESTS` env-var gate it describes is exactly
+> what the suite uses today. Every pass count and timing below is stale
+> (the suite has grown from 178 to 515+ tests since); see README.md for
+> current numbers. Kept here for historical reference on the conversion
+> methodology only.
+
 Baseline counts from scratch scripts (method: `^\s*@test[^_a-zA-Z]`, `@test_throws`, `= @inferred `).
 
 ## Taubin runtime (measured in this environment, 2026-07-07)

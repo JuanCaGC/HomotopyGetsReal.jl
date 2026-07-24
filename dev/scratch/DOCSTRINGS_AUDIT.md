@@ -1,5 +1,15 @@
 # Docstrings audit — exported API
 
+> **Archived, 2026-07 (Phase 7).** A point-in-time snapshot from the
+> scratch-to-test conversion, checking that every exported symbol as of
+> Phase 7 had a docstring. Since superseded by the automated, live
+> `test/test_docstring_rendering.jl` (added during the 2026-07
+> documentation audit), which checks every *current* export's docstring
+> rendering on every test run, not as a one-time manual pass. The export
+> list and "0 missing" result below are stale (the package has since
+> grown the entire isosingular deflation API, generic projection
+> support, and more) — kept here for historical reference only.
+
 Automated check: every symbol in `src/HomotopyGetsReal.jl` `export` list has a docstring on its definition (or parent type for enum members).
 
 | Export | Docstring | Location |

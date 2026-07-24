@@ -284,3 +284,261 @@ of only when genuinely needed, with no exception or test failure to flag
 it. The current direct-call rule (stated in `_sweep_hop!`'s own
 docstring) exists specifically to make that mistake structurally
 impossible to reintroduce by accident.
+
+---
+
+## Surface decomposition, Phases 8-9 (`src/SurfaceDecomposition.jl`)
+
+### Robust z-mid selection: rejected alternatives and gate calibration — `_robust_slice_at_z`
+
+`_robust_slice_at_z` chooses which literal `z` to hand to `slice_at_z`
+for one slab, defending against a naive midpoint that coincidentally
+lands on a NON-REDUCED (repeated-factor) plane curve. The failure was
+discovered while validating this file against the Taubin heart surface
+(`(x^2+(1.2y)^2+z^2-1)^3 - x^2z^3 - 0.1(1.2y)^2z^3`,
+`scratch_phase5_taubin_check.jl` section 6); on the Taubin heart's
+degenerate slab, retry attempt 1 already succeeds (see the retry report
+in `scratch_phase5_taubin_check.jl`).
+
+**A direct residual-magnitude tiebreaker was rejected.** Flagging `z_mid`
+suspect by `maximum(|_residual_at(...)|)` over every edge sample point,
+instead of inspecting vertex types, was empirically tested: raw
+`sample_edge` output is linearly interpolated between homotopy-tracked
+points, so its residual has a substantial baseline even on healthy
+slices — a fully clean control slice at `z=0.05` already measures max
+raw residual `0.105`; the fully clean `[1.0648,1.2367]` slab measures
+`0.144`; the narrow-but-fine `[1.0,1.0648]` slab measures `0.268`; the
+genuinely-degenerate `z_mid=0` slab measures `1.000`. There is no
+scale-free gap to split a threshold into — the "fine" cases already span
+nearly 3x among themselves, and the "bad" case is only ~3.7x above the
+worst "fine" case. The `Singular`-typed-vertex co-occurrence check the
+function actually uses has no such scale problem (it is boolean, not a
+magnitude) and correctly separates all four cases.
+
+**Why the gradient gate exists at all.** Confirmed by re-running the
+Taubin heart regression once the `Singular` co-occurrence refinement was
+in place: the `[-1,1]` slab's retry landed on a topologically CLEAN
+`z_mid=0.02` (2 edges, 0 `Artificial`/`Singular` vertices) — yet the
+downstream sweep was STILL catastrophic (max `|f|` via `track_face`:
+`1.43`). Root cause: near `z=0`, every first partial derivative of `f`
+scales like `O(z^2)` together, so no vertex ever gets classified
+`Singular` even though the patch system is nearly singular there.
+
+**A same-point gradient ratio was rejected in favor of the cross-z
+reference ratio the function actually uses.** `hypot(patch_direction(...))
+/ |f_z|` at the candidate's own anchor does not correlate with sweep
+quality: the two already-healthy reference slabs measured `0.60` and
+`1.16`, while already-confirmed-bad candidates near `z=0` measured
+`2.08`-`4.29` — HIGHER than the healthy baseline, because `f_z` is
+suppressed by the same `O(z^2)` factor as `f_x`/`f_y` near `z=0`, so the
+ratio between them stays `O(1)` right through the degenerate
+neighborhood. The adopted cross-z reference ratio was measured instead:
+the two already-healthy reference slabs scored `0.82`/`0.98`; the
+`[-1,1]` slab's bad candidates scored `0.0014`-`0.0057`; its
+eventually-accepted good candidate (`z=0.06`, independently confirmed via
+`track_face` to give max `|f|=2.4e-6`) scored `0.013`. The chosen
+default, `cfg.z_mid_gradient_ratio_tol = 0.01`, sits with almost two
+orders of magnitude of margin on both sides of this gap.
+
+**Why the reference scale is computed eagerly, not lazily.** Measured
+2026-07 (see
+`dev/scratch/scratch_robust_slice_eagerness_check.jl`): with
+`bbox_z = (-0.96, 1.3)` (an ordinary asymmetric bounding-box crop), the
+bottom slab's naive midpoint `z=0.02` is topologically clean (no
+`:endpoint_fallback`, no `Singular`) yet its downstream sweep measures
+max `|f| ≈ 1.6`, versus `2.4e-7` at the gradient-gate-chosen
+`z ≈ 0.059`. A retry-armed LAZY variant (gradient gate active only from
+the first retry onward) was evaluated and REJECTED for exactly this
+reason: it silently accepts that slab. The measured eager cost is a ~3x
+multiplier on a healthy slab's slicing time (sphere/ellipsoid: 3.0x),
+accepted as the price of the guarantee.
+
+**The min-vs-max false positive and its Phase 8 resolution.** An earlier
+version of the gradient gate compared the candidate's MIN anchor
+gradient against the reference's MAX, which false-fires on curves with
+multiple, legitimately very-differently-conditioned branches. On the
+fixed-axis `[1.0, 1.0648]` slab this cost one harmless avoidable retry
+(candidate min `0.035` vs reference max `3.94`, ratio `0.0089`, just
+under the `0.01` threshold). The Phase 8 five-seed rotated-Taubin
+regression then showed the FATAL form of the same artifact: narrow slabs
+between two close genuine critical values (seed 3: `[-0.864, -0.858]`,
+seed 4: `[0.884, 0.900]`, nowhere near the singular ellipse) carry a
+just-born tiny branch whose Critical anchor gradient (`4e-4`/`3.5e-3`) is
+structurally weak across the ENTIRE slab, so every retry candidate failed
+identically and the ladder exhausted. The structural-heterogeneity skip
+(the function's current gradient-gate refinement) resolves both:
+measured `ref_min/ref_max` is `0.00306` on the `[1.0, 1.0648]` slab (gate
+skipped, false positive gone) and `0.372`/`0.0723` on the `[-1, 1]`/
+`[1.0648, 1.2367]` slabs (gate active, all true positives preserved).
+
+**Phase 8 transversal-singular-curve measurements.** On the rotated
+Taubin heart (seed 1), the naive midpoint of slab `[-0.956, -0.24]` had 2
+`Singular` vertices (the ellipse crossings), 2 benign
+`:endpoint_fallback` vertices, and per-edge first-sample anchor gradients
+`{4.01, 4.01, 1.44, 8.6e-15, 1.8e-13, 0.28}` against reference scale
+`3.98` — BOTH gates false-fired on every retry candidate before the
+topology-gate and gradient-gate-exclusion refinements existed, so 5 of 9
+slabs threw. For the gradient-gate exclusion refinement, a mid-edge
+anchor was evaluated as an alternative and REJECTED with data:
+`sample_edge` chords sit measurably off-curve precisely in the degenerate
+cases (the z=0.02 catastrophe candidate reads a healthy `0.353` at its
+chord midpoint while its downstream sweep is provably catastrophic),
+which would blind the gate exactly where it is most needed.
+
+**Validation of the refined gates** (measured 2026-07): fixed-axis
+Taubin — `[-1,1] -> 0.06` retried exactly as before (reference
+heterogeneity `0.372`), `[1.0, 1.0648] ->` naive midpoint (heterogeneity
+`0.00306`, resolving the documented false positive), `[1.0648, 1.2367]
+->` naive midpoint (heterogeneity `0.0723`); full fixed-axis decompose
+max `|f| = 2.4e-6`. Rotated Taubin, seeds 1-5: zero retries, zero throws;
+seed 3 (previously fatal) full decompose median world-`|f|` `2.1e-8` with
+21/5677 points above `1e-4`, confined to the singular-curve band.
+
+### Slab boundary merging — `_slab_bounds`
+
+`_slab_bounds` merges z-slab boundaries closer than `cfg.min_slab_width`
+because path endpoints landing on a point singularity carry
+~accuracy^(1/multiplicity) scatter in their z-estimate: ~2e-4 observed on
+the rotated Taubin heart, beyond `vertex_match_tol`'s own reach, which
+would otherwise mint sliver slabs centered ON a singular point that no
+`z_mid` choice can slice. All existing fixed-axis fixtures have
+critical-z gaps >= 0.065 — 65x the default `min_slab_width` floor of
+1e-3 — so none of their bounds are affected by the merge.
+
+### Phase 9a/9b: crit-slice incidence and the `critical_point` coincidence fix — `SurfaceIncidence`, `_cells_adjacent`, `_decompose_crit_slice`
+
+*(Canonical entry — consolidates what were previously two near-duplicate
+copies of the same investigation, one in `SurfaceIncidence`'s docstring
+and one in `_cells_adjacent`'s. Neither source site owns this account;
+both point here.)*
+
+`SurfaceIncidence.continuity_ok` flags, per face, whether every pair of
+CONFIDENT consecutive boundary columns lands on combinatorially adjacent
+crit-slice cells (`_cells_adjacent`). A direct diagnostic measurement
+(2026-07) — ground-truth residual/geometry checks, resolution-sensitivity
+re-runs at higher `edge_sample_density`/`midslice_sample_density`, and
+direct coordinate comparison of the flagged cells themselves, see
+`dev/scratch/scratch_continuity_ok_diagnosis.jl` — found that the
+ORIGINAL measured firing rate (fixed-axis 10/14 faces `continuity_ok`/16
+flagged pairs, rotated seed 1 15/22 faces/17 flagged pairs) was dominated
+by a FALSE POSITIVE, not genuine branch-jumping or resolution-limited
+ambiguity: 12 of the 16 fixed-axis pairs (and a comparable share of the
+rotated ones) paired a `:critical_point` landing against a
+`:crit_slice_vertex` landing that are, by construction, the SAME physical
+fold-tip location — confirmed coincident to machine precision (~1e-16) by
+direct coordinate comparison — which `_cells_adjacent`'s original rule
+had no case for (only exact `(kind, id)` matches or `:edge`-involving
+pairs were ever considered adjacent).
+
+The tell that distinguished this from genuine ambiguity: these 12 pairs
+did NOT shrink at higher sampling density the way the OTHER (genuine) 4
+fixed-axis violations at z=1.0648 did (which vanish completely by
+`edge_sample_density = 16`) — they persisted and grew MORE confidently
+separated, the opposite of what resolution-limited ambiguity should do.
+
+Fixed by adding `:critical_point` coincidence cases to `_cells_adjacent`
+(coincidence checked against `cfg.vertex_match_tol`, the same tolerance
+`weld_mesh`'s own clustering uses): a `:critical_point` and a
+`:crit_slice_vertex`/edge-endpoint that are the SAME physical location
+within that tolerance now count as adjacent. Re-measured after the fix:
+fixed-axis drops to 4/14 faces flagged with exactly the 4 genuine
+z=1.0648 pairs remaining (0 at the fold-tip boundaries, confirmed still
+resolving to 0 at `edge_sample_density = 16`, unchanged); rotated seed 1
+drops to roughly 5-7/22 faces (~10-11 pairs, run-to-run jitter from the
+same HC.jl cross-process nondeterminism documented elsewhere in this
+codebase). The residual flags on both fixtures now concentrate at the
+SAME multi-face edge-type boundaries the watertightness measurements
+below document as an open coverage-gap issue — this is exactly the
+evidence-gathering `continuity_ok` exists for, not a surprise finding.
+
+Separately, `_decompose_crit_slice` was measured across every fixture
+(fixed-axis and rotated Taubin included): nodal/saddle-type crit-slices
+decompose like the nodal-cubic fixture, fold-type extremes come back
+empty or as isolated `Singular` vertices, and nothing throws.
+
+`_inward_row_points` exists because the boundary row's own inter-column
+spacing self-referentially defeats a ratio check near a converging fold
+point. Measured on the fixed-axis Taubin cusp: boundary-row spacing
+`0.00355` vs a landing distance of `0.0037` (fails a `1.5x` ratio against
+itself) while the row-inward spacing (the SAME columns, one ring earlier)
+is `0.0982` (comfortably passes).
+
+### Phase 9b: monotone snap-target assignment — `_monotone_snap_targets`
+
+Motivated directly by measurement: plain nearest-target assignment (no
+monotonicity constraint) was checked on the fixed-axis Taubin `z=1.0`
+boundary and visits targets non-monotonically on more than half of
+same-edge column runs (4/8 sides monotone without this constraint, 16/56
+segments spanning >= 2 targets) — which would zigzag the welded boundary.
+The two-pass monotone DP eliminates that by construction.
+
+### Phase 9c: edge chaining, loft triangulation, and the Option A investigation — `_chained_edge_polylines`, `weld_mesh`
+
+`_chained_edge_polylines` chains adjacent crit-slice edges before
+`_split_t_junctions` runs, because a T-junction at a point shared between
+two DIFFERENT crit-slice edges is otherwise invisible to it
+(`_split_t_junctions` only fan-splits within a single polyline). Confirmed
+empirically (2026-07) to be a real, common case: 10 of 16 residual naked
+edges at the fixed-axis Taubin z=1.0/z=1.0648 boundaries (measured with
+per-edge-only polylines) had endpoints on DIFFERENT edge_ids; chaining
+closed roughly half of those.
+
+`_append_loft_triangles!`'s seam-capping triangle is confirmed empirically
+(2026-07) to close most but not all such seams; the residual is part of
+the watertightness measurement below, not silently treated as fully
+solved.
+
+`weld_mesh`'s three-mechanism `incidence` path (snap, loft, chain+split)
+was compared directly (2026-07) against a HIGHER-fidelity but
+higher-risk alternative: BertiniReal-style targeted homotopy tracking
+toward known crit-slice vertices, replacing free-sweep `track_face` hops
+("Option A"). Measured precision showed no mechanism for Option A to beat
+direct reuse of already-Newton-polished crit-slice coordinates (parity at
+best, given it necessarily adds tracker predictor-corrector error on top
+of converging to the SAME target), so it was not pursued. The residual
+naked edges after all three mechanisms (see the watertightness
+measurement below) break down as roughly a third genuine
+cross-edge-junction cases the chaining did not resolve, a third seam
+artifacts at run boundaries the capping did not fully reach, and a third
+UNDIAGNOSED after three separate investigation attempts — confirmed NOT a
+resolution artifact (coarser/finer `edge_sample_density` does not trend
+this to zero). Full closure is DEFERRED as a future, separately-scoped
+phase.
+
+### Watertightness measurements
+
+*(Canonical entry — consolidates what were previously three
+near-duplicate tellings of the same progression, in `weld_mesh`,
+`_naked_mesh_edges`, and `decompose_3d_surface`'s `incidence` keyword.
+None of the three source sites owns this account; all point here.)*
+
+`_naked_mesh_edges` counts undirected mesh edges belonging to exactly one
+triangle — a surface closed within the bounding box should have none.
+Measured on the fixed-axis Taubin fixture (verified deterministic across
+sessions): the plain tolerance-only `weld_mesh` (`incidence = nothing`)
+leaves 188 naked edges (10 at z=-1, 70 at z=1.0, 84 at z=1.0648, 24 at
+z=1.2367). Phase 9b's incidence-based snap-stitching
+(`weld_mesh(...; incidence = ...)`, step 1 only) closes this to 58
+(0/26/32/0) — the fold/point-type boundaries (cusp, tips) close
+COMPLETELY. Phase 9c's coordinated loft (steps 2-3, layered on the same
+`incidence` path) reduces it further to 31-35 across repeated decomposes
+(the spread is cross-process HC.jl solver jitter, not nondeterminism in
+the loft logic itself; see `test/test_taubin.jl`'s Phase 9c section) — a
+further ~40% reduction over 9b, all of it at the two multi-edge,
+multi-face EDGE-type boundaries (the singular notch, the saddle pair).
+The 188 and 58 baselines are asserted exactly in `test/test_taubin.jl`
+(fully deterministic); the Phase 9c result uses loose bounds there for
+the documented jitter reason, not a weaker guarantee about the mechanism.
+
+Measured cost of `decompose_3d_surface(...; incidence = true)` on the
+fixed-axis Taubin fixture: ~+9 s on a ~16 s decompose (4 crit-slices plus
+one extra critical-point solve for fold anchors; the snapping/splitting
+mechanisms themselves are comparatively negligible, no new solves).
+
+### Known limitation: generic projections over singular curves — `decompose_3d_surface`
+
+Measured (rotated Taubin heart, seed 1, 2026-07): median world-`|f|`
+residual `6e-9` over 2617 mesh points, but ~2.5% of points exceed `1e-4`
+(max `0.26`), ALL confined to `|z_world| <= 0.14` around the singular
+plane (the surface spans `|z| <= 1.24`). Away from the singular locus the
+decomposition is unaffected.

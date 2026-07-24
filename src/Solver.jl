@@ -305,10 +305,10 @@ false-positive rate that motivated keeping these separate.
 - `NotTerminal`: every retry attempt cleanly failed to track -- no attempt
   succeeded, and none reported an inconsistent success either. Real,
   repeated evidence this round is not yet stabilized; keep deflating.
-- `Inconclusive`: the retry budget was exhausted without a clean verdict.
-  Any single attempt reporting tracker-success with a residual outside
-  tolerance against the original system forces this outcome immediately,
-  regardless of how many clean rejections surround it -- one inconsistent
+- `Inconclusive`: any single attempt reporting tracker-success with a
+  residual outside tolerance against the original system forces this
+  outcome immediately, however many attempts remain in the retry budget
+  and however many clean rejections surround it -- one inconsistent
   result is itself the signal, not noise to retry away.
 """
 @enum IsosingularVerdict Verified NotTerminal Inconclusive
@@ -382,10 +382,11 @@ FRESH random hyperplane draw (per Hauenstein-Wampler's own stated
 reliability recommendation for Algorithm 6.3 -- "perform this test
 multiple times using different `L` and `lambda`" -- NOT Bertini1's literal
 same-draw retry, `isosingular.c:389-397`, already found unsound in fixed
-Float64 precision with no AMP escalation). The guaranteed invariant is `1
-<= attempts <= cfg.isosingular_verify_retries`, not a fixed count -- see
-`cfg.isosingular_verify_retries`'s own docstring for why the default is
-kept generous.
+Float64 precision with no AMP escalation). The guaranteed invariant is
+`attempts == 0` when `d == 0` (the trivial short-circuit below);
+otherwise `1 <= attempts <= cfg.isosingular_verify_retries`, not a fixed
+count -- see `cfg.isosingular_verify_retries`'s own docstring for why the
+default is kept generous.
 
 `d == 0` short-circuits to `Verified` with no tracking at all.
 

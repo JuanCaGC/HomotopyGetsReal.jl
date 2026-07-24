@@ -45,6 +45,7 @@ so `HomotopyConfig{BigFloat}()` gets full-precision literals.
 - `min_slab_width`: Resolution floor for z-slab boundaries; closer critical z-values are merged.
 - `incidence_snap_tol_ratio`: Chord-error-aware distance ratio gating Phase 9b snap-unification/continuity.
 - `isosingular_verify_retries`: Retry budget for `verify_isosingular_dimension`'s fresh-hyperplane attempts.
+- `max_deflations`: Round budget for `resolve_isosingular_dimension`'s deflation attempts.
 """
 @with_kw struct HomotopyConfig{T<:AbstractFloat}
     # critical_point_tol: solution quality at compute_critical_points ("did the solver converge?").

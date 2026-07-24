@@ -5,10 +5,11 @@
 # intersect_bounding_object, interslice/MidSlice!, ConnectTheDots!,
 # Merge/GetMergeCandidates, sample_edge).
 #
-# These structs are intentionally minimal in Phase 1: no defaults are
-# tied to `HomotopyConfig` yet (that wiring happens in Phase 2), and the
-# outer constructors below only take care of building well-typed fields
-# from loosely-typed keyword input (e.g. literal arrays), which is
+# These structs are precision-parametric (Phase 1). NativeVertex also has
+# an additional HomotopyConfig-aware constructor (below) that records the
+# accepting tolerance used to classify a vertex directly in its metadata.
+# The outer constructors otherwise just take care of building well-typed
+# fields from loosely-typed keyword input (e.g. literal arrays), which is
 # exactly the kind of thing that silently produced `Vector{Vector{Any}}`
 # fields in the old prototype.
 

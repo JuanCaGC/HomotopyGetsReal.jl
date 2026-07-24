@@ -9,6 +9,7 @@ using Test
 const _TEST_OUTPUT = mkpath(joinpath(@__DIR__, "output"))
 
 @testset "HomotopyGetsReal" begin
+    include("test_docstring_rendering.jl")
     include("test_types.jl")
     include("test_vertex_registry.jl")
     include("test_solver.jl")

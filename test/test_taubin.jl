@@ -325,24 +325,58 @@ rng_idx = round.(Int, range(1, length(mesh_tris); length = n_spot))
 # from Float32-rounded mesh coordinates, so an exactly-degenerate triangle
 # (normal ~ orthogonal to ∇f) can land epsilon-negative (observed: -1.4e-22,
 # sixteen orders below the ~1e-6 magnitude of a genuine flip).
+#
+# That relative bound assumes norm(g) itself stays bounded away from zero --
+# false when a triangle's anchor sits at (or numerically indistinguishable
+# from) a genuine surface singularity, where ∇f = 0 by definition. There,
+# both dot(n,g) and the threshold `-1e-10*norm(n)*norm(g)` collapse to noise
+# together (observed: dot ~1e-34 vs threshold ~1e-44), and the sign of that
+# comparison is uncontrolled floating-point noise, not a real winding
+# signal. Such triangles are excluded from the alignment check entirely --
+# anchor at a genuine surface singularity, no well-defined normal to check
+# against -- rather than forced through a relative tolerance that cannot
+# work at that scale. Validated empirically (2026-07, 5 reruns, full
+# per-triangle gradient-magnitude dump): every non-degenerate anchor's
+# gradient measured >= 4.67e-3, every degenerate one measured <= 3.3e-11 --
+# an 8-order-of-magnitude gap on either side of cfg.jacobian_rank_tol
+# (1e-8), so it cleanly separates the two cases rather than merely being
+# convenient to reuse.
+n_gradient_degenerate = 0
 n_aligned = count(idx -> begin
     tri = mesh_tris[idx]
     p1, p2, p3 = mesh_pts[tri[1]], mesh_pts[tri[2]], mesh_pts[tri[3]]
     n = cross(p2 .- p1, p3 .- p1)
     gx, gy, gz = HomotopyGetsReal._gradient_at(patch_heart, Float64(p1[1]), Float64(p1[2]), Float64(p1[3]), cfg)
     g = [gx, gy, gz]
-    dot(n, g) >= -1e-10 * norm(n) * norm(g)
+    if norm(g) < cfg.jacobian_rank_tol
+        n_gradient_degenerate += 1
+        true
+    else
+        dot(n, g) >= -1e-10 * norm(n) * norm(g)
+    end
 end, rng_idx)
 worst_dot_sign = minimum(idx -> begin
     tri = mesh_tris[idx]
     p1, p2, p3 = mesh_pts[tri[1]], mesh_pts[tri[2]], mesh_pts[tri[3]]
     n = cross(p2 .- p1, p3 .- p1)
     gx, gy, gz = HomotopyGetsReal._gradient_at(patch_heart, Float64(p1[1]), Float64(p1[2]), Float64(p1[3]), cfg)
-    dot(n, [gx, gy, gz])
+    g = [gx, gy, gz]
+    norm(g) < cfg.jacobian_rank_tol ? Inf : dot(n, g)
 end, rng_idx)
 println("  spot-checked $(n_spot) triangles: $(n_aligned)/$(n_spot) have normal . ∇f >= 0 (expect $(n_spot)/$(n_spot))")
-println("  worst (most negative) normal . ∇f among spot-checked triangles: ", worst_dot_sign)
+println("  ($(n_gradient_degenerate) excluded as gradient-degenerate -- anchor at a genuine")
+println("  surface singularity, no well-defined normal to check against)")
+println("  worst (most negative) normal . ∇f among non-degenerate spot-checked triangles: ", worst_dot_sign)
 @test n_aligned == n_spot
+# Sanity bound on the exclusion itself: empirically this was exactly 1 across
+# every one of 5 independent reruns (always the same triangle, anchored at
+# the bottom-cusp boundary, z=-1 -- one of the Taubin heart's own handful of
+# genuine point singularities). Allow a small margin above that observed
+# count -- enough that another of the surface's few known singular points
+# coinciding with a different sampled triangle would not spuriously fail --
+# without being so loose that a real regression elsewhere (e.g. a bug that
+# spuriously zeroes gradients) would go unnoticed.
+@test n_gradient_degenerate <= 2
 println("  winding-order convention (normal aligned with +∇f) confirmed on this multi-lobe,")
 println("  non-convex, pinch-containing mesh -- not just the sphere/ellipsoid's simpler cases.")
 

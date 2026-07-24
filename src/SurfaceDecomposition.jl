@@ -142,7 +142,7 @@ has no way to know this ahead of time; what actually happens is that its
 true critical points get correctly classified `Singular` (their Jacobian
 IS genuinely rank-deficient there), but `connect_the_dots!` then cannot
 track paths back onto those `Singular` vertices within `vertex_match_tol`,
-so `Topology._resolve_endpoint`'s fallback fabricates new `Artificial`
+so the `Topology._resolve_endpoint` fallback fabricates new `Artificial`
 vertices wherever the paths actually (wrongly) landed -- silently
 producing edges that do not follow the true curve at all.
 
@@ -160,24 +160,24 @@ see the "why not just Artificial" note below.
    trivially pass this check with zero retries).
 2. If any returned vertex has `v_type == Artificial &&
    metadata[:origin] == :endpoint_fallback` **AND** at least one
-   returned vertex has `v_type == Singular`, retry at a perturbed z_mid:
-   for attempt `k = 1, 2, ..., cfg.max_z_mid_retries`, offset
-   `= min(ceil(k/2), 0.45/cfg.z_mid_retry_frac) * cfg.z_mid_retry_frac *
-   (z_top-z_bottom)` with alternating sign `(-1)^(k+1)` -- i.e. tries
-   `+1, -1, +2, -2, ...` step multiples of `cfg.z_mid_retry_frac *
-   (z_top-z_bottom)`, small steps first, alternating direction before
-   growing. The `0.45` cap is a hardcoded SAFETY BOUND, not a new config
-   knob: it just guarantees the perturbed `z_mid` can never reach within
-   5% of `z_bottom`/`z_top` themselves (the slab's own critical/bbox
-   boundaries, which may be singular in their own right), independent of
-   how `cfg.z_mid_retry_frac`/`cfg.max_z_mid_retries` are tuned.
+   returned vertex has `v_type == Singular`, retry at a perturbed `z_mid`.
 3. Returns as soon as an attempt comes back clean (empirically, on the
    Taubin heart's degenerate slab, attempt 1 already succeeds -- see
-   `scratch_phase5_taubin_check.jl`'s retry report). If EVERY attempt
-   (the original midpoint plus all `cfg.max_z_mid_retries` perturbations)
-   remains suspect, throws an `ErrorException` naming the slab bounds and
-   attempt count -- a loud, explicit failure for a genuinely pathological
-   slab, never a silent fallback to a slice already known to be wrong.
+   the retry report in `scratch_phase5_taubin_check.jl`). If EVERY attempt
+   (the original midpoint plus all retries) remains suspect, throws an
+   `ErrorException` naming the slab bounds and attempt count -- a loud,
+   explicit failure for a genuinely pathological slab, never a silent
+   fallback to a slice already known to be wrong.
+
+Retry offsets are computed as `offset = min(ceil(k/2), 0.45/frac) * frac *
+(z_top-z_bottom)` for attempt `k = 1, 2, ..., cfg.max_z_mid_retries` (writing
+`frac` for `cfg.z_mid_retry_frac`), with alternating sign `(-1)^(k+1)` --
+i.e. tries `+1, -1, +2, -2, ...` step multiples, small steps first,
+alternating direction before growing. The `0.45` cap is a hardcoded SAFETY
+BOUND, not a new config knob: it just guarantees the perturbed `z_mid` can
+never reach within 5% of `z_bottom`/`z_top` themselves (the slab's own
+critical/bbox boundaries, which may be singular in their own right),
+independent of how the two config fields above are tuned.
 
 # Why "`:endpoint_fallback` AND `Singular`", not just `:endpoint_fallback`
 The Taubin heart's `[1.0, 1.0648]` slab (a narrow slab immediately below
@@ -192,8 +192,8 @@ are all ordinary, well-conditioned `Critical` points). Retrying on
 perturbed `z_mid` nearby has the same 4-x-critical-point topology, so the
 retry loop exhausts `cfg.max_z_mid_retries` and throws) even though this
 slab's SWEPT output was already fine before this fix existed (measured
-max `|f|` along swept points: `2.4e-6`, via `track_face`'s own
-`_project_to_slice` Gauss-Newton correction, which converges reliably
+max `|f|` along swept points: `2.4e-6`, via the `_project_to_slice`
+Gauss-Newton correction that `track_face` itself uses, which converges reliably
 here precisely because the local gradient is well-conditioned -- unlike
 the true repeated-factor case, where the gradient vanishes identically
 along the whole degenerate curve and Newton correction has nothing to
@@ -204,8 +204,8 @@ A direct residual-magnitude tiebreaker (flag `z_mid` suspect if
 exceeds some threshold, instead of inspecting vertex types) was
 empirically tested and rejected: raw `sample_edge` output is LINEARLY
 INTERPOLATED between homotopy-tracked points (a known, pre-existing
-approximation -- see `Topology.sample_edge`'s own docstring, and exactly
-why `track_face` already needs `_project_to_slice`'s correction), so its
+approximation -- see the `Topology.sample_edge` docstring itself, and exactly
+why `track_face` already needs the `_project_to_slice` correction), so its
 residual has a substantial baseline even on completely healthy slices:
 a fully clean control slice at `z=0.05` (2 vertices, 0 `Artificial` of
 any kind) already measures max raw residual `0.105`; the fully clean
@@ -225,15 +225,15 @@ Confirmed by re-running the very same Taubin heart regression once the
 `Singular` co-occurrence refinement above was in place: the `[-1,1]`
 slab's retry now lands on a topologically CLEAN `z_mid=0.02` (2 edges, 0
 `Artificial`/`Singular` vertices) -- yet the downstream sweep was STILL
-catastrophic (`track_face`'s max `|f|` along swept points: `1.43`, worse
+catastrophic (the max `|f|` along swept points via `track_face`: `1.43`, worse
 than before this fix). Root cause: near `z=0`, `f(x,y,z) ≈ g(x,y)^3 -
 z^3·h(x,y)` for this surface, so along the level curve (where `g≈0` by
 definition of it being close to the true repeated-factor curve) EVERY
 first partial derivative of `f` -- not just the ones `decompose_1d_curve`
 happens to probe -- scales like `O(z^2)`: genuinely tiny, but not
 *exactly* zero, so no vertex ever gets classified `Singular` and the
-vertex-type gate alone cannot see it. This wrecks `FaceTracking`'s
-Newton-based patch tracking (tiny gradient magnitude means the patch
+vertex-type gate alone cannot see it. This wrecks the Newton-based patch
+tracking in `FaceTracking` (tiny gradient magnitude means the patch
 system is nearly singular) even though the 2D curve decomposition itself
 looks perfectly clean.
 
@@ -252,8 +252,8 @@ introducing new gradient-computation logic:
   is suppressed by the SAME `O(z^2)` factor as `f_x`/`f_y` (all partials
   vanish together), so the ratio between them stays `O(1)` right through
   the degenerate neighborhood.
-- **Cross-z reference ratio** (adopted): compare a candidate `z_mid`'s
-  own anchor-gradient magnitude against a reference magnitude measured
+- **Cross-z reference ratio** (adopted): compare a candidate `z_mid`
+  value's own anchor-gradient magnitude against a reference magnitude measured
   elsewhere ON THE SAME SLAB, at two FIXED locations independent of the
   retry ladder's own step schedule: the slab's quarter-points,
   `z_bottom + 0.25*(z_top-z_bottom)` and `z_top - 0.25*(z_top-z_bottom)`
@@ -288,7 +288,7 @@ topologically CLEAN but numerically degenerate, and the naive midpoint
 itself can be such a candidate, because the degenerate z (z=0 for the
 Taubin family) is NOT a critical z-value -- it sits invisibly inside a
 slab, and nothing pins it to the slab's exact center. Concretely
-(measured 2026-07, see dev/scratch/scratch_robust_slice_eagerness_check.jl):
+(measured 2026-07, see `dev/scratch/scratch_robust_slice_eagerness_check.jl`):
 this same Taubin heart with `bbox_z = (-0.96, 1.3)` -- an ordinary
 asymmetric bounding-box crop, which drops the critical value z=-1 and
 makes the bottom slab [-0.96, 1.0] with naive midpoint z=0.02 -- yields
@@ -337,7 +337,7 @@ positive-dimensional singular curve of the surface (e.g. the Taubin heart's
 ellipse `{x^2+1.44y^2=1, z=0}`, along which `∇f` vanishes identically) is
 either parallel to the slicing planes -- confined to a single degenerate z,
 exactly the case the retry ladder handles -- or absent. Under a generic
-rotated chart (`decompose_3d_surface`'s Phase 8 `projection` support), that
+rotated chart (the Phase 8 `projection` support in `decompose_3d_surface`), that
 curve becomes TRANSVERSAL: it spans a whole range of chart-z values, and every
 midslice in that range legitimately contains isolated singular points (nodes).
 Measured on the rotated Taubin heart (seed 1, 2026-07): the naive midpoint of
@@ -735,10 +735,12 @@ per-column `(x, y, z)` landing points (rows 1 / n_z of `Face.mesh_vertices`);
 column). Otherwise each landing competes across: the crit-slice's edge
 polylines (minimum distance over `sampled_points` — chord-interpolated, hence
 the recorded distances carry the known chord error), the crit-slice's
-vertices, and the surface's 3D critical vertices within `cfg.min_slab_width`
-of `z_c` (the fold-type anchors, which the slice itself represents
-unreliably). Ties break by that category order. No candidates at all gives
-`:none` with `dist = Inf` — never an error in 9a (pure measurement).
+vertices, and the surface's 3D critical vertices.
+
+Vertices within `cfg.min_slab_width` of `z_c` count as candidates too (the
+fold-type anchors, which the slice itself represents unreliably). Ties break
+by that category order. No candidates at all gives `:none` with `dist = Inf`
+— never an error in 9a (pure measurement).
 """
 function _assign_landings(
     landings::Vector{Vector{T}},

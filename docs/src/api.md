@@ -22,6 +22,8 @@ Face
 cluster_vertices
 cluster_scalars
 cluster_points_indexed
+VertexRegistry
+register!
 ```
 
 ## Critical points and bounding objects
@@ -30,6 +32,19 @@ cluster_points_indexed
 jacobian_rank_info
 compute_critical_points
 intersect_bounding_object
+```
+
+## Isosingular deflation
+
+```@docs
+estimate_corank
+deflate_once
+IsosingularVerdict
+VerifyResult
+verify_isosingular_dimension
+ResolveVerdict
+ResolveResult
+resolve_isosingular_dimension
 ```
 
 ## Path tracking
@@ -61,6 +76,12 @@ track_face
 sweep_face_bidirectional
 ```
 
+## Projection
+
+```@docs
+random_orthogonal_matrix
+```
+
 ## Surface decomposition
 
 ```@docs
@@ -68,6 +89,9 @@ compute_critical_z_slices
 slice_at_z
 decompose_3d_surface
 weld_mesh
+CritSlice
+ColumnLanding
+SurfaceIncidence
 ```
 
 ## Visualization

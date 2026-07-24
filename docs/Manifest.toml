@@ -803,8 +803,8 @@ uuid = "f213a82b-91d6-5c5d-acf7-10f1c761b327"
 version = "2.21.0"
 
 [[deps.HomotopyGetsReal]]
-deps = ["GLMakie", "GenericLinearAlgebra", "GeometryBasics", "HomotopyContinuation", "LinearAlgebra", "Parameters"]
-path = "/Users/juancagc/HomotopyGetsReal"
+deps = ["Combinatorics", "GLMakie", "GenericLinearAlgebra", "GeometryBasics", "HomotopyContinuation", "LinearAlgebra", "Parameters", "Random"]
+path = ".."
 uuid = "4051f461-4a5e-492e-9237-10b01d865883"
 version = "0.1.0"
 

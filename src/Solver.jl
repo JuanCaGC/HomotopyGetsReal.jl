@@ -276,6 +276,19 @@ length(F.expressions)` -- `deflate_once`'s precondition, guaranteed by construct
 gap is specific to `compute_critical_points`'s classify-against-`Faug` pattern, not
 something that can also silently exist wherever classification and the deflation target
 are already the same matrix.
+
+**Why this default is safe, unlike `estimate_corank`'s former unsafe one**:
+`estimate_corank` is a general rank primitive serving genuinely different,
+co-equal callers with genuinely different conventions -- no single default
+could be correct for both, which is why it was hardened to a mandatory
+keyword. `_deflation_applicable` asks exactly one question, by
+construction: would `deflate_once` accept this `F_original` at this `x0`.
+That question is permanently tied to `deflate_once`'s own convention
+(`expected_rank = length(F.variables)`, matched here on purpose) -- a
+caller wanting the row-rank question is asking
+`_classify_vertex_type`/`intersect_bounding_object`'s question instead,
+which needs no gate at all (above). The one real call site relies on this
+default for exactly that reason.
 """
 function _deflation_applicable(
     F_original::System,

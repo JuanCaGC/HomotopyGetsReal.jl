@@ -119,12 +119,15 @@ so `HomotopyConfig{BigFloat}()` gets full-precision literals.
     # and weld_mesh's for the full evidence trail.
     incidence_snap_tol_ratio::T = T(1.5)
     # isosingular_verify_retries: retry budget for verify_isosingular_dimension (Stage 3,
-    # 2026-07) -- how many fresh-random-hyperplane attempts before an unresolved round
-    # reports Inconclusive rather than NotTerminal. Attempts genuinely vary run to run (not
-    # a fixed count); default 20 (matching Bertini1's isosingularDimTest maxIts,
-    # isosingular.c:336) is a safety margin well above the observed range, not a minimum
-    # requirement. See docs/DESIGN_NOTES.md §isosingular-deflation, Stage 3, for the
-    # measurement history behind this default (the attempts-count retraction).
+    # 2026-07) -- the cap on fresh-random-hyperplane attempts before an unresolved round
+    # (every attempt a clean tracking failure) reports NotTerminal. Does NOT gate
+    # Inconclusive, which fires immediately on the FIRST attempt that tracks successfully
+    # but fails the original-system residual check, independent of how much of this
+    # budget remains. Attempts genuinely vary run to run (not a fixed count); default 20
+    # (matching Bertini1's isosingularDimTest maxIts, isosingular.c:336) is a safety
+    # margin well above the observed range, not a minimum requirement. See
+    # docs/DESIGN_NOTES.md §isosingular-deflation, Stage 3, for the measurement history
+    # behind this default (the attempts-count retraction).
     isosingular_verify_retries::Int = 20
     # max_deflations: round budget for resolve_isosingular_dimension (Stage 4a, 2026-07) --
     # how many deflate_once rounds before an unresolved point reports Exhausted rather than

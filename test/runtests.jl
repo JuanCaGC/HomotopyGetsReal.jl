@@ -25,4 +25,10 @@ const _TEST_OUTPUT = mkpath(joinpath(@__DIR__, "output"))
     else
         @info "Skipping test_taubin.jl (set HOMOTOPYGETSREAL_RUN_SLOW_TESTS=1 to run)"
     end
+
+    # Always included (matches test_visuals.jl's own fast/slow-within-one-file
+    # pattern): only its Taubin-heart testsets are gated internally. Included
+    # AFTER test_taubin.jl -- see test_isosingular_deflation.jl's own comment
+    # on why its resolve_isosingular_dimension monkeypatch must run last.
+    include("test_isosingular_deflation.jl")
 end

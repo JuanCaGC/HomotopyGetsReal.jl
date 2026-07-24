@@ -1,0 +1,17 @@
+cff-version: 1.2.0
+message: "If you use this software, please cite it as below."
+title: "HomotopyGetsReal.jl"
+authors:
+  - family-names: "Gonzalez"
+    given-names: "Juan Camilo"
+license: MIT
+repository-code: "https://github.com/JuanCaGC/HomotopyGetsReal.jl"
+# 0.1.0 is the version registered in Julia's General registry (confirmed
+# directly, not assumed, during this project's 2026-07 audit -- see
+# docs/DESIGN_NOTES.md / README.md's Install section) and also the version
+# currently in this repo's own Project.toml. It predates several major
+# features present in local HEAD as of 2026-07 (the isosingular deflation
+# API, generic projection support, and incidence-based mesh welding) --
+# an updated release is planned but not yet tagged; do not bump this
+# without also bumping Project.toml, and only on an explicit decision.
+version: "0.1.0"

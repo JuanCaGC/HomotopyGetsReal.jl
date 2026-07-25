@@ -146,6 +146,40 @@ BertiniReal/Bertini1 investigation behind it live externally at
   after the Albatross talk given current deadline pressure. Not
   implemented or further investigated this session.
 
+### External reference: independent architecture/math/BertiniReal-gap audit trio (2026-07-25)
+
+**Future-work reference only — not active work.** An independent,
+zero-context review (via Cursor) synthesized three separate audits
+(architecture, math/performance, BertiniReal-gap analysis) into a
+full 8-phase long-term roadmap toward making HGR "the definitive
+pure-Julia BertiniReal-class library." Source documents live external
+to this repo (`/tmp/HGR_MASTER_CONTEXT_AND_ROADMAP.md` and its two
+source audits, on the machine Cursor ran on — ask Juan for the actual
+file locations before referencing them precisely; not transferred
+here).
+
+No new active-bug findings — its value here is as independent
+cross-validation: it substantially corroborates this project's own
+existing backlog rather than surfacing anything new. Concrete matches
+confirmed against current source before writing this entry: the
+duplicate `compute_critical_points` solve under `incidence=true`
+(`SurfaceDecomposition.jl`'s own docstring already calls the missing
+dedup with `_slab_bounds`'s internal call "a deliberately deferred
+optimization"); the linear `_cells_adjacent` scan (`filter(x -> x.id
+== eid, cs.edges)`-style lookups, called once per consecutive
+column-pair in `_check_continuity!`, not indexed); and the
+positive-dimensional-critical-loci gap this project already
+investigated directly via the torus (`compute_critical_points` cannot
+represent a fold locus that's a curve rather than isolated points —
+see the torus entry below; resolved for that specific fixture via
+`projection=:random`, but the underlying representational gap is
+general, not fixture-specific).
+
+The roadmap's own Phase 1 (singular curves as first-class geometry)
+overlaps almost exactly with the already-deferred Griffis-Duffy
+singular-curve blueprint above — not a second, competing plan, the
+same deferred scope observed independently twice.
+
 ### Not logged as backlog: torus, resolved via `projection=:random`
 
 Tried a torus (`(x^2+y^2+z^2+3)^2-16(x^2+y^2)=0`, hole axis aligned with

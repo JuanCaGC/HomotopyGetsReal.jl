@@ -171,57 +171,17 @@ end
     # src/Solver.jl's compute_critical_points) requires instrumenting
     # resolve_isosingular_dimension itself.
     #
-    # This monkeypatches the real, exported HomotopyGetsReal.resolve_isosingular_dimension
-    # in place -- unlike this file's other testsets, which only call private
-    # functions read-only. Deliberately NOT following test_taubin.jl's own
-    # shadow-copy-under-a-new-name convention here, because a same-name
-    # shadow would never be reached: the real pipeline (compute_critical_points)
-    # calls resolve_isosingular_dimension by its real name internally, so
-    # only redefining that exact name in place observes every firing.
-    # Julia has no supported way to restore the original method afterward
-    # (same-signature redefinition permanently replaces the method table
-    # entry), so this is safe only because Pkg.test() runs test/runtests.jl
-    # in its own fresh subprocess -- this redefinition cannot leak into any
-    # other Julia session. Defensively, this is also the LAST slow testset
-    # in the suite (test_isosingular_deflation.jl is included after
-    # test_taubin.jl in runtests.jl), so nothing downstream in the same
-    # process depends on the unpatched behavior.
+    # 2026-07: uses the REAL, unmodified resolve_isosingular_dimension via
+    # its own private _resolve_isosingular_trace ScopedValue hook (see that
+    # function's docstring) -- no monkeypatching, no method-table
+    # redefinition. Base.ScopedValues.with is task-local and restores the
+    # previous value automatically when the block exits (even on error), so
+    # this cannot leak into any other test regardless of include order.
     resolve_log = NamedTuple[]
-    function HomotopyGetsReal.resolve_isosingular_dimension(
-        F_original::HomotopyGetsReal.System,
-        x0::AbstractVector,
-        cfg::HomotopyGetsReal.HomotopyConfig{T};
-        rng::Random.AbstractRNG = Random.default_rng(),
-    ) where {T<:AbstractFloat}
-        nv = length(F_original.variables)
-        F_current = F_original
-        corank_seq = Int[HomotopyGetsReal.estimate_corank(F_current, x0, cfg; expected_rank = nv)]
-        rounds = 0
-        while true
-            d = corank_seq[end]
-            if d == 0 || HomotopyGetsReal._corank_plateau_hint(corank_seq)
-                vr = HomotopyGetsReal.verify_isosingular_dimension(F_current, F_original, x0, d, cfg; rng = rng)
-                if vr.verdict == HomotopyGetsReal.Verified
-                    push!(resolve_log, (verdict = Resolved, dim = d, rounds = rounds, attempts = vr.attempts, corank_seq = copy(corank_seq)))
-                    return HomotopyGetsReal.ResolveResult{T}(Resolved, d, vr.endpoint, corank_seq, rounds, F_current)
-                elseif vr.verdict == HomotopyGetsReal.Inconclusive
-                    push!(resolve_log, (verdict = Ambiguous, dim = missing, rounds = rounds, attempts = vr.attempts, corank_seq = copy(corank_seq)))
-                    return HomotopyGetsReal.ResolveResult{T}(Ambiguous, nothing, nothing, corank_seq, rounds, F_current)
-                end
-                # NotTerminal: fall through, keep deflating (matches committed logic exactly).
-            end
-            if rounds >= cfg.max_deflations
-                push!(resolve_log, (verdict = Exhausted, dim = missing, rounds = rounds, attempts = missing, corank_seq = copy(corank_seq)))
-                return HomotopyGetsReal.ResolveResult{T}(Exhausted, nothing, nothing, corank_seq, rounds, F_current)
-            end
-            F_current, d_new = HomotopyGetsReal.deflate_once(F_current, x0, cfg; expected_rank = nv)
-            push!(corank_seq, d_new)
-            rounds += 1
-        end
+    Base.ScopedValues.with(HomotopyGetsReal._resolve_isosingular_trace => resolve_log) do
+        decompose_3d_surface(F_heart, cfg_taubin; incidence = true, deflate = true)
+        HomotopyGetsReal._surface_critical_vertices(F_heart, cfg_taubin; deflate = true)
     end
-
-    decompose_3d_surface(F_heart, cfg_taubin; incidence = true, deflate = true)
-    HomotopyGetsReal._surface_critical_vertices(F_heart, cfg_taubin; deflate = true)
 
     n_ambiguous = count(r -> r.verdict == Ambiguous, resolve_log)
     n_exhausted = count(r -> r.verdict == Exhausted, resolve_log)

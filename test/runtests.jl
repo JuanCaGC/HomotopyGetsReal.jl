@@ -27,16 +27,15 @@ const _TEST_OUTPUT = mkpath(joinpath(@__DIR__, "output"))
     end
 
     # Always included (matches test_visuals.jl's own fast/slow-within-one-file
-    # pattern): only its Taubin-heart testsets are gated internally. Included
-    # AFTER test_taubin.jl -- see test_isosingular_deflation.jl's own comment
-    # on why its resolve_isosingular_dimension monkeypatch must run last.
+    # pattern): only its Taubin-heart testsets are gated internally.
     #
-    # WARNING: when HOMOTOPYGETSREAL_RUN_SLOW_TESTS=1, test_isosingular_deflation.jl
-    # permanently monkeypatches the real, exported HomotopyGetsReal.resolve_isosingular_dimension
-    # in this running process (no supported way to restore the original
-    # method afterward -- see that file's own comment for the full
-    # rationale). This MUST stay the LAST include in this testset: any file
-    # added below it that calls resolve_isosingular_dimension expecting the
-    # real implementation will silently get the instrumented copy instead.
+    # No ordering constraint here (2026-07): this file's Taubin verdict
+    # testset used to permanently monkeypatch the real
+    # resolve_isosingular_dimension, which required it to stay the LAST
+    # include in this testset. It now uses that function's own private
+    # _resolve_isosingular_trace ScopedValue hook instead (see
+    # src/Solver.jl's docstring and this file's own comment) -- task-local,
+    # restores automatically when its `with` block exits, cannot leak into
+    # any other test regardless of include order.
     include("test_isosingular_deflation.jl")
 end

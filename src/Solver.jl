@@ -561,7 +561,31 @@ validation data.
 [`verify_isosingular_dimension`](@ref) call, so a caller who needs a
 reproducible `verdict`/`rounds` on a case whose plateau lands on a
 nonzero corank can pass a seeded `rng` for a deterministic result.
+
+**Test instrumentation (2026-07)**: `_resolve_isosingular_trace`, a
+private `Base.ScopedValue`, is checked at each of this function's 3
+return points and, when set to a `Vector` (via
+`Base.ScopedValues.with(_resolve_isosingular_trace => log) do ... end`
+around a caller several frames up -- `decompose_3d_surface`'s own
+`compute_critical_points`/`intersect_bounding_object` call sites never
+pass anything explicitly, so this is invisible to them), has a
+`(verdict, dim, rounds, attempts, corank_seq)` `NamedTuple` pushed onto
+it before returning. This exists so `test/test_isosingular_deflation.jl`
+can observe every real firing (including ones absorbed during clustering
+before reaching a final decomposition's output) without monkeypatching
+this function -- see that test file's own comment for why a same-name
+shadow copy would never be reached, and why permanently redefining this
+function in place (the prior approach) could silently drift from
+whatever this docstring's logic actually does. Default `nothing`: a
+single pointer-equality check, zero-cost for the one production caller
+path (`compute_critical_points`), which never sets this.
 """
+# Private test-instrumentation hook -- see resolve_isosingular_dimension's
+# own docstring, "Test instrumentation" paragraph, for the full rationale.
+# Default nothing; Base.ScopedValues.with(...) is the only supported way
+# to set it (task-local, restores automatically, never leaks across tests).
+const _resolve_isosingular_trace = Base.ScopedValues.ScopedValue{Union{Nothing,Vector}}(nothing)
+
 function resolve_isosingular_dimension(
     F_original::System,
     x0::AbstractVector,
@@ -578,14 +602,22 @@ function resolve_isosingular_dimension(
         if d == 0 || _corank_plateau_hint(corank_seq)
             vr = verify_isosingular_dimension(F_current, F_original, x0, d, cfg; rng = rng)
             if vr.verdict == Verified
+                trace = _resolve_isosingular_trace[]
+                trace !== nothing && push!(trace, (verdict = Resolved, dim = d, rounds = rounds, attempts = vr.attempts, corank_seq = copy(corank_seq)))
                 return ResolveResult{T}(Resolved, d, vr.endpoint, corank_seq, rounds, F_current)
             elseif vr.verdict == Inconclusive
+                trace = _resolve_isosingular_trace[]
+                trace !== nothing && push!(trace, (verdict = Ambiguous, dim = missing, rounds = rounds, attempts = vr.attempts, corank_seq = copy(corank_seq)))
                 return ResolveResult{T}(Ambiguous, nothing, nothing, corank_seq, rounds, F_current)
             end
             # NotTerminal (only reachable when d > 0, since d == 0 always verifies
             # trivially) -- fall through and deflate further.
         end
-        rounds >= cfg.max_deflations && return ResolveResult{T}(Exhausted, nothing, nothing, corank_seq, rounds, F_current)
+        if rounds >= cfg.max_deflations
+            trace = _resolve_isosingular_trace[]
+            trace !== nothing && push!(trace, (verdict = Exhausted, dim = missing, rounds = rounds, attempts = missing, corank_seq = copy(corank_seq)))
+            return ResolveResult{T}(Exhausted, nothing, nothing, corank_seq, rounds, F_current)
+        end
         F_current, d_new = deflate_once(F_current, x0, cfg; expected_rank = nv)
         push!(corank_seq, d_new)
         rounds += 1

@@ -13,6 +13,162 @@ the docstring; only the investigation narrative moved.
 
 ---
 
+## Backlog: production robustness gaps
+
+Real, live-confirmed gaps found during other investigations, logged here
+rather than fixed inline because each needs its own separately-scoped
+design decision. No existing consolidated backlog list was found in this
+repo to add these next to (grepped `docs/`, `README.md`; nothing found),
+so this section is new as of 2026-07. The Griffis-Duffy singular-curve
+blueprint (a different, larger item, full detail kept externally — see
+its own entry below) lives in this same section, not a separate one.
+
+### Uncaught exception when `compute_critical_z_slices` finds zero critical z-values and the naive bbox midpoint is itself degenerate
+
+Found 2026-07 while trying the Whitney umbrella (`x^2-y^2*z=0`) as a
+candidate `decompose_3d_surface` validation fixture (see the Whitney
+umbrella item below; this gap is independent of Whitney specifically).
+`compute_critical_z_slices` returned `Float64[]` for this surface (no
+critical z found at all), so `_slab_bounds` never split away from the
+naive bbox midpoint — and that naive midpoint, `z=0`, is exactly where
+`slice_at_z(F, 0.0, cfg)` itself throws `OverflowError: Cannot compute a
+start system` (confirmed directly, not inferred). `_robust_slice_at_z`'s
+existing retry mechanism (`docs/DESIGN_NOTES.md`, "Robust z-mid
+selection") only catches the *softer* signal of a slice coming back with
+bad vertices (`:endpoint_fallback` + `Singular` co-occurrence) — it has
+no `try`/`catch` around the tracking calls themselves, so an outright
+exception from a degenerate naive midpoint propagates uncaught and kills
+the whole `decompose_3d_surface` call with no retry attempted. This is a
+real production robustness gap independent of any specific fixture:
+**any** surface whose only real critical z lands outside `bbox_z`, or
+which has none at all, is one unlucky bbox choice away from this same
+crash if its bbox midpoint happens to be numerically degenerate.
+
+### HC.jl polyhedral-solve reliability on multiplicity≥2 / reducible critical-point systems
+
+One recurring pattern, found independently four separate times during
+2026-07 investigations — consolidated here into a single entry rather
+than left scattered across separate bullets, so the connection isn't
+missed. In every case, the critical-point-finding augmented system has a
+solution of multiplicity ≥ 2 at exactly the point being searched for
+(structurally guaranteed at cusps, reducible crossing points, and conical
+apexes — that multiplicity *is* what makes them singular), and HC.jl's
+default polyhedral `solve` unreliably finds it:
+
+1. **Node curve** (`y^2-x^2=0`, two crossing lines): `compute_critical_points`
+   on the y-derivative-augmented system `[y^2-x^2, 2y]` returns **zero**
+   solutions — both tracked paths report `return_code=excess_solution`,
+   neither converging to the genuine double root at the origin. See
+   `paper_artifacts/VISUAL_ASSETS.md` Finding 1.
+2. **Astroid's 4 cusps** (corrected equation, `(x^2+y^2-1)^3+27x^2y^2=0`):
+   each cusp is a multiplicity-2 solution of its own augmented system
+   (`solve` reports 12 raw paths converging to 4 physical points —
+   several redundant paths per cusp). Across 5 independent runs, 2 came
+   back with 1 or 2 cusps missing entirely (replaced by `Artificial`
+   fallback vertices), not just coordinate jitter. See
+   `paper_artifacts/VISUAL_ASSETS.md` Finding 5.
+3. **Whitney umbrella's apex/singular z-axis** (`x^2-y^2*z=0`, tried as a
+   `decompose_3d_surface` fixture): `compute_critical_z_slices` returned
+   `Float64[]` — no critical z found at all — which is what let the naive
+   bbox-midpoint slab land exactly on the degenerate `z=0` plane and crash
+   (see the uncaught-`OverflowError` entry above for that downstream
+   consequence; the empty critical-z result itself is this pattern).
+4. **Cone's apex** (`x^2+y^2-z^2=0`, tried as a Whitney alternative): the
+   apex is a genuine isolated critical point mathematically (`x=y=0`
+   forced, then `z^2=0` — a double root in `z`), but
+   `compute_critical_z_slices` returned `Float64[]` for it too,
+   live-confirmed. Because the cone's `bbox_z` is symmetric, the
+   resulting single whole-bbox slab's naive midpoint lands exactly on
+   that undetected apex, and `decompose_3d_surface` silently returns a
+   **completely empty** decomposition (0 vertices, 0 faces) — no crash
+   this time, just nothing, which is arguably worse to notice.
+
+Working hypothesis, not yet verified against HC.jl internals: `solve`'s
+default settings struggle specifically when the critical-point-finding
+augmented system has a solution of multiplicity ≥ 2 at the point being
+searched for — so this gap sits squarely in territory this project's own
+fixtures keep landing on. Worth a dedicated investigation into whether a
+different `solve` configuration (e.g. disabling early path truncation, or
+a dedicated multiplicity-aware follow-up step) recovers these points
+reliably.
+
+### Singular-curve decomposition (Griffis-Duffy blueprint)
+
+**Different problem class from the item directly above — do not
+conflate the two despite sitting next to each other.** The multiplicity≥2
+item above is a *detection-reliability bug*: HC.jl's `solve` sometimes
+fails to find critical points that demonstrably exist. This item is a
+*missing capability*: HomotopyGetsReal has no first-class representation
+of a singular curve as its own decomposed object at all (today, a
+singular point is only `Singular`-vertex metadata when `deflate=true` —
+never a retained deflated system that gets curve-decomposed in its own
+right), independent of whether any particular critical point was found
+correctly.
+
+Full phased blueprint (S0–S4), architectural detail, and the live
+BertiniReal/Bertini1 investigation behind it live externally at
+`/Users/juancagc/bertini_migration/GriffisDuffy_BertiniReal_run_and_HGR_blueprint.md`
+(outside this repo, not committed here). Summary only:
+
+- **Core architectural insight**: deflate → retain the deflated system →
+  curve-decompose it embedded (in the ambient surface's own coordinates),
+  fed by singular-locus samples from surface critical-point work. Smaller
+  in scope than porting Bertini's full Numerical Irreducible Decomposition
+  (NID) stage; larger than just flipping a metadata flag — HGR already
+  generates the geometric samples BertiniReal would otherwise read from
+  `witness_data` for smooth pieces, so what's actually missing is a
+  witness-like object for the *singular* branch specifically (a general
+  point + the deflated equations + a projection), not a whole new solver
+  stage.
+- **Phase S0 (documentation only, this entry) — oracle-clarity status**:
+  an independent, read-only investigation against a live Bertini
+  1.7.0 + BertiniReal 1.9.0 install (nothing in this repo touched) ran the
+  packaged Griffis-Duffy fixture directly. The published README numbers
+  (588 candidate minors, 8 needed, full deflation sequence `4, 1, 1`) do
+  **not** currently reproduce: only the **leading term (4)** was confirmed
+  live (`isosingular_summary = 4 0`, "Testing for a component of dimension
+  4"); the rest failed downstream of a **real bug in stock BertiniReal's
+  own Python deflation script** (subfunctions emitted as `Matrix([...])`
+  then used inside scalar polynomials — `TypeError: unsupported operand
+  type(s) for +: 'Add' and 'MutableDenseMatrix'`), not anything to do with
+  HGR. A patched local reconstruction of the Python minors found **2347**
+  nonzero minors (of 2352 combinatorial), not 588 — refuted for this
+  path/tooling, not merely "not yet tried." **Do not cite 588/8 as
+  independently re-verified against this install without a working Matlab
+  (or repaired Python) deflation that matches the historical count** —
+  this repo had no prior claim to correct (grepped clean, 2026-07: no hit
+  for "588", "8 needed", or the full corank sequence anywhere in
+  `docs/`, `test/`, `src/`, or `dev/scratch/`), so this status is recorded
+  here for the first time, not amended.
+- **S1–S4** (deflated-system retention, singular-locus sampling,
+  first-class embedded singular-curve decomposition, Griffis CI target)
+  are **not scoped for now** — real, separate future work, most likely
+  after the Albatross talk given current deadline pressure. Not
+  implemented or further investigated this session.
+
+### Not logged as backlog (informational only)
+
+Tried a torus (`(x^2+y^2+z^2+3)^2-16(x^2+y^2)=0`, hole axis aligned with
+the slicing z-axis) as a new-topology validation fixture, 2026-07. Found,
+and confirmed by direct calculation, a different problem from the two
+above: at the fold `z=±1`, `∂f/∂x=∂f/∂y=0` **identically for every point**
+on the circle `x^2+y^2=4` there — a genuine 1-dimensional critical
+locus, not isolated points, which `compute_critical_points` (built for
+isolated-solution homotopy continuation) cannot represent at all. Not
+logged as a backlog item because it isn't a bug in the usual sense — the
+pipeline was never designed to detect positive-dimensional critical
+loci, and doing so would be a real new capability, not a fix. Reorienting
+the torus so its hole axis is *not* aligned with the slicing axis
+(matching `prototipo_viejo_julia/HomotopyGetsReal.jl`'s own original
+orientation) avoids this specific problem — confirmed live that
+`compute_critical_z_slices` then finds 4 clean, isolated critical
+z-values (`[-3,-1,1,3]`) — but the full `decompose_3d_surface` validation
+run against that corrected orientation was not completed this session
+(the first, wrong orientation alone cost 1419s and produced a
+catastrophically wrong mesh before this was diagnosed).
+
+---
+
 ## Isosingular deflation
 
 ### Stage 1 — `estimate_corank` / `_corank_plateau_hint` (`src/Solver.jl`)

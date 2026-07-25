@@ -130,7 +130,7 @@ println("=" ^ 70)
 infer_scalars(xs_, tol) = cluster_scalars(xs_, tol)
 infer_midslice(F_, xl, xr, cfg_) = compute_midslice(F_, xl, xr, cfg_)
 infer_connect(F_, xl, xm, xr, ym, eid, verts, cfg_) = connect_the_dots!(F_, xl, xm, xr, ym, eid, verts, cfg_)
-infer_sample(e, cfg_) = sample_edge(e, cfg_)
+infer_sample(F_, e, cfg_) = sample_edge(F_, e, cfg_)
 infer_decompose(F_, cfg_) = decompose_1d_curve(F_, cfg_)
 
 r1 = @inferred infer_scalars(xs, cfg64.vertex_match_tol)
@@ -146,7 +146,7 @@ verts_for_infer = deepcopy(vertices)
 r3 = @inferred infer_connect(F_curve, x_left, x_mid, x_right, y_mid, 999, verts_for_infer, cfg64)
 println("@inferred connect_the_dots!     -> ", typeof(r3), "  OK")
 
-r4 = @inferred infer_sample(edges[1], cfg64)
+r4 = @inferred infer_sample(F_curve, edges[1], cfg64)
 println("@inferred sample_edge           -> ", typeof(r4), "  OK")
 
 r5 = @inferred infer_decompose(F_curve, cfg64)

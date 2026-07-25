@@ -661,6 +661,23 @@ resolution artifact (coarser/finer `edge_sample_density` does not trend
 this to zero). Full closure is DEFERRED as a future, separately-scoped
 phase.
 
+**Checked directly, 2026-07 (fourth investigation attempt): the
+`sample_edge` straight-chord bug fixed below is NOT the explanation for
+the undiagnosed third.** Before the fix, cross-referencing residual naked
+edges against their nearest crit-slice edge found a plausible partial
+link at `z=1.0` (naked edges landing 0.08-0.17 away from severely
+under-sampled reference points — see `sample_edge`'s own docstring for
+the fix). After the fix (`sample_edge` now Newton-projects every
+interpolated point onto the true curve, residuals down from up to 0.28 to
+~5e-7), the naked-edge count was re-measured on the identical fixed-axis
+Taubin fixture and found **unchanged**: 188 unstitched / 32-34 with full
+`incidence=true` (previously 31-35) — within the same cross-process
+jitter range, not a reduction. The plausible link the cross-reference
+suggested did not materialize into a measurable improvement once the
+underlying point accuracy was actually fixed; recording this so a future
+reader doesn't re-investigate the same already-ruled-out hypothesis. The
+undiagnosed third remains undiagnosed.
+
 ### Watertightness measurements
 
 *(Canonical entry — consolidates what were previously three

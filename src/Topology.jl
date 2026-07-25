@@ -232,20 +232,77 @@ function connect_the_dots!(
 end
 
 """
-    sample_edge(edge::Edge{T}, cfg::HomotopyConfig{T}) where {T<:AbstractFloat}
+    _project_to_curve(f, fx, fy, x_var, y_var, x0::T, y0::T, cfg::HomotopyConfig{T}) where {T<:AbstractFloat}
+        -> (x::T, y::T)
+
+The bare-2-variable-curve analogue of `FaceTracking._project_to_slice`
+(same algorithm, reused deliberately, not reinvented): re-projects
+`(x0, y0)` onto `f(x, y) = 0` via the standard single-constraint
+Gauss-Newton correction (the minimal-norm Newton step for one equation
+in two unknowns) -- repeatedly computes `step = f(x, y) / (fx^2 + fy^2)`
+and updates `(x, y) -= step .* (fx, fy)` (moving along `-∇f`, steepest
+descent toward the zero level set) until `|f| <= cfg.critical_point_tol`,
+capped at 50 iterations. See `sample_edge`'s own docstring for why this
+correction is applied there (2026-07 fix).
+"""
+function _project_to_curve(f, fx, fy, x_var, y_var, x0::T, y0::T, cfg::HomotopyConfig{T}) where {T<:AbstractFloat}
+    bits = precision(T)
+    x, y = x0, y0
+    for _ in 1:50
+        fval = T(real(evaluate(f, [x_var, y_var] => Complex{T}[x, y]; bits = bits)))
+        abs(fval) <= cfg.critical_point_tol && break
+        grad = evaluate([fx, fy], [x_var, y_var] => Complex{T}[x, y]; bits = bits)
+        fx_val, fy_val = T(real(grad[1])), T(real(grad[2]))
+        denom = fx_val^2 + fy_val^2
+        denom == zero(T) && break
+        step = fval / denom
+        x -= step * fx_val
+        y -= step * fy_val
+    end
+    return x, y
+end
+
+"""
+    sample_edge(F::System, edge::Edge{T}, cfg::HomotopyConfig{T}) where {T<:AbstractFloat}
         -> Edge{T}
 
 Resample an edge to `cfg.edge_sample_density` equidistant points along arc length.
 
-Pure geometry — no homotopy continuation. Returns a new `Edge` with updated `sampled_points`
-and unchanged ids and singularity flag. Degenerate edges repeat the sole point.
+**No longer "pure geometry" (2026-07 fix, see `docs/DESIGN_NOTES.md`'s
+Watertightness measurements entry for the investigation).** The arc-length
+redistribution below is still plain linear interpolation between the raw
+tracked points in `edge.sampled_points` -- but for a curve segment smooth
+enough that `PathTracking._track_path_segment!` never needed to bisect
+(e.g. a plain circle, or any well-conditioned arc), that raw path can be
+as sparse as 2 points, and interpolating `cfg.edge_sample_density` points
+along the straight chord between them lands every interior point
+measurably OFF the true curve -- confirmed directly on this project's own
+Taubin heart fixture (residuals up to 0.28, orders of magnitude above
+`cfg.critical_point_tol`), not just a synthetic worst case. Every
+interpolated point is now corrected back onto `f(x, y) = 0` via
+[`_project_to_curve`](@ref) (the same Gauss-Newton re-projection
+`FaceTracking._project_to_slice` already uses for the analogous 3D case)
+before being returned. `F` is therefore now a required argument. Ids,
+`left_vertex_id`/`right_vertex_id`, and the singularity flag are
+unchanged; degenerate (single-point) edges are still repeated, now
+through the same projection for consistency.
 """
-function sample_edge(edge::Edge{T}, cfg::HomotopyConfig{T}) where {T<:AbstractFloat}
+function sample_edge(F::System, edge::Edge{T}, cfg::HomotopyConfig{T}) where {T<:AbstractFloat}
+    length(F.variables) == 2 && length(F.expressions) == 1 || throw(ArgumentError(
+        "sample_edge: expected F with exactly 1 equation in exactly 2 variables (a raw plane " *
+        "curve); got $(length(F.expressions)) equation(s) in $(length(F.variables)) variable(s).",
+    ))
+    x_var, y_var = F.variables
+    f = F.expressions[1]
+    fx = differentiate(f, x_var)
+    fy = differentiate(f, y_var)
+    project(p::Vector{T}) = (isempty(p) ? p : (T[_project_to_curve(f, fx, fy, x_var, y_var, p[1], p[2], cfg)...]))
+
     pts = edge.sampled_points
     n_out = cfg.edge_sample_density
 
     if length(pts) < 2
-        p = isempty(pts) ? T[] : copy(pts[1])
+        p = isempty(pts) ? T[] : project(copy(pts[1]))
         return Edge{T}(
             id = edge.id, left_vertex_id = edge.left_vertex_id, right_vertex_id = edge.right_vertex_id,
             sampled_points = [copy(p) for _ in 1:n_out], is_singular = edge.is_singular,
@@ -257,9 +314,10 @@ function sample_edge(edge::Edge{T}, cfg::HomotopyConfig{T}) where {T<:AbstractFl
     total = cumlen[end]
 
     if total == 0
+        p = project(copy(pts[1]))
         return Edge{T}(
             id = edge.id, left_vertex_id = edge.left_vertex_id, right_vertex_id = edge.right_vertex_id,
-            sampled_points = [copy(pts[1]) for _ in 1:n_out], is_singular = edge.is_singular,
+            sampled_points = [copy(p) for _ in 1:n_out], is_singular = edge.is_singular,
         )
     end
 
@@ -272,7 +330,8 @@ function sample_edge(edge::Edge{T}, cfg::HomotopyConfig{T}) where {T<:AbstractFl
         end
         t0, t1 = cumlen[seg_idx], cumlen[seg_idx+1]
         frac = t1 > t0 ? (t - t0) / (t1 - t0) : T(0)
-        new_pts[k] = pts[seg_idx] .+ frac .* (pts[seg_idx+1] .- pts[seg_idx])
+        interp = pts[seg_idx] .+ frac .* (pts[seg_idx+1] .- pts[seg_idx])
+        new_pts[k] = project(interp)
     end
 
     return Edge{T}(
@@ -337,6 +396,6 @@ function decompose_1d_curve(F::System, cfg::HomotopyConfig{T}; deflate::Bool = f
         end
     end
 
-    final_edges = Edge{T}[sample_edge(e, cfg) for e in edges]
+    final_edges = Edge{T}[sample_edge(F, e, cfg) for e in edges]
     return vertices, final_edges
 end

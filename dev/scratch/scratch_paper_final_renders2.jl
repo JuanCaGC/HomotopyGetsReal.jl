@@ -29,7 +29,7 @@ const LABELSIZE = 14
 const LINEWIDTH = 2.5
 
 @var x y
-f1 = (x^2 + y^2 - 1)^3 - 27 * x^2 * y^2
+f1 = (x^2 + y^2 - 1)^3 + 27 * x^2 * y^2
 f2 = (x^3 - x * y^2 + y + 1)^2 * (x^2 + y^2 - 1) + y^2 - 5
 f3 = x^8 - 28 * x^6 * y^2 + 70 * x^4 * y^4 - 28 * x^2 * y^6 + y^8 + 15 * x^4 * y^2 - 15 * x^2 * y^4
 
@@ -103,7 +103,7 @@ println("Curve 1 FINAL (:mono)")
 println("=" ^ 70)
 fig1 = Figure(size = (750, 750))
 ax1 = Axis(fig1[1, 1]; aspect = DataAspect(), xlabel = "x", ylabel = "y",
-    title = "Curve 1: (x²+y²-1)³ - 27x²y² = 0", titlesize = TITLESIZE,
+    title = "Curve 1: (x²+y²-1)³ + 27x²y² = 0", titlesize = TITLESIZE,
     xlabelsize = LABELSIZE, ylabelsize = LABELSIZE)
 draw_curve!(ax1, v1, e1; edge_color_by = :mono, legend_position = :rt)
 xl, yl = tight_lims(v1, e1)

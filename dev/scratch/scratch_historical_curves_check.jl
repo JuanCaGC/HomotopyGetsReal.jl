@@ -62,7 +62,7 @@ println("Pre-scan: real extent of each curve (plain grid sign-scan, no HC)")
 println("=" ^ 70)
 
 @var xv yv
-f1 = (xv^2 + yv^2 - 1)^3 - 27 * xv^2 * yv^2
+f1 = (xv^2 + yv^2 - 1)^3 + 27 * xv^2 * yv^2
 f2 = (xv^3 - xv * yv^2 + yv + 1)^2 * (xv^2 + yv^2 - 1) + yv^2 - 5
 f3 = xv^8 - 28 * xv^6 * yv^2 + 70 * xv^4 * yv^4 - 28 * xv^2 * yv^6 + yv^8 + 15 * xv^4 * yv^2 - 15 * xv^2 * yv^4
 
@@ -123,7 +123,7 @@ cfg_default = HomotopyConfig{Float64}()
 println("Default HomotopyConfig{Float64}() bbox: x=$(cfg_default.bbox_x) y=$(cfg_default.bbox_y)")
 
 F1 = System([f1], variables = [xv, yv])
-v1, e1, t1 = _report("Curve 1: (x^2+y^2-1)^3 - 27x^2y^2 = 0", F1, cfg_default; used_default = true)
+v1, e1, t1 = _report("Curve 1: (x^2+y^2-1)^3 + 27x^2y^2 = 0", F1, cfg_default; used_default = true)
 
 F2 = System([f2], variables = [xv, yv])
 v2, e2, t2 = _report("Curve 2: (x^3-xy^2+y+1)^2 (x^2+y^2-1) + y^2 - 5 = 0", F2, cfg_default; used_default = true)

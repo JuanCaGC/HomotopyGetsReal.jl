@@ -39,7 +39,7 @@ const XLIM = (-2.9, 2.9)
 const YLIM = (-2.9, 2.9)
 
 @var xv yv
-f1 = (xv^2 + yv^2 - 1)^3 - 27 * xv^2 * yv^2
+f1 = (xv^2 + yv^2 - 1)^3 + 27 * xv^2 * yv^2
 cfg = HomotopyConfig{Float64}()
 F1 = System([f1], variables = [xv, yv])
 
@@ -72,7 +72,7 @@ end
 println("=" ^ 70)
 println("Step 1: raw curve, nothing computed")
 println("=" ^ 70)
-fig1, ax1 = new_axis("Step 1: the raw curve f(x,y) = 0\n(x²+y²-1)³ - 27x²y² = 0, nothing computed yet")
+fig1, ax1 = new_axis("Step 1: the raw curve f(x,y) = 0\n(x²+y²-1)³ + 27x²y² = 0, nothing computed yet")
 draw_implicit_curve!(ax1, f1, xv, yv)
 GLMakie.save(joinpath(OUTDIR, "01_raw_curve.png"), fig1; px_per_unit = 4)
 println("  saved 01_raw_curve.png")

@@ -18,7 +18,7 @@ const XLIM = (-2.9, 2.9)
 const YLIM = (-2.9, 2.9)
 
 @var xv yv
-f1 = (xv^2 + yv^2 - 1)^3 - 27 * xv^2 * yv^2
+f1 = (xv^2 + yv^2 - 1)^3 + 27 * xv^2 * yv^2
 cfg = HomotopyConfig{Float64}()
 F1 = System([f1], variables = [xv, yv])
 

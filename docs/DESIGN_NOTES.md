@@ -146,26 +146,45 @@ BertiniReal/Bertini1 investigation behind it live externally at
   after the Albatross talk given current deadline pressure. Not
   implemented or further investigated this session.
 
-### Not logged as backlog (informational only)
+### Not logged as backlog: torus, resolved via `projection=:random`
 
 Tried a torus (`(x^2+y^2+z^2+3)^2-16(x^2+y^2)=0`, hole axis aligned with
 the slicing z-axis) as a new-topology validation fixture, 2026-07. Found,
 and confirmed by direct calculation, a different problem from the two
-above: at the fold `z=±1`, `∂f/∂x=∂f/∂y=0` **identically for every point**
-on the circle `x^2+y^2=4` there — a genuine 1-dimensional critical
-locus, not isolated points, which `compute_critical_points` (built for
-isolated-solution homotopy continuation) cannot represent at all. Not
-logged as a backlog item because it isn't a bug in the usual sense — the
-pipeline was never designed to detect positive-dimensional critical
-loci, and doing so would be a real new capability, not a fix. Reorienting
-the torus so its hole axis is *not* aligned with the slicing axis
-(matching `prototipo_viejo_julia/HomotopyGetsReal.jl`'s own original
-orientation) avoids this specific problem — confirmed live that
-`compute_critical_z_slices` then finds 4 clean, isolated critical
-z-values (`[-3,-1,1,3]`) — but the full `decompose_3d_surface` validation
-run against that corrected orientation was not completed this session
-(the first, wrong orientation alone cost 1419s and produced a
-catastrophically wrong mesh before this was diagnosed).
+items above: at the fold `z=±1`, `∂f/∂x=∂f/∂y=0` **identically for every
+point** on the circle `x^2+y^2=4` there — a genuine 1-dimensional
+critical locus, not isolated points, which `compute_critical_points`
+(built for isolated-solution homotopy continuation) cannot represent at
+all. Not logged as a backlog item because it isn't a bug in the usual
+sense — the pipeline was never designed to detect positive-dimensional
+critical loci, and doing so would be a real new capability, not a fix.
+
+**Resolved, 2026-07 (second investigation, same day): `projection=:random`
+closes this — an existing capability, not a new one.** The fold's
+positive-dimensional locus is a coordinate-ALIGNMENT artifact (the hole
+axis exactly coincides with the slicing axis), not a real singularity —
+the torus itself is smooth everywhere. A generic rotation breaks that
+alignment. Confirmed live across 3 seeds (`1, 7, 42`, this project's own
+seed precedent): `compute_critical_z_slices` on the generically-rotated
+chart always finds an isolated, nonempty 4-value critical set (never
+empty), and the full `decompose_3d_surface(...; projection=:random,
+incidence=true)` run succeeds (seeds `42`/`7`: 8 vertices all `Critical`
+— 0 `Singular`, correctly reflecting the torus has none — 8 edges/faces,
+~78k-point/~160k-triangle meshes, `|f|` residuals up to ~2.2e-5 — looser
+than sphere/ellipsoid's own but not garbage — 0 degenerate triangles).
+Naked-edge count after incidence stitching is real but noisy run to run
+even at a fixed seed (21–22 on one run, 144/24 on an earlier run of the
+same two seeds) — the same cross-process HC.jl solver jitter already
+documented elsewhere in this project (e.g. Taubin's own naked-edge
+spread), just a larger swing here than typically seen; not investigated
+further.
+
+Both the z-aligned failure and the `projection=:random` fix are
+independently reproducible from **one** script,
+`dev/scratch/scratch_torus_validation.jl` (sections 1–4: the failure,
+kept as-is rather than trimmed, ~1400s and a catastrophically wrong mesh;
+sections 5–6: the fix). The torus is a usable `decompose_3d_surface`
+validation fixture after all.
 
 ---
 

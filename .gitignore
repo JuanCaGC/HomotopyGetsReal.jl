@@ -16,6 +16,9 @@ paper_artifacts/
 .cursor/
 .cursorignore
 
+# Claude Code (local tool config/session state)
+.claude/
+
 # VS Code / editor settings (machine-local paths)
 .vscode/
 

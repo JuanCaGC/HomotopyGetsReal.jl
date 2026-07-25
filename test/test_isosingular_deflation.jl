@@ -106,7 +106,7 @@ using Random
     # round) -- not "cheap N=2" as originally assumed in the Stage 5 design
     # proposal. Confirmed live, not reasoned from the equation's degree alone.
     @var xv yv
-    f1 = (xv^2 + yv^2 - 1)^3 - 27 * xv^2 * yv^2
+    f1 = (xv^2 + yv^2 - 1)^3 + 27 * xv^2 * yv^2
     f2 = (xv^3 - xv * yv^2 + yv + 1)^2 * (xv^2 + yv^2 - 1) + yv^2 - 5
     f3 = xv^8 - 28 * xv^6 * yv^2 + 70 * xv^4 * yv^4 - 28 * xv^2 * yv^6 + yv^8 + 15 * xv^4 * yv^2 - 15 * xv^2 * yv^4
 

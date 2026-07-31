@@ -23,6 +23,34 @@ so this section is new as of 2026-07. The Griffis-Duffy singular-curve
 blueprint (a different, larger item, full detail kept externally — see
 its own entry below) lives in this same section, not a separate one.
 
+### TagBot-created tags never trigger a "stable" docs build — needs a PAT, not implemented here
+
+Found 2026-07 during the v0.2.0 registry pre-flight. `.github/workflows/
+Documentation.yml` is correctly configured for Documenter.jl's dev/stable
+split (`on: push: tags: [v*]`, plus the default `deploydocs` versions
+scheme), but checking the actual `gh-pages` branch content (not just the
+workflow config) showed only a `dev/` folder exists — no `stable/`,
+`v0.1.0/`, or `v0.1/` — and `versions.js` has `DOCUMENTER_STABLE = "dev"`,
+i.e. stable is just aliased to dev because nothing else was ever built.
+Root cause, confirmed by checking every historical workflow run: the only
+existing tag, `v0.1.0`, was created by `.github/workflows/TagBot.yml`
+using `secrets.GITHUB_TOKEN`. Pushes/tags made with the default
+`GITHUB_TOKEN` do not retrigger other Actions workflows (GitHub's built-in
+anti-recursion restriction) — every run in the list is a `push` event
+with `headBranch: main`, none show a tag-ref trigger, confirming the
+tag-triggered docs build has simply never fired. Low-risk partial fix
+applied same day: added `workflow_dispatch:` to `Documentation.yml` so a
+stable build can be kicked off manually (`gh workflow run
+Documentation.yml`) whenever a real tag exists but didn't auto-trigger.
+The full automatic fix — giving `TagBot.yml` a personal access token
+(instead of `GITHUB_TOKEN`) so its own tag pushes *do* retrigger other
+workflows, per TagBot's own documented recommendation for this exact
+gap — was deliberately **not** implemented: creating a PAT is a
+credential-issuing action that has to happen on Juan's own GitHub account
+directly, not something to do on his behalf. Left as a follow-up decision
+whenever the manual-dispatch workaround becomes enough of a recurring
+annoyance to be worth it.
+
 ### Uncaught exception when `compute_critical_z_slices` finds zero critical z-values and the naive bbox midpoint is itself degenerate
 
 Found 2026-07 while trying the Whitney umbrella (`x^2-y^2*z=0`) as a

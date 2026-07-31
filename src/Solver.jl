@@ -523,6 +523,20 @@ struct ResolveResult{T<:AbstractFloat}
     F_final::System
 end
 
+# Private test-instrumentation hook -- see resolve_isosingular_dimension's
+# own docstring below, "Test instrumentation" paragraph, for the full
+# rationale. Default nothing; Base.ScopedValues.with(...) is the only
+# supported way to set it (task-local, restores automatically, never leaks
+# across tests). Deliberately placed BEFORE the docstring immediately below
+# rather than between it and the function it documents: a docstring attaches
+# to the next top-level EXPRESSION, skipping comments -- placing this const
+# there instead (as an earlier version of this fix did, 2026-07) silently
+# redirects the docstring onto the const, leaving
+# resolve_isosingular_dimension undocumented (confirmed: this broke
+# docs/make.jl's hard-error checkdocs=:exports check, caught by CI, not by
+# Pkg.test() -- Pkg.test() never runs docs/make.jl).
+const _resolve_isosingular_trace = Base.ScopedValues.ScopedValue{Union{Nothing,Vector}}(nothing)
+
 """
     resolve_isosingular_dimension(F_original::System, x0::AbstractVector, cfg::HomotopyConfig{T}) where {T<:AbstractFloat}
         -> ResolveResult{T}
@@ -580,12 +594,6 @@ whatever this docstring's logic actually does. Default `nothing`: a
 single pointer-equality check, zero-cost for the one production caller
 path (`compute_critical_points`), which never sets this.
 """
-# Private test-instrumentation hook -- see resolve_isosingular_dimension's
-# own docstring, "Test instrumentation" paragraph, for the full rationale.
-# Default nothing; Base.ScopedValues.with(...) is the only supported way
-# to set it (task-local, restores automatically, never leaks across tests).
-const _resolve_isosingular_trace = Base.ScopedValues.ScopedValue{Union{Nothing,Vector}}(nothing)
-
 function resolve_isosingular_dimension(
     F_original::System,
     x0::AbstractVector,

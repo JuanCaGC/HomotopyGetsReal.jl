@@ -6,12 +6,10 @@ authors:
     given-names: "Juan Camilo"
 license: MIT
 repository-code: "https://github.com/JuanCaGC/HomotopyGetsReal.jl"
-# 0.1.0 is the version registered in Julia's General registry (confirmed
-# directly, not assumed, during this project's 2026-07 audit -- see
-# docs/DESIGN_NOTES.md / README.md's Install section) and also the version
-# currently in this repo's own Project.toml. It predates several major
-# features present in local HEAD as of 2026-07 (the isosingular deflation
-# API, generic projection support, and incidence-based mesh welding) --
-# an updated release is planned but not yet tagged; do not bump this
-# without also bumping Project.toml, and only on an explicit decision.
-version: "0.1.0"
+# 0.2.0 is the version registered in Julia's General registry (merged
+# 2026-07-31, JuliaRegistries/General#162942) and also the version
+# currently in this repo's own Project.toml. Includes the isosingular
+# deflation API, generic projection support, and incidence-based mesh
+# welding. Do not bump this without also bumping Project.toml, and only
+# on an explicit decision.
+version: "0.2.0"

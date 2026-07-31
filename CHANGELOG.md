@@ -13,23 +13,33 @@
   non-isolated/higher-multiplicity points: `estimate_corank`, `deflate_once`,
   `verify_isosingular_dimension`, `resolve_isosingular_dimension`, plus the
   `IsosingularVerdict`/`ResolveVerdict` result types. Opt-in via
-  `decompose_3d_surface(...; deflate = true)`; diagnostic-only.
+  `decompose_3d_surface(...; deflate = true)`; diagnostic-only (adds
+  `metadata[:isosingular_verdict]` etc. to affected vertices; does not
+  change mesh geometry).
 - Generic projection support for `decompose_3d_surface` via a new
   `projection` keyword (`:random`, a user-supplied orthogonal matrix, or
-  `nothing`), plus `random_orthogonal_matrix`.
-- Face/edge incidence tracking (`incidence = true`) and cross-call
-  persistent vertex identity via `VertexRegistry`/`register!`, reducing
-  mesh naked-edge counts through boundary snap-unification and coordinated
-  triangle lofting in `weld_mesh`.
-- `CritSlice`, `ColumnLanding`, `SurfaceIncidence` exported types.
+  `nothing` for the prior z-aligned behavior), plus `random_orthogonal_matrix`.
+- Face/edge incidence tracking (`incidence = true` on `decompose_3d_surface`)
+  and cross-call persistent vertex identity via `VertexRegistry`/`register!`,
+  substantially reducing mesh naked-edge counts through boundary
+  snap-unification and coordinated triangle lofting in `weld_mesh`.
+- `CritSlice`, `ColumnLanding`, `SurfaceIncidence` exported types supporting
+  the above.
 
 ### Fixed
-- `sample_edge` no longer approximates curved edges with a straight chord.
-- Several docstring-rendering/cross-reference issues from two internal
-  documentation audits.
+- `sample_edge` no longer approximates curved edges with a straight chord
+  (see Breaking, above) — this was a real geometric inaccuracy for edges
+  with significant curvature between sampled endpoints.
+- Several docstring-rendering and cross-reference corruption issues found
+  during two internal documentation audits.
 - A flaky winding-check assertion at genuine surface singularities.
 
 ### Changed
-- `Combinatorics`/`Random` now properly declared with `compat` bounds.
-- `HomotopyConfig` gained 5 new defaulted fields (all keyword-constructed;
-  no existing call sites affected).
+- `Combinatorics` and `Random` are now properly declared with `compat`
+  bounds in `Project.toml` (previously present as implicit/undeclared
+  dependencies).
+- `HomotopyConfig` gained several new fields with defaults (all
+  keyword-constructed; no existing call sites are affected):
+  `projection_orthonormality_tol`, `min_slab_width`,
+  `incidence_snap_tol_ratio`, `isosingular_verify_retries`,
+  `max_deflations`.

@@ -227,6 +227,8 @@ function _near_constant_colorrange(colorvals::Vector{Float64})
     return (mid - half_width, mid + half_width)
 end
 
+const _EMPTY_MESH_WARNED = Ref(false)
+
 """
     plot_surface_decomposition(mesh; kwargs...) -> Figure
 
@@ -256,20 +258,6 @@ function plot_surface_decomposition(
     # Uses weld_mesh output with global winding correction applied.
     pts = GeometryBasics.coordinates(mesh)
 
-    colorvals = if color_by isa Function
-        [Float64(color_by(p[1], p[2], p[3])) for p in pts]
-    elseif color_by == :x
-        [Float64(p[1]) for p in pts]
-    elseif color_by == :y
-        [Float64(p[2]) for p in pts]
-    elseif color_by == :z
-        [Float64(p[3]) for p in pts]
-    else
-        throw(ArgumentError(
-            "plot_surface_decomposition: color_by must be :x, :y, :z, or a Function(x,y,z)->Real, got $(color_by)",
-        ))
-    end
-
     fig = Figure()
     ax = Axis3(fig[1, 1]; aspect = :data, xlabel = "x", ylabel = "y", zlabel = "z")
 
@@ -279,14 +267,47 @@ function plot_surface_decomposition(
         zlims!(ax, cfg.bbox_z...)
     end
 
-    fixed_range = _near_constant_colorrange(colorvals)
-    mp = if fixed_range === nothing
-        mesh!(ax, mesh; color = colorvals, colormap = colormap)
+    # decompose_3d_surface can legitimately return a completely empty mesh
+    # (e.g. the cone/horn_torus apex-type degeneracies documented in
+    # docs/DESIGN_NOTES.md, "HC.jl polyhedral-solve reliability") -- mirror
+    # plot_curve_decomposition's own graceful handling of empty input
+    # (mesh!/colorrange are simply skipped, same as that method's per-edge
+    # loop no-ops on empty edges) instead of letting `extrema` in
+    # `_near_constant_colorrange` throw on an empty `colorvals`.
+    if isempty(pts) || isempty(GeometryBasics.faces(mesh))
+        if !_EMPTY_MESH_WARNED[]
+            @warn "plot_surface_decomposition: mesh has zero points/triangles -- " *
+                  "decompose_3d_surface returned a completely empty decomposition " *
+                  "(a known outcome for some fixtures, e.g. a surface whose only " *
+                  "critical z lands exactly on an undetected degenerate point -- see " *
+                  "docs/DESIGN_NOTES.md, \"HC.jl polyhedral-solve reliability\"). " *
+                  "Returning an empty axes frame instead of plotting a mesh."
+            _EMPTY_MESH_WARNED[] = true
+        end
     else
-        mesh!(ax, mesh; color = colorvals, colormap = colormap, colorrange = fixed_range)
+        colorvals = if color_by isa Function
+            [Float64(color_by(p[1], p[2], p[3])) for p in pts]
+        elseif color_by == :x
+            [Float64(p[1]) for p in pts]
+        elseif color_by == :y
+            [Float64(p[2]) for p in pts]
+        elseif color_by == :z
+            [Float64(p[3]) for p in pts]
+        else
+            throw(ArgumentError(
+                "plot_surface_decomposition: color_by must be :x, :y, :z, or a Function(x,y,z)->Real, got $(color_by)",
+            ))
+        end
+
+        fixed_range = _near_constant_colorrange(colorvals)
+        mp = if fixed_range === nothing
+            mesh!(ax, mesh; color = colorvals, colormap = colormap)
+        else
+            mesh!(ax, mesh; color = colorvals, colormap = colormap, colorrange = fixed_range)
+        end
+        show_colorbar && Colorbar(fig[1, 2], mp)
+        show_wireframe && wireframe!(ax, mesh; color = :black, linewidth = 0.5)
     end
-    show_colorbar && Colorbar(fig[1, 2], mp)
-    show_wireframe && wireframe!(ax, mesh; color = :black, linewidth = 0.5)
 
     if vertices !== nothing
         handles = _plot_vertices_by_type!(ax, vertices)

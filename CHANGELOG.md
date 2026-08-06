@@ -1,5 +1,15 @@
 # Changelog
 
+## [Unreleased]
+
+### Fixed
+- `plot_surface_decomposition` no longer throws an uncaught `ArgumentError`
+  when `decompose_3d_surface` returns a completely empty mesh (0 points, 0
+  triangles — a known outcome for some fixtures, e.g. a surface whose only
+  critical z lands exactly on an undetected degenerate point). Now renders
+  an empty axes frame (axis limits from `cfg` if given) with a one-shot
+  `@warn` instead of crashing.
+
 ## [0.2.0]
 
 ### Breaking

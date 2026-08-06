@@ -248,6 +248,39 @@ kept as-is rather than trimmed, ~1400s and a catastrophically wrong mesh;
 sections 5–6: the fix). The torus is a usable `decompose_3d_surface`
 validation fixture after all.
 
+### `verify_isosingular_dimension`'s per-attempt `solve()` defaults to `compile=:mixed`, not `compile=:none` — unconfirmed Phase 2 lead (2026-08-04)
+
+Found while investigating why `test_isosingular_deflation.jl` dominates
+full-suite runtime (see "Isosingular deflation" section's own 2026-08-04
+entry for the timing trace this came from). Diagnostic only — no `src/`
+change made or proposed here.
+
+`verify_isosingular_dimension` (`src/Solver.jl:419`) builds a fresh `System`
+on every retry attempt inside `for attempt in 1:cfg.isosingular_verify_retries`
+and calls `solve(Faug, [x0_c]; ...)` (`:448`) with no `compile=` kwarg, so it
+falls through to `HomotopyContinuation.jl`'s global default,
+`COMPILE_DEFAULT[] = :mixed`. This is structurally the same shape as
+`build_face_tracker` (`src/FaceTracking.jl:263-272`) — a fresh small system
+built per call, "called once per anchor, potentially hundreds of times per
+surface" — which already has an explicit, commented `compile = :none`
+override for exactly this pattern (see "Face tracking" section, "Patch
+construction: `compile=:none`..." below: benchmarked directly, `compile =
+:all` cost ~5,700x what `compile = :none` cost across 15 structurally
+distinct systems). `:mixed` is not `:all`, so that 5,700x figure doesn't
+transfer directly — HC.jl's `:mixed` heuristic may already avoid compiling
+systems this small — but the underlying pattern (many small, single-use,
+freshly-built systems) is the same one that motivated the FaceTracking fix,
+and `verify_isosingular_dimension` has no comment anywhere addressing the
+tradeoff. Not profiled; not confirmed as a real cost here.
+
+**Before ever applying `compile=:none` to this call**: `verify_isosingular_dimension`'s
+output (verdicts, corank sequences) must be re-validated against the existing
+Hauenstein-Wampler ground-truth tests (Whitney umbrella, node, cusp —
+`test/test_isosingular_deflation.jl`, `test/test_solver.jl`) to rule out
+`compile` mode changing *numerical* tracking behavior, not just runtime.
+Compile mode is not guaranteed numerically inert in general; this hasn't been
+checked for this call site specifically.
+
 ---
 
 ## Isosingular deflation
@@ -460,6 +493,78 @@ members): before adding any new `@enum` to this module, grep the whole
 `Resolved`/`Ambiguous`/`Exhausted`) rather than relying on a word simply
 sounding unlikely to collide — that's exactly what `Inconclusive` sounded
 like the first time too.
+
+### Full-suite test timing and the 536-vs-537 assertion-count variance (2026-08-04)
+
+Found while independently verifying `docs/ORCHESTRATOR_BRIEFING.md`'s
+"537/537" test-count claim for a `CLAUDE.md` draft (not reasoned from the
+doc, confirmed live: three full `HOMOTOPYGETSREAL_RUN_SLOW_TESTS=1` runs this
+session).
+
+**536 vs 537 is expected variance, not a bug.** Independently summing the 12
+per-file `Test Summary` rows from a live run gives 536, one less than
+`Pkg.test()`'s own reported aggregate of 537. Cause, confirmed by reading the
+source, not inferred: `test/test_isosingular_deflation.jl`'s "Historical
+curves (N=2)" testset (`:99-139`) loops over 4 curve/config combos —
+including the astroid fixture (`f1` at `:109`, `(x²+y²-1)³+27x²y²`) — calling
+`decompose_1d_curve(F, cfg; deflate=true)` live for each, then firing one
+`@test verdict == Resolved` per resulting `Singular` vertex that carries
+`:isosingular_verdict` metadata (`:127-131`). That count depends on how many
+vertices a given live run happens to flag; it is not fixed. Matches the
+paper's own §5.3 documentation of this mechanism exactly.
+
+**Per-file timing breakdown**, live run, all 12 files,
+`HOMOTOPYGETSREAL_RUN_SLOW_TESTS=1`:
+
+| File / testset | Pass | Total | Time |
+|---|---|---|---|
+| Isosingular deflation (Stage 5) | 19 | 19 | 18m15.2s |
+| Projection (Phase 8) | 44 | 44 | 2m01.3s |
+| Solver (Phase 2) | 85 | 85 | 1m22.9s |
+| Taubin heart (Phase 5 slow) | 37 | 37 | 1m08.3s |
+| Visuals (Phase 6) | 24 | 24 | 41.8s |
+| SurfaceDecomposition (Phase 5) | 60 | 60 | 14.0s |
+| Incidence (Phase 9a) | 36 | 36 | 4.1s |
+| Topology (Phase 3) | 36 | 36 | 2.0s |
+| Docstring rendering | 113 | 113 | 1.9s |
+| VertexRegistry (Phase 10) | 46 | 46 | 0.5s |
+| Types and Config (Phase 1) | 18 | 18 | 0.3s |
+| PathTracking (Phase 4) | 18 | 18 | 0.2s |
+
+`test_isosingular_deflation.jl` alone is ~76% of full-suite runtime — more
+than 3x the sum of all 11 other files combined (18m15s vs 5m42s).
+
+**Retracted comparison, logged so it isn't re-derived**: a first pass at this
+investigation compared that 18m15s whole-file figure against the file's own
+`:103-104` comment (commit `0c73491`, 2026-07-24), which benchmarks its
+"Historical curves" testset **alone** at 6m24.8s, and called the gap "~3x the
+documented baseline." That comparison is invalid — the file has two more
+slow-gated testsets not covered by the original benchmark ("Taubin heart:
+..." at `:157` and `:164`) — and was retracted before reaching `CLAUDE.md`. A
+fair single-testset comparison would need its own timing pass, not done here.
+Separately confirmed via `git blame`: `isosingular_verify_retries` and
+`max_deflations` (`HomotopyConfig`) both predate that 6m24.8s benchmark by
+one day (added commit `6b4aaf7`/`4e4dbd2`, 2026-07-23; benchmark written
+2026-07-24) — the config knobs were already in place when it was measured.
+
+**The flake.** Three live full-suite attempts this session: one errored
+before reaching a `Test Summary`, two passed clean. Root cause of the error
+is **not confirmed** — that run's output was piped through `tail -15` before
+capture, which discarded the actual error message and testset location along
+with everything else but generic `Pkg.API` stack-unwind frames, and it
+hasn't reproduced since (2 clean runs after it, including a dedicated
+attempt to recapture it). `docs/ORCHESTRATOR_BRIEFING.md` item 6 documents a
+different, already-diagnosed nondeterminism
+(`MixedSubdivisions.uniform_lifting_sampler` reading Julia's global RNG,
+affecting torus mesh counts) — plausible analogy, not evidence, for this
+specific error. No further live reruns planned this session; next time the
+full suite runs for a real reason (not a diagnostic one), capture its output
+via direct redirection to a file, never through a pipe that can silently
+truncate on failure — the pattern this session eventually settled on for the
+two runs that did land cleanly.
+
+See "Backlog: production robustness gaps" for a `compile=:none` lead found
+during this same investigation.
 
 ---
 

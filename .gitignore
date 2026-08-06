@@ -16,8 +16,11 @@ paper_artifacts/
 .cursor/
 .cursorignore
 
-# Claude Code (local tool config/session state)
-.claude/
+# Claude Code (local tool config/session state; agent definitions under
+# .claude/agents/ are tracked, everything else under .claude/ stays local)
+.claude/*
+!.claude/agents/
+!.claude/agents/**
 
 # VS Code / editor settings (machine-local paths)
 .vscode/
@@ -31,3 +34,6 @@ referencias_academicas/bertini_real_manual.pdf
 
 # Local reference audit (kept locally only; regenerable / working notes)
 docs/BERTINIREAL_AUDIT.md
+
+# Local orchestrator/agent handoff briefing (kept locally only)
+docs/ORCHESTRATOR_BRIEFING.md

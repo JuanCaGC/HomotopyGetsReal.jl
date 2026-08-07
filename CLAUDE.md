@@ -109,7 +109,18 @@ the third, in the adjacent repo it deliberately lives in).
 - **Self-review pass**: a worktree-isolated pass Developer spawns before
   reporting any change as done. Isolation: worktree. Read-only plus test
   execution — runs `Pkg.test()` and `docs/make.jl` in that isolated
-  worktree before Developer reports a task complete.
+  worktree before Developer reports a task complete. Operational note:
+  subagents cannot use their own `Write` tool to persist files
+  ("Subagents should return findings as text, not files") — a subagent
+  must return findings as text in its final message; the
+  parent/orchestrating session is responsible for writing anything to
+  disk. Also: a worktree-isolated subagent starts from the last commit,
+  not the current working tree — it does not see uncommitted changes,
+  and its own git operations are restricted to its own worktree (even
+  read-only ones against the shared checkout are refused). To review an
+  uncommitted change, copy the modified file(s) into the subagent's
+  worktree directly via the filesystem (not `git add`/commit) before
+  invoking it.
 - **Correctness Auditor**: lives in Cursor, external to this repo. Has the
   actual installed Bertini_real/Bertini1 source and cross-checks new HGR
   claims against its real output (see mechanism 3 above). This repo links

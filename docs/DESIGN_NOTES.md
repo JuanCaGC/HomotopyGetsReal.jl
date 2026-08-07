@@ -110,6 +110,63 @@ default polyhedral `solve` unreliably finds it:
    that undetected apex, and `decompose_3d_surface` silently returns a
    **completely empty** decomposition (0 vertices, 0 faces) — no crash
    this time, just nothing, which is arguably worse to notice.
+   Independently reproduced 2026-08-06 by a live capability-survey run of
+   the bare, default `decompose_3d_surface` call itself (not just
+   `compute_critical_z_slices` in isolation): 0 vertices, 0 edges, 0
+   faces, 0 mesh points, no exception — saved evidence at
+   `dev/scratch/capability_survey/data/cone.json`.
+   **2026-08-07 follow-up — neither tested workaround is safe to use**:
+   - Asymmetric `bbox_z=(-4.0, 4.3)` (coarse survey density) produces a
+     *non-empty* decomposition (2 vertices, 2 edges/faces, 98 mesh
+     points) that looks superficially plausible but is geometrically
+     corrupted: median residual is fine (`1.2e-7`), but `p99=12.2`,
+     `max=16.0` — a visible seam/discontinuity around `z≈2.2-2.5` plus a
+     spike artifact near the rim, confirmed by direct render inspection,
+     not just the residual numbers. **This is more dangerous than the
+     original empty-mesh failure, not a partial fix** — an empty mesh is
+     an unambiguous failure signal; this produces a plausible-looking
+     wrong answer that only reveals itself if residuals are actually
+     checked. Do not present this as a usable workaround under any
+     framing. `dev/scratch/capability_survey/data/cone_asymmetric_bbox.json`,
+     `.../renders/cone_asymmetric_bbox.png`.
+   - `projection=:random, rng=Xoshiro(42)` (same convention as the torus
+     fixture) does not produce a working decomposition either — it fails
+     loudly instead (`_robust_slice_at_z` gate failure after 8 perturbed
+     retries), a preferable failure *mode* to the original silent
+     emptiness, but still not a working result.
+     `dev/scratch/capability_survey/data/cone_projection_random.json`.
+   - **Net: no known safe workaround exists for the cone specifically**,
+     unlike horn torus (item 5) and the original torus fixture.
+5. **Horn torus's self-tangent pinch** (`(x^2+y^2+z^2)^2-4(x^2+y^2)=0`,
+   genus-1 torus with `R=r` — the hole pinches to a point at the origin):
+   the same mechanism as item 4, a different degenerate point. Bare,
+   default `decompose_3d_surface` returns the same completely empty
+   decomposition, no exception. Not previously tested in this file — a
+   new fixture confirming the existing mechanism, not a new one.
+   `dev/scratch/capability_survey/data/horn_torus.json`.
+   **2026-08-07 follow-up — confirmed, clean workaround**:
+   `projection=:random, rng=Xoshiro(42)` (same convention as the torus
+   fixture) produces a genuinely working decomposition: 20 vertices (12
+   `Critical`, 8 `Artificial`), 20 edges/faces, 1647 mesh points, all
+   residuals small (median `2.3e-7`, p90 `1.2e-6`, max `8.5e-4`, no wild
+   outliers). Recommended, at the same tier of confidence as the existing
+   torus workaround entry above.
+   `dev/scratch/capability_survey/data/horn_torus_projection_random.json`,
+   `.../renders/horn_torus_projection_random.png`. Separately tested:
+   asymmetric `bbox_z=(-4.0, 4.3)` does **not** help this fixture — still
+   returns a completely empty decomposition, no exception.
+   `dev/scratch/capability_survey/data/horn_torus_asymmetric_bbox.json`.
+
+**Falsified prediction, flagged not resolved**: the geometric argument
+that "the singular point sits at the origin, fixed under any rotation,
+so `projection=:random` shouldn't help" correctly predicted the cone's
+outcome above but not horn torus's success under the identical
+treatment — the two fixtures diverge for a reason not investigated here
+(likely something about how each system's specific degree/structure
+interacts with HC.jl's polyhedral start-system construction under a
+generic rotation, not the geometric fixed-point argument itself, which
+only speaks to where the degenerate point is, not to whether the solver
+can find it).
 
 Working hypothesis, not yet verified against HC.jl internals: `solve`'s
 default settings struggle specifically when the critical-point-finding
@@ -280,6 +337,94 @@ Hauenstein-Wampler ground-truth tests (Whitney umbrella, node, cusp —
 `compile` mode changing *numerical* tracking behavior, not just runtime.
 Compile mode is not guaranteed numerically inert in general; this hasn't been
 checked for this call site specifically.
+
+### Capability survey (2026-08-06): new gaps found across a 24-fixture survey
+
+*(Six distinct findings from `dev/scratch/capability_survey/` — a
+curve/surface capability survey across 24 fixtures at coarse test-density
+config. Full data/renders/logs live there, untracked; this entry logs
+only what's genuinely new, not fixture-by-fixture confirmations of
+already-documented mechanisms — see
+`dev/scratch/capability_survey/summary_report.md` for the complete
+picture including those.)*
+
+1. **Smooth critical points correctly located but misclassified
+   `Singular`, with edge/mesh construction bypassing them entirely** —
+   `squircle_quartic` (`x^4+y^4-1`) and its surface analog
+   `quartic_superellipsoid` (`x^4+y^4+z^4-1`). The misclassification
+   itself confirms the "Stage 4c — `_deflation_applicable`" entry below
+   (genuine smooth points, e.g. `jacobian_rank=1`, `singular_values=[4,0]`
+   at `(±1,0)` for the curve case — exactly that entry's own `f=x-y^3`
+   illustration, now with a live measurement). The NEW part: downstream
+   edge/mesh construction doesn't use these correctly-found points at
+   all — it wires to off-curve `Artificial` `:endpoint_fallback` vertices
+   instead (residual up to ~1.0 on the surface case — nowhere near the
+   actual surface). Visually confirmed in both renders: the squircle's
+   curve render is missing most of the actual curve; the superellipsoid's
+   mesh has a visible wedge-shaped notch cut out near one pole.
+   `dev/scratch/capability_survey/data/squircle_quartic.json`,
+   `.../quartic_superellipsoid.json`, `.../renders/squircle_quartic.png`,
+   `.../renders/quartic_superellipsoid.png`.
+
+2. **Cross-process nondeterminism silently drops a whole curve segment,
+   zero error signal** — `folium_descartes` (`x^3+y^3-3xy`). The general
+   jitter mechanism is already documented elsewhere in this file (torus
+   naked-edge spread under "Watertightness measurements"; the full-suite
+   536-vs-537 flake). This specific consequence is not: 1 of 3 identical
+   `decompose_1d_curve` runs (same fixture, same config) silently
+   orphaned a genuine on-curve `Boundary` vertex — referenced by zero
+   edges — dropping the unbounded branch's continuation segment entirely,
+   with no exception. `dev/scratch/capability_survey/errors_log.md`
+   ("folium_descartes" entry).
+
+3. **`three_concurrent_lines_reducible`** (`x(x-y)(x+y)`, triple point at
+   the origin), two findings:
+   (a) The vertical line component (`x=0`) is structurally invisible to
+   x-parametrized slicing — never appears in the edge graph at all, even
+   though its two `Boundary` vertices are correctly located. No
+   precedent anywhere in this file.
+   (b) The triple point is found but misclassified `Artificial`, not
+   `Singular` — the first concrete measurement of a case the "HC.jl
+   polyhedral-solve reliability" entry above already names in the
+   abstract ("reducible crossing points") but had never tested. Not a
+   new mechanism — the first data point for a previously-named,
+   previously-untested sub-case.
+   `dev/scratch/capability_survey/data/three_concurrent_lines_reducible.json`,
+   `.../renders/three_concurrent_lines_reducible.png`.
+
+4. **`ellipsoid` post-fix residual, first measurement** — max/p99
+   residual jumps to ~1.0e-05, ~170x above its own p90 (1-2 outlier
+   points out of 160 mesh points). Same mechanism as the "Adaptive
+   re-anchoring"/ellipsoid-discovery entry below, but that entry's own
+   validation numbers are all measured on the Taubin heart — never on
+   the ellipsoid fixture that originally motivated it. This is the first
+   documented post-fix residual figure for the ellipsoid itself.
+   `dev/scratch/capability_survey/data/ellipsoid.json`.
+
+5. **`plot_surface_decomposition` throws `ArgumentError` on any
+   completely empty mesh** — uncaught, from `_near_constant_colorrange`'s
+   `extrema` call over zero points (`src/Visuals.jl:210`). Hit 3x in the
+   survey: `horn_torus`, `cone`, `empty_surface`. This is a different bug
+   from the `_near_constant_colorrange` entry below (Float32 round-off on
+   a *non-empty* near-constant range causing full-spectrum speckle) —
+   same function, unrelated failure, do not conflate the two. **Good
+   candidate for an actual small `src/` fix**: an early return with an
+   informative message on an empty mesh, rather than a raw crash —
+   low-risk, visualization-only, doesn't require re-validation against
+   any ground-truth numerical test. Flagged, not implemented in this
+   pass.
+
+6. **Wholly empty real locus handled gracefully — but wholly
+   undocumented** — `empty_curve` (`x^2+y^2+1`) and `empty_surface`
+   (`x^2+y^2+z^2+1`) both decompose cleanly (0 counts, no exception).
+   Verified via full-text grep: no entry anywhere in this file covers a
+   wholly empty real variety (the existing "empty" mentions are all about
+   an empty *critical-value set* mid-pipeline — the Whitney/cone
+   discussions above). Logging the graceful-handling behavior itself as
+   new, positive, previously-undocumented coverage. Also: plotting
+   diverges 2D vs. 3D here — `empty_curve`'s render succeeds (a valid
+   blank frame); `empty_surface`'s hits the same crash as finding 5
+   above.
 
 ---
 
@@ -565,6 +710,23 @@ two runs that did land cleanly.
 
 See "Backlog: production robustness gaps" for a `compile=:none` lead found
 during this same investigation.
+
+**Follow-up, 2026-08-06**: a full/fast suite run can also crash with a
+native segfault (signal 11) inside GLMakie's window-creation path
+(`test_visuals.jl`), when the machine's display has gone to sleep/locked
+while the system itself stays awake — confirmed via `pmset -g assertions`
+showing `UserIsActive: 0`, and conclusively isolated from any
+source-code cause via a pristine-file control test (the completely
+unmodified `src/Visuals.jl`, zero code changes, reproduced the identical
+segfault in the same environment). This is a **plausible, not
+confirmed**, explanation for at least some of the previously-unconfirmed
+full-suite crash instances documented above — the original failed run's
+trace was lost to the `tail`-piping mistake described above and was
+never actually compared against this specific mechanism, so this is a
+new lead, not a retroactive proof. Practical implication: an unattended
+full-suite run (e.g. a scheduled Routine or an overnight run) should
+keep the display awake, or expect this as a known failure mode unrelated
+to code correctness.
 
 ---
 
@@ -893,6 +1055,84 @@ Measured cost of `decompose_3d_surface(...; incidence = true)` on the
 fixed-axis Taubin fixture: ~+9 s on a ~16 s decompose (4 crit-slices plus
 one extra critical-point solve for fold anchors; the snapping/splitting
 mechanisms themselves are comparatively negligible, no new solves).
+
+### Density-dependence and cross-fixture extension of the Watertightness gap (2026-08-06 capability survey)
+
+Follow-up to "Watertightness measurements" above, from
+`dev/scratch/capability_survey/`'s 24-fixture survey and its targeted
+render-gap follow-ups (`investigate_render_gaps.jl`,
+`investigate_taubin_seam.jl`, `investigate_taubin_seam_matched_zoom.jl`,
+`investigate_taubin_density_choice.jl` — full logs/renders there, not
+duplicated here).
+
+**Residual anomaly that motivated this investigation**: `taubin_heart`'s
+max residual at this survey's coarse density (`2.85e-05`) is ~12x the
+existing fixed-axis production-density baseline stated elsewhere in this
+file (`2.4e-6`, see "Validation of the refined gates" above). This gap
+remains **unconfirmed** — nothing below resolves it. A plausible but
+explicitly unconfirmed contributing factor: at coarse density,
+`taubin_heart`'s bare mesh has substantially more unstitched connectivity
+than production-density validation typically shows (see the naked-edge
+data immediately below) — logged as a plausible link, not a settled
+explanation.
+
+Naked-edge counts (`_naked_mesh_edges`, `incidence=true` in every case):
+
+| Config | torus naked edges | taubin_heart naked edges |
+|---|---|---|
+| Coarse survey (`edge_sample_density=6`, `midslice=8`) | 8 (from 80 bare) | 29 (from 132 bare) |
+| Paper-figure config (`edge=8`, `midslice=8`; taubin only) | — | ~30-31 |
+| Full production defaults (`edge=50`, `midslice=100`) | — | ~56-63 |
+
+(a) `incidence=true` substantially reduces naked edges for both fixtures
+at every density tested, but does not fully close them at any of
+them — matches this file's own "reduces... without fully closing" caveat
+above exactly, now confirmed across multiple density regimes rather than
+only the one production-density measurement the original entry used.
+
+(b) **New, not covered by the entry above**: sampling density is a
+second, independent lever on this limitation's *visual* severity,
+distinct from the documented lever (pipeline stage: bare → `incidence=true`
+→ Phase 9c loft). Confirmed via matched-axis-limit rendering (controlling
+for plot zoom/bbox as a confound — the first comparison attempt here
+didn't control for this and had to be redone): the same underlying gap
+looks markedly smaller at higher density even though the raw naked-edge
+count rises (more, individually shorter perimeter edges sampling a
+fixed-or-shrinking gap area at finer resolution — not a contradiction).
+
+(c) **New, and not merely an internal robustness note**: the actual
+archived, already-published paper figure
+(`paper_artifacts/figures/taubin_singular_structure.pdf`, the §5
+Validation incidence-overlay figure) was generated at
+`edge_sample_density=8` — essentially the same density as this survey's
+own coarse config — and exhibited this same defect, confirmed by direct
+visual inspection of the figure's own preview PNG (partially obscured by
+its chosen camera angle and vertex-marker overlay, but genuinely
+present). **Resolved, 2026-08-06**: the intermediate density
+(`edge_sample_density=20`, `midslice_sample_density=25` — reviewed
+against the current `edge=8` figure and against full production
+defaults, `edge=50`/`midslice=100` at ~138MB, impractically heavy) was
+accepted. `paper_artifacts/figures/taubin_singular_structure.pdf` and
+`taubin_talk_hook.pdf` were both regenerated in place at this density
+(originals preserved as `*_PRE_DENSITY_FIX_2026-08-01.*`, not deleted),
+and `paper_artifacts/taubin_singular_structure_example.jl`'s own density
+defaults were updated to match — this is now the reproducible default
+for both figures, not a one-off scratch render. As of this writing, the
+regenerated files still need to be manually uploaded into the paper's
+and talk's Cowork sessions by Juan — this repo-local change doesn't
+propagate there automatically.
+
+(d) **Methodological note, useful beyond this survey**: raw
+`_naked_mesh_edges` counts are not comparable across fixture types
+without care. A bbox-clipped rim on an *unbounded* surface (e.g.
+`hyperboloid_one_sheet`: 196 naked edges at default density, purely from
+its clipped boundary) is naked *by construction* — there is no surface
+beyond the box to stitch to — unlike genuine interior stitching cracks on
+a closed/near-closed surface (torus, taubin_heart). Separately confirmed:
+`hyperboloid_one_sheet`'s own visual jaggedness at coarse density is a
+sampling-density artifact (smooths out almost completely at default
+density), not the naked-edge/stitching mechanism above — a different
+fixture, a different cause, do not conflate the two.
 
 ### Known limitation: generic projections over singular curves — `decompose_3d_surface`
 

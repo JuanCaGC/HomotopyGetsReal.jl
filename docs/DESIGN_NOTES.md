@@ -1192,7 +1192,16 @@ and the sphere / Taubin heart / cylinder all pass.
 GLMakie was confirmed (empirically, not assumed) to render headlessly in
 this project's dev sandbox before this file was written — no CairoMakie
 fallback needed, `Project.toml`'s existing `GLMakie` dependency
-(already listed, never previously `using`d) was sufficient.
+(already listed, never previously `using`d) was sufficient under the
+conditions tested at the time. **Correction, 2026-08-08**: not an
+unconditional guarantee — this is conditional on the display being
+awake, not asleep/locked, per the display-sleep GLMakie segfault found
+later and logged under "Full-suite test timing and the 536-vs-537
+assertion-count variance"'s 2026-08-06 follow-up (Isosingular deflation
+section above). Same underlying rendering path, two different display
+states, two different outcomes — not a contradiction between the two
+entries once read together, just an unstated precondition in this one
+until now.
 
 ### `_near_constant_colorrange`'s Phase 6 "02b" discovery
 

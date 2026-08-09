@@ -37,3 +37,22 @@ docs/BERTINIREAL_AUDIT.md
 
 # Local orchestrator/agent handoff briefing (kept locally only)
 docs/ORCHESTRATOR_BRIEFING.md
+
+# dev/scratch/ investigation directories: regenerable satellite-environment
+# manifests, pure-setup logs with no unique findings, and two oversized
+# render PDFs (152MB combined) whose "impractically heavy" finding is
+# already captured as a number in docs/DESIGN_NOTES.md -- everything else
+# under these two directories is tracked (evidentiary record, cited by
+# path from docs/DESIGN_NOTES.md and examples/oscar_integration.jl).
+# Literal paths, not globs -- docs/Manifest.toml and docs/Project.toml are
+# tracked and must not be caught by a broader Manifest.toml/Project.toml
+# pattern.
+dev/scratch/capability_survey/Manifest.toml
+dev/scratch/capability_survey/Project.toml
+dev/scratch/capability_survey/data/_env_setup.log
+dev/scratch/capability_survey/renders/taubin_heart_intermediate_density_MATCHED_ZOOM.pdf
+dev/scratch/capability_survey/renders/taubin_heart_production_density_MATCHED_ZOOM.pdf
+dev/scratch/oscar_investigation/Manifest.toml
+dev/scratch/oscar_investigation/Project.toml
+dev/scratch/oscar_investigation/add_cairomakie.log
+dev/scratch/oscar_investigation/add_geometrybasics.log

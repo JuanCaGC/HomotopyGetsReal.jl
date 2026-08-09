@@ -2,6 +2,8 @@
 
 ## [Unreleased]
 
+## [0.2.1] - 2026-08-08
+
 ### Fixed
 - `plot_surface_decomposition` no longer throws an uncaught `ArgumentError`
   when `decompose_3d_surface` returns a completely empty mesh (0 points, 0

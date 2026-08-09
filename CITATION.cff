@@ -6,10 +6,13 @@ authors:
     given-names: "Juan Camilo"
 license: MIT
 repository-code: "https://github.com/JuanCaGC/HomotopyGetsReal.jl"
-# 0.2.0 is the version registered in Julia's General registry (merged
-# 2026-07-31, JuliaRegistries/General#162942) and also the version
-# currently in this repo's own Project.toml. Includes the isosingular
-# deflation API, generic projection support, and incidence-based mesh
-# welding. Do not bump this without also bumping Project.toml, and only
-# on an explicit decision.
-version: "0.2.0"
+# 0.2.1 bumps from 0.2.0 (registered in Julia's General registry, merged
+# 2026-07-31, JuliaRegistries/General#162942) for the
+# plot_surface_decomposition empty-mesh crash fix -- see CHANGELOG.md's
+# [0.2.1] entry for the full description. 0.2.1's own registration is
+# PENDING as of this commit: JuliaRegistries/General#<PR NUMBER>, merged
+# <DATE> -- to be filled in once that PR actually merges, not before.
+# Also the version currently in this repo's own Project.toml. Do not
+# bump this without also bumping Project.toml, and only on an explicit
+# decision.
+version: "0.2.1"

@@ -1,0 +1,35 @@
+======================================================================
+Repro case 1: astroid, ring order [z_var, x_var, y_var], z_var unused
+(Task 3 original finding: bridge's bare System(I) DROPPED z_var
+entirely -- sys.variables came back as only [x_var, y_var])
+======================================================================
+Bare bridge System(I).variables (for comparison, still buggy): Variable[x_var, y_var]
+oscar_ideal_to_system(I).variables:                             Variable[z_var, x_var, y_var]
+gens(base_ring(I)):                                             QQMPolyRingElem[z_var, x_var, y_var]
+
+FIXED (3 variables, exact gens() order)? true
+
+======================================================================
+Repro case 2: ellipsoid, ring order [c_var, a_var, b_var]
+(Task 3 original finding: bridge's bare System(I2) silently
+REORDERED to alphabetical [a_var, b_var, c_var])
+======================================================================
+Bare bridge System(I2).variables (for comparison, still buggy): Variable[a_var, b_var, c_var]
+oscar_ideal_to_system(I2).variables:                             Variable[c_var, a_var, b_var]
+gens(base_ring(I2)):                                             QQMPolyRingElem[c_var, a_var, b_var]
+
+FIXED (exact gens() order [c_var, a_var, b_var])? true
+
+======================================================================
+HEADLINE
+======================================================================
+Test 1 (astroid, dropping bug):    FIXED = true
+Test 2 (ellipsoid, reordering bug): FIXED = true
+
+Both confirmed bug cases from Task 3 are fixed by oscar_ideal_to_system.
+
+NOTE: end-to-end decompose_3d_surface/decompose_1d_curve smoke test
+NOT run this round (GLMakie precompile blocked by display sleep;
+skipped per explicit decision) -- outstanding for a future check.
+
+VERIFY DONE

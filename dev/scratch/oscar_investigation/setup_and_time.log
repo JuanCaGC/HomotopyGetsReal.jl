@@ -1,0 +1,1485 @@
+  Activating new project at `~/HomotopyGetsReal/dev/scratch/oscar_investigation`
+    Updating registry at `~/.julia/registries/General.toml`
+   Resolving package versions...
+   Installed Static ─────────── v1.4.6
+   Installed SpecialFunctions ─ v2.8.3
+   Installed PrettyTables ───── v3.4.6
+    Updating `~/HomotopyGetsReal/dev/scratch/oscar_investigation/Project.toml`
+  [4051f461] + HomotopyGetsReal v0.2.0 `~/HomotopyGetsReal`
+    Updating `~/HomotopyGetsReal/dev/scratch/oscar_investigation/Manifest.toml`
+  [47edcb42] + ADTypes v1.22.4
+  [621f4979] + AbstractFFTs v1.5.0
+  [398f06c4] + AbstractLattices v0.3.1
+  [1520ce14] + AbstractTrees v0.4.5
+  [7d9f7c33] + Accessors v0.1.45
+  [79e6a3ab] + Adapt v4.7.0
+  [35492f91] + AdaptivePredicates v1.2.0
+  [66dad0bd] + AliasTables v1.1.3
+  [27a7e980] + Animations v0.4.2
+  [fb37089c] + Arblib v1.8.0
+  [4fba245c] + ArrayInterface v7.28.1
+  [67c07d97] + Automa v1.2.0
+  [13072b0f] + AxisAlgorithms v1.1.0
+  [39de3d68] + AxisArrays v0.4.8
+  [18cc8868] + BaseDirs v1.4.0
+  [62783981] + BitTwiddlingConvenienceFunctions v0.1.6
+  [fa961155] + CEnum v0.5.0
+  [2a0fbf3d] + CPUSummary v0.2.7
+  [96374032] + CRlibm v1.0.2
+  [d360d2e6] + ChainRulesCore v1.26.1
+  [fb6a15b2] + CloseOpenIntervals v0.1.13
+  [6b39b394] + CodecZstd v0.8.7
+  [a2cac450] + ColorBrewer v0.4.2
+  [35d6a980] + ColorSchemes v3.31.0
+  [3da002f7] + ColorTypes v0.12.1
+  [c3611d14] + ColorVectorSpace v0.11.0
+  [5ae59095] + Colors v0.13.1
+  [861a8166] + Combinatorics v1.1.0
+  [38540f10] + CommonSolve v0.2.13
+  [f70d9fcc] + CommonWorldInvalidations v1.1.2
+  [34da2185] + Compat v4.18.1
+  [a33af91c] + CompositionsBase v0.1.2
+  [95dc2771] + ComputePipeline v0.1.8
+  [187b0558] + ConstructionBase v1.6.0
+  [d38c429a] + Contour v0.6.3
+  [b7a15901] + CoreMath v0.1.0
+  [adafc99b] + CpuId v0.3.1
+  [a8cc5b0e] + Crayons v4.2.0
+  [9a962f9c] + DataAPI v1.16.0
+  [864edb3b] + DataStructures v0.19.6
+  [e2d170a0] + DataValueInterfaces v1.0.0
+  [927a84f5] + DelaunayTriangulation v1.6.6
+  [8bb1440f] + DelimitedFiles v1.9.1
+  [a0c0ee7d] + DifferentiationInterface v0.7.20
+  [31c24e10] + Distributions v0.25.130
+  [ffbed154] + DocStringExtensions v0.9.5
+  [7c1d4256] + DynamicPolynomials v0.6.6
+  [fdbdab4c] + ElasticArrays v1.2.12
+  [4e289a0a] + EnumX v1.0.7
+  [429591f6] + ExactPredicates v2.2.9
+  [b86e33f2] + FFTA v0.3.1
+  [5789e2e9] + FileIO v1.20.0
+  [8fc22ac5] + FilePaths v0.9.0
+  [48062228] + FilePathsBase v0.9.24
+  [1a297f60] + FillArrays v1.17.0
+  [6a86dc24] + FiniteDiff v2.32.1
+⌅ [53c48c17] + FixedPointNumbers v0.8.6
+  [1fa38f19] + Format v1.3.7
+  [b38be410] + FreeType v4.1.1
+  [663a7486] + FreeTypeAbstraction v0.10.8
+  [f7f18e0c] + GLFW v3.4.6
+  [e9467ef8] + GLMakie v0.13.13
+  [a0844989] + Gamma v1.1.0
+  [14197337] + GenericLinearAlgebra v0.4.0
+  [5c1252a2] + GeometryBasics v0.5.11
+  [3955a311] + GridLayoutBase v0.11.2
+  [076d061b] + HashArrayMappedTries v0.2.0
+  [f213a82b] + HomotopyContinuation v2.22.2
+  [4051f461] + HomotopyGetsReal v0.2.0 `~/HomotopyGetsReal`
+  [3e5b6fbb] + HostCPUFeatures v0.1.18
+  [34004b35] + HypergeometricFunctions v0.3.30
+  [615f187c] + IfElse v0.1.1
+  [2803e5a7] + ImageAxes v0.6.12
+  [c817782e] + ImageBase v0.1.7
+  [a09fc81d] + ImageCore v0.10.5
+  [82e4d734] + ImageIO v0.6.9
+  [bc367c6b] + ImageMetadata v0.9.10
+  [9b13fd28] + IndirectArrays v1.0.0
+  [d25df0c9] + Inflate v0.1.5
+  [18e54dd8] + IntegerMathUtils v0.1.4
+  [a98d9a8b] + Interpolations v0.16.3
+  [d1acc4aa] + IntervalArithmetic v1.0.10
+  [8197267c] + IntervalSets v0.7.14
+  [524e6230] + IntervalTrees v1.1.0
+  [3587e190] + InverseFunctions v0.1.17
+  [92d709cd] + IrrationalConstants v0.2.6
+  [f1662d9f] + Isoband v0.1.1
+  [c8e1da08] + IterTools v1.10.0
+  [82899510] + IteratorInterfaceExtensions v1.0.0
+  [692b3bcd] + JLLWrappers v1.8.0
+  [682c06a0] + JSON v1.7.0
+  [b835a17e] + JpegTurbo v0.1.6
+  [5ab0869b] + KernelDensity v0.6.12
+  [8ac3fa9e] + LRUCache v1.6.2
+  [b964fa9f] + LaTeXStrings v1.4.0
+  [10f19ff3] + LayoutPointers v0.1.17
+  [8cdb02fc] + LazyModules v0.3.1
+  [9c8b4983] + LightXML v0.9.3
+  [d3d80556] + LineSearches v7.7.1
+  [9b3f67b0] + LinearAlgebraX v0.2.11
+  [2ab3a3ac] + LogExpFunctions v1.0.1
+  [bdcacae8] + LoopVectorization v0.12.174
+  [1914dd2f] + MacroTools v0.5.16
+  [ee78f7c6] + Makie v0.24.13
+  [d125e4d3] + ManualMemory v0.1.8
+  [dbb5928d] + MappedArrays v0.4.3
+  [0a4f8689] + MathTeXEngine v0.6.9
+  [7269a6da] + MeshIO v0.5.3
+  [e1d29d7a] + Missings v1.2.0
+  [291d046c] + MixedSubdivisions v1.2.0
+  [66fc600b] + ModernGL v1.1.8
+  [7475f97c] + Mods v2.2.6
+  [e94cdb99] + MosaicViews v0.3.4
+  [46d2c3a1] + MuladdMacro v0.2.7
+  [3b2b4ff1] + Multisets v0.4.6
+  [102ac46a] + MultivariatePolynomials v0.5.19
+  [d8a4904e] + MutableArithmetics v1.8.0
+  [d41bc354] + NLSolversBase v8.0.0
+  [77ba4419] + NaNMath v1.1.4
+  [f09324ee] + Netpbm v1.1.1
+  [510215fc] + Observables v0.5.5
+  [6fe1bfb0] + OffsetArrays v1.17.0
+  [52e1d378] + OpenEXR v0.3.3
+  [429524aa] + Optim v2.2.1
+⌅ [bac558e1] + OrderedCollections v1.8.2
+  [90014a1f] + PDMats v0.11.41
+  [f57f5aa1] + PNGFiles v0.4.5
+  [19eb6ba3] + Packing v0.5.1
+  [5432bcbf] + PaddedViews v0.5.12
+⌅ [d96e819e] + Parameters v0.12.3
+  [69de0a69] + Parsers v2.8.7
+  [2ae35dd2] + Permutations v0.4.23
+  [eebad327] + PkgVersion v0.3.3
+  [995b91a9] + PlotUtils v1.4.4
+  [1d0040c9] + PolyesterWeave v0.2.2
+  [647866c9] + PolygonOps v0.1.2
+  [f27b6e38] + Polynomials v4.1.1
+  [85a6dd25] + PositiveFactorizations v0.2.4
+  [aea7be01] + PrecompileTools v1.3.4
+  [21216c6a] + Preferences v1.5.2
+  [08abe8d2] + PrettyTables v3.4.6
+  [27ebfcd6] + Primes v0.5.7
+  [92933f4c] + ProgressMeter v1.11.0
+  [01f381cc] + ProjectiveVectors v1.1.4
+  [43287f4e] + PtrArrays v1.4.0
+  [4b34888f] + QOI v1.0.2
+  [1fd47b50] + QuadGK v2.11.3
+  [b3c3ace0] + RangeArrays v0.3.2
+  [c84ed2f1] + Ratios v0.4.5
+  [189a3867] + Reexport v1.2.2
+  [05181044] + RelocatableFolders v1.0.1
+  [ae029012] + Requires v1.3.1
+  [286e9d63] + RingLists v0.2.9
+  [79098fc4] + Rmath v0.9.0
+  [f2b01f46] + Roots v3.0.6
+  [5eaf0fd0] + RoundingEmulator v0.2.1
+  [fdea26ae] + SIMD v3.7.2
+  [94e857df] + SIMDTypes v0.1.0
+  [476501e8] + SLEEFPirates v0.6.46
+  [431bcebd] + SciMLPublic v1.2.4
+  [7e506255] + ScopedValues v1.6.2
+  [6c6a2e73] + Scratch v1.3.0
+  [8e049039] + SemialgebraicSets v0.3.5
+  [efcf1570] + Setfield v1.1.2
+  [65257c39] + ShaderAbstractions v0.5.0
+  [73760f76] + SignedDistanceFields v0.4.1
+  [55797a34] + SimpleGraphs v0.8.10
+  [ec83eff0] + SimplePartitions v0.3.3
+  [cc47b68c] + SimplePolynomials v0.2.18
+  [a6525b86] + SimpleRandom v0.3.2
+  [699a6c99] + SimpleTraits v0.9.6
+  [45858cf5] + Sixel v0.1.5
+  [a2af1166] + SortingAlgorithms v1.2.3
+  [276daf66] + SpecialFunctions v2.8.3
+  [860ef19b] + StableRNGs v1.0.4
+  [cae243ae] + StackViews v0.1.2
+  [0c0c59c1] + StarAlgebras v0.3.0
+  [aedffcd0] + Static v1.4.6
+  [0d7ed370] + StaticArrayInterface v1.10.0
+  [90137ffa] + StaticArrays v1.9.18
+  [1e83bf80] + StaticArraysCore v1.4.4
+  [10745b16] + Statistics v1.11.1
+  [82ae8749] + StatsAPI v1.8.0
+  [2913bbd2] + StatsBase v0.34.12
+  [4c63d2b9] + StatsFuns v2.2.1
+  [892a3eda] + StringManipulation v0.4.7
+  [09ab397b] + StructArrays v0.7.3
+  [ec057cc2] + StructUtils v2.8.3
+  [3783bdb8] + TableTraits v1.0.1
+  [bd369af6] + Tables v1.13.0
+  [62fd8b95] + TensorCore v0.1.1
+  [8290d209] + ThreadingUtilities v0.5.6
+  [731e570b] + TiffImages v0.11.9
+  [3bb67fe8] + TranscodingStreams v0.11.3
+  [a2a6695c] + TreeViews v0.3.0
+  [981d1d27] + TriplotBase v0.1.0
+  [3a884ed6] + UnPack v1.0.2
+  [1cfade01] + UnicodeFun v0.4.1
+  [1986cc42] + Unitful v1.28.0
+  [3d5dd08c] + VectorizationBase v0.21.74
+  [e3aaa7dc] + WebP v0.1.3
+  [efce3f68] + WoodburyMatrices v1.1.0
+  [6e34b625] + Bzip2_jll v1.0.9+0
+  [4e9b3aee] + CRlibm_jll v1.0.1+0
+  [83423d85] + Cairo_jll v1.18.7+0
+  [a38c48d9] + CoreMath_jll v0.1.0+0
+  [ee1fde0b] + Dbus_jll v1.16.2+0
+  [5ae413db] + EarCut_jll v2.2.4+0
+  [2702e6a9] + EpollShim_jll v0.0.20230411+1
+  [2e619515] + Expat_jll v2.8.2+0
+⌅ [b22a6f82] + FFMPEG_jll v8.1.2+0
+  [e134572f] + FLINT_jll v301.600.0+0
+  [a3f928ae] + Fontconfig_jll v2.17.1+0
+  [d7e528f0] + FreeType2_jll v2.14.3+1
+  [559328eb] + FriBidi_jll v1.0.17+0
+  [0656b61e] + GLFW_jll v3.4.1+1
+⌅ [b0724c58] + GettextRuntime_jll v0.22.4+0
+⌅ [59f7168a] + Giflib_jll v5.2.3+0
+  [7746bdde] + Glib_jll v2.88.3+0
+  [3b182d85] + Graphite2_jll v1.3.16+0
+⌅ [2e76f6c2] + HarfBuzz_jll v8.5.1+0
+  [905a6f67] + Imath_jll v3.2.2+0
+  [aacddb02] + JpegTurbo_jll v3.2.0+0
+  [c1c5ebd0] + LAME_jll v3.100.3+0
+  [88015f11] + LERC_jll v4.1.0+0
+  [1d63c593] + LLVMOpenMP_jll v22.1.7+0
+⌅ [e9f186c6] + Libffi_jll v3.4.7+0
+  [7e76a0d4] + Libglvnd_jll v1.7.1+1
+  [94ce4f54] + Libiconv_jll v1.18.0+0
+  [4b2f31a3] + Libmount_jll v2.42.0+0
+  [89763e89] + Libtiff_jll v4.7.3+0
+  [38a345b3] + Libuuid_jll v2.42.0+0
+  [2ce0c516] + MPC_jll v1.4.1+0
+  [e7412a2a] + Ogg_jll v1.3.6+0
+  [656ef2d0] + OpenBLAS32_jll v0.3.34+0
+  [6cdc7f73] + OpenBLASConsistentFPCSR_jll v0.3.34+0
+  [18a262bb] + OpenEXR_jll v3.4.13+0
+  [efe28fd5] + OpenSpecFun_jll v0.5.6+0
+  [91d4177d] + Opus_jll v1.6.1+0
+  [36c8627f] + Pango_jll v1.58.0+0
+  [30392449] + Pixman_jll v0.46.4+0
+  [f50d1b31] + Rmath_jll v0.5.2+0
+  [3428059b] + SymEngine_jll v0.12.0+0
+  [a2964d1f] + Wayland_jll v1.24.0+0
+  [02c8fc9c] + XML2_jll v2.15.3+0
+  [ffd25f8a] + XZ_jll v5.8.3+0
+  [4f6342f7] + Xorg_libX11_jll v1.8.13+0
+  [0c0b7dd1] + Xorg_libXau_jll v1.0.13+0
+  [935fb764] + Xorg_libXcursor_jll v1.2.4+0
+  [a3789734] + Xorg_libXdmcp_jll v1.1.6+0
+  [1082639a] + Xorg_libXext_jll v1.3.8+0
+  [d091e8ba] + Xorg_libXfixes_jll v6.0.2+0
+  [a51aa0fd] + Xorg_libXi_jll v1.8.4+0
+  [d1454406] + Xorg_libXinerama_jll v1.1.7+0
+  [ec84b674] + Xorg_libXrandr_jll v1.5.6+0
+  [ea2f1a96] + Xorg_libXrender_jll v0.9.12+0
+  [a65dc6b1] + Xorg_libpciaccess_jll v0.19.0+0
+  [c7cfdc94] + Xorg_libxcb_jll v1.17.1+0
+  [cc61e674] + Xorg_libxkbfile_jll v1.2.0+0
+  [35661453] + Xorg_xkbcomp_jll v1.4.7+0
+  [33bec58e] + Xorg_xkeyboard_config_jll v2.47.0+2
+  [c5fb5394] + Xorg_xtrans_jll v1.6.0+0
+  [3161d3a3] + Zstd_jll v1.5.7+1
+  [9a68df92] + isoband_jll v0.2.3+0
+  [a4ae2306] + libaom_jll v3.13.3+0
+  [0ac62f75] + libass_jll v0.17.4+0
+  [1183f4f0] + libdecor_jll v0.2.2+0
+  [8e53e030] + libdrm_jll v2.4.134+0
+  [f638f0a6] + libfdk_aac_jll v2.0.4+0
+  [b53b4c65] + libpng_jll v1.6.58+0
+  [075b6546] + libsixel_jll v1.10.5+0
+  [9a156e7d] + libva_jll v2.23.0+0
+  [f27f6e37] + libvorbis_jll v1.3.8+0
+  [c5f90fcd] + libwebp_jll v1.6.0+0
+⌅ [1270edf5] + x264_jll v10164.0.1+0
+  [dfaa095f] + x265_jll v4.1.0+0
+  [d8fb68d0] + xkbcommon_jll v1.13.0+0
+  [0dad84c5] + ArgTools v1.1.2
+  [56f22d72] + Artifacts v1.11.0
+  [2a0f44e3] + Base64 v1.11.0
+  [8bf52ea8] + CRC32c v1.11.0
+  [ade2ca70] + Dates v1.11.0
+  [8ba89e20] + Distributed v1.11.0
+  [f43a241f] + Downloads v1.7.0
+  [7b1f6079] + FileWatching v1.11.0
+  [9fa8497b] + Future v1.11.0
+  [b77e0a4c] + InteractiveUtils v1.11.0
+  [ac6e5ff7] + JuliaSyntaxHighlighting v1.12.0
+  [b27032c2] + LibCURL v0.6.4
+  [76f85450] + LibGit2 v1.11.0
+  [8f399da3] + Libdl v1.11.0
+  [37e2e46d] + LinearAlgebra v1.12.0
+  [56ddb016] + Logging v1.11.0
+  [d6f4376e] + Markdown v1.11.0
+  [a63ad114] + Mmap v1.11.0
+  [ca575930] + NetworkOptions v1.3.0
+  [44cfe95a] + Pkg v1.12.1
+  [de0858da] + Printf v1.11.0
+  [3fa0cd96] + REPL v1.11.0
+  [9a3f8284] + Random v1.11.0
+  [ea8e919c] + SHA v0.7.0
+  [9e88b42a] + Serialization v1.11.0
+  [1a1011a3] + SharedArrays v1.11.0
+  [6462fe0b] + Sockets v1.11.0
+  [2f01184e] + SparseArrays v1.12.0
+  [f489334b] + StyledStrings v1.11.0
+  [4607b0f0] + SuiteSparse
+  [fa267f1f] + TOML v1.0.3
+  [a4e569a6] + Tar v1.10.0
+  [8dfed614] + Test v1.11.0
+  [cf7118a7] + UUIDs v1.11.0
+  [4ec0a83e] + Unicode v1.11.0
+  [e66e0078] + CompilerSupportLibraries_jll v1.3.0+1
+  [781609d7] + GMP_jll v6.3.0+2
+  [deac9b47] + LibCURL_jll v8.15.0+0
+  [e37daf67] + LibGit2_jll v1.9.0+0
+  [29816b5a] + LibSSH2_jll v1.11.3+1
+  [3a97d323] + MPFR_jll v4.2.2+0
+  [14a3606d] + MozillaCACerts_jll v2025.11.4
+  [4536629a] + OpenBLAS_jll v0.3.29+0
+  [05823500] + OpenLibm_jll v0.8.7+0
+  [458c3c95] + OpenSSL_jll v3.5.4+0
+  [efcefdf7] + PCRE2_jll v10.44.0+1
+  [bea87d4a] + SuiteSparse_jll v7.8.3+2
+  [83775a58] + Zlib_jll v1.3.1+2
+  [8e850b90] + libblastrampoline_jll v5.15.0+0
+  [8e850ede] + nghttp2_jll v1.64.0+1
+  [3f19e933] + p7zip_jll v17.7.0+0
+        Info Packages marked with ⌅ have new versions available but compatibility constraints restrict them from upgrading. To see why use `status --outdated -m`
+   Resolving package versions...
+   Installed GAP_pkg_float_jll ───────────── v101.1000.0+0
+   Installed Perl_jll ────────────────────── v5.34.1+0
+   Installed GAP_pkg_guava_jll ───────────── v301.210000.0+0
+   Installed GAP_lib_jll ─────────────────── v400.1600.0+0
+   Installed MongoC_jll ──────────────────── v1.28.1+0
+   Installed GAP_pkg_kbmag_jll ───────────── v101.51100.0+0
+   Installed AlgebraicSolving ────────────── v0.10.6
+   Installed Singular ────────────────────── v0.28.15
+   Installed GAP_pkg_json_jll ────────────── v201.40000.0+0
+   Installed GAP_pkg_gauss_jll ───────────── v202500.120100.0+0
+   Installed GAP_pkg_fplsa_jll ───────────── v101.20800.0+0
+   Installed libsodium_jll ───────────────── v1.0.21+0
+   Installed TOPCOM_jll ──────────────────── v0.17.8+0
+   Installed GAP_pkg_ace_jll ─────────────── v501.70000.0+0
+   Installed snappy_jll ──────────────────── v1.2.3+0
+   Installed GAP_jll ─────────────────────── v400.1600.0+0
+   Installed boost_jll ───────────────────── v1.87.0+0
+   Installed GAP_pkg_zeromqinterface_jll ─── v1.180000.0+0
+   Installed lib4ti2_jll ─────────────────── v1.6.10+0
+   Installed nauty_jll ───────────────────── v2.8.10+1
+   Installed libsingular_julia_jll ───────── v0.47.15+0
+   Installed GAP_pkg_profiling_jll ───────── v201.60200.1+0
+   Installed Ncurses_jll ─────────────────── v6.6.0+2
+   Installed GLPK_jll ────────────────────── v5.0.2+0
+   Installed BinaryWrappers ──────────────── v0.2.0
+   Installed MUMPS_seq_jll ───────────────── v500.900.100+0
+   Installed Oscar ───────────────────────── v1.8.0
+   Installed GAP_pkg_normalizinterface_jll ─ v101.50100.0+0
+   Installed Hwloc_jll ───────────────────── v2.12.1+0
+   Installed polymake_jll ────────────────── v400.1500.5+0
+   Installed GAP_pkg_semigroups_jll ──────── v501.60300.0+0
+   Installed Singular_jll ────────────────── v404.101.510+0
+   Installed GAP_pkg_orb_jll ─────────────── v501.10000.0+0
+   Installed GAP_pkg_crypting_jll ────────── v1.100600.1+0
+   Installed Mongoc ──────────────────────── v0.10.1
+   Installed libpolymake_julia_jll ───────── v0.14.9+0
+   Installed GAP_pkg_anupq_jll ───────────── v301.30300.0+0
+   Installed Ipopt_jll ───────────────────── v300.1400.1902+0
+   Installed lrslib_jll ──────────────────── v0.3.3+0
+   Installed GAP_pkg_ferret_jll ──────────── v101.1600.0+0
+   Installed ZeroMQ_jll ──────────────────── v4.3.6+0
+   Installed polymake_oscarnumber_jll ────── v0.3.19+0
+   Installed GAP_pkg_browse_jll ──────────── v101.82200.0+0
+   Installed GAP_pkg_nq_jll ──────────────── v201.51100.0+0
+   Installed GAP_pkg_edim_jll ────────────── v101.30800.1+0
+   Installed Ninja_jll ───────────────────── v1.13.1+0
+   Installed METIS_jll ───────────────────── v5.1.3+0
+   Installed GAP_pkg_io_jll ──────────────── v401.90300.1+0
+   Installed StructTypes ─────────────────── v1.11.0
+   Installed JSON3 ───────────────────────── v1.14.3
+   Installed GAP_pkg_simpcomp_jll ────────── v201.11400.0+0
+   Installed SPRAL_jll ───────────────────── v2025.9.18+0
+   Installed GAP ─────────────────────────── v0.17.3
+   Installed GAP_pkg_datastructures_jll ──── v1.40100.0+0
+   Installed GAP_pkg_cddinterface_jll ────── v202600.30200.0+0
+   Installed normaliz_jll ────────────────── v300.1100.101+0
+   Installed GAP_pkg_caratinterface_jll ──── v201.30900.0+0
+   Installed libcxxwrap_julia_jll ────────── v0.14.10+1
+   Installed libsemigroups_jll ───────────── v3.5.5+1
+   Installed f4ncgb_jll ──────────────────── v100.0.101+0
+   Installed cohomCalg_jll ───────────────── v0.32.0+0
+   Installed GAP_pkg_digraphs_jll ────────── v101.140000.0+0
+   Installed Readline_jll ────────────────── v8.3.3+0
+   Installed ASL_jll ─────────────────────── v0.1.3+0
+   Installed PPL_jll ─────────────────────── v1.2.1+0
+   Installed MPFI_jll ────────────────────── v1.5.6+0
+   Installed msolve_jll ──────────────────── v0.900.504+0
+   Installed DecFP ───────────────────────── v1.4.2
+   Installed CxxWrap ─────────────────────── v0.17.5
+   Installed cddlib_jll ──────────────────── v0.94.15+0
+   Installed GAP_pkg_curlinterface_jll ───── v201.40300.0+0
+   Installed bliss_jll ───────────────────── v0.77.0+1
+   Installed Polymake ────────────────────── v0.13.12
+   Installed DecFP_jll ───────────────────── v2.0.300+0
+   Installed Hecke ───────────────────────── v0.39.21
+   Installed SCIP_jll ────────────────────── v900.200.400+0
+   Installed GAP_pkg_juliainterface_jll ──── v0.170000.0+0
+   Installed GAP_pkg_cohomolo_jll ────────── v101.61200.0+0
+   Installed GAP_pkg_deepthought_jll ─────── v101.900.1+0
+   Installed GAP_pkg_cvec_jll ────────────── v201.80500.0+0
+  Installing 246 artifacts
+   Installed artifact GAP_pkg_crypting                   6.5 KiB
+   Installed artifact GAP_pkg_json                       20.0 KiB
+   Installed artifact GAP_pkg_json                       105.1 KiB
+   Installed artifact GAP_pkg_liering                    568.6 KiB
+   Installed artifact GAP_pkg_orb                        892.5 KiB
+   Installed artifact msolve                             1.1 MiB
+   Installed artifact GAP_pkg_io                         630.5 KiB
+   Installed artifact GAP_pkg_xgap                       851.0 KiB
+   Installed artifact libsingular_julia                  369.8 KiB
+   Installed artifact GAP_pkg_factint                    4.4 MiB
+   Installed artifact GAP_pkg_sl2reps                    367.8 KiB
+   Installed artifact lrslib                             190.6 KiB
+   Installed artifact Readline                           1.1 MiB
+   Installed artifact MongoC                             650.8 KiB
+   Installed artifact GAP_pkg_origami                    396.0 KiB
+   Installed artifact GAP_pkg_example                    206.4 KiB
+   Installed artifact GAP_pkg_caratinterface             10.5 MiB
+   Installed artifact GAP_pkg_automgrp                   451.3 KiB
+   Installed artifact Ipopt                              991.6 KiB
+   Installed artifact GAP_pkg_nock                       226.8 KiB
+   Installed artifact GAP_pkg_inducereduce               176.8 KiB
+   Installed artifact MPFI                               48.2 KiB
+   Installed artifact GAP_pkg_typeset                    207.0 KiB
+   Installed artifact GAP_pkg_browse                     26.9 KiB
+   Installed artifact GAP_pkg_idrel                      556.9 KiB
+   Installed artifact GAP_pkg_fplsa                      66.7 KiB
+   Installed artifact GAP_pkg_simpcomp                   9.8 MiB
+   Installed artifact GAP_pkg_utils                      459.0 KiB
+   Installed artifact GAP_pkg_laguna                     524.3 KiB
+   Installed artifact GAP_pkg_ace                        1.2 MiB
+   Installed artifact GAP_pkg_gbnp                       1.6 MiB
+   Installed artifact cddlib                             841.3 KiB
+   Installed artifact GAP_pkg_smallgrp                   19.2 MiB
+   Installed artifact PPL                                11.3 MiB
+   Installed artifact GAP_pkg_ibnp                       430.0 KiB
+   Installed artifact GAP_pkg_agt                        21.2 MiB
+   Installed artifact polymake                           35.1 MiB
+   Installed artifact GAP_pkg_crime                      309.9 KiB
+   Installed artifact GAP_pkg_uuid                       114.3 KiB
+   Installed artifact GAP_pkg_design                     391.8 KiB
+   Installed artifact GAP_pkg_localnr                    7.4 MiB
+   Installed artifact GAP_pkg_corefreesub                205.5 KiB
+   Installed artifact GAP_pkg_deepthought                323.2 KiB
+   Installed artifact GAP_pkg_hap                        46.6 MiB
+   Installed artifact lib4ti2                            1.3 MiB
+   Installed artifact GAP_pkg_nq                         52.7 KiB
+   Installed artifact GAP_pkg_io                         19.8 KiB
+   Installed artifact GAP_pkg_quagroup                   623.2 KiB
+   Installed artifact GAP_pkg_symbcompcc                 261.9 KiB
+   Installed artifact GAP_pkg_sonata                     1.6 MiB
+   Installed artifact cohomCalg                          215.2 KiB
+   Installed artifact GAP_pkg_scscp                      955.3 KiB
+   Installed artifact GAP_pkg_permut                     400.6 KiB
+   Installed artifact GAP_pkg_fining                     3.8 MiB
+   Installed artifact GAP_pkg_localizeringforhomalg      285.3 KiB
+   Installed artifact GAP_pkg_recog                      3.7 MiB
+   Installed artifact GAP_pkg_zeromqinterface            246.7 KiB
+   Installed artifact GAP_pkg_jupyterviz                 3.3 MiB
+   Installed artifact GAP_pkg_cvec                       59.8 KiB
+   Installed artifact GAP_pkg_jupyterkernel              340.2 KiB
+   Installed artifact GAP_pkg_classicalmaximals          408.1 KiB
+   Installed artifact GAP_pkg_majoranaalgebras           345.0 KiB
+   Installed artifact GLPK                               2.1 MiB
+   Installed artifact GAP_pkg_kan                        312.7 KiB
+   Installed artifact GAP_pkg_modisom                    660.2 KiB
+   Installed artifact SmallGroupDB                       941.2 KiB
+   Installed artifact libsemigroups                      6.2 MiB
+   Installed artifact GAP_pkg_orb                        24.9 KiB
+   Installed artifact GAP_pkg_ferret                     333.1 KiB
+   Installed artifact GAP_pkg_unitlib                    28.6 MiB
+   Installed artifact GAP_pkg_images                     187.6 KiB
+   Installed artifact GAP_pkg_4ti2interface              132.2 KiB
+   Installed artifact GAP_lib                            16.0 MiB
+   Installed artifact GAP_pkg_rcwa                       12.8 MiB
+   Installed artifact GAP_pkg_curlinterface              160.5 KiB
+   Installed artifact GAP_pkg_homalg                     664.8 KiB
+   Installed artifact GAP_pkg_semigroups                 27.0 MiB
+   Installed artifact GAP_pkg_curlinterface              4.5 KiB
+   Installed artifact GAP_pkg_openmath                   313.8 KiB
+   Installed artifact GAP_pkg_cap                        1.5 MiB
+   Installed artifact SPRAL                              624.0 KiB
+   Installed artifact GAP_pkg_itc                        420.8 KiB
+   Installed artifact GAP_pkg_polymaking                 209.9 KiB
+   Installed artifact GAP_pkg_packagemaker               183.8 KiB
+   Installed artifact GAP_pkg_automata                   829.5 KiB
+   Installed artifact GAP_pkg_repndecomp                 287.9 KiB
+   Installed artifact GAP_pkg_sglppow                    14.5 MiB
+   Installed artifact GAP_pkg_semigroups                 8.5 MiB
+   Installed artifact GAP_pkg_hecke                      695.6 KiB
+   Installed artifact libsodium                          651.7 KiB
+   Installed artifact ZeroMQ                             259.0 KiB
+   Installed artifact GAP_pkg_difsets                    3.5 MiB
+   Installed artifact normaliz                           36.4 MiB
+   Installed artifact GAP_pkg_nconvex                    293.4 KiB
+   Installed artifact GAP_pkg_circle                     295.1 KiB
+   Installed artifact DecFP                              2.3 MiB
+   Installed artifact libpolymake_julia                  7.8 MiB
+   Installed artifact GAP_pkg_nilmat                     323.7 KiB
+   Installed artifact GAP_pkg_hapcryst                   355.6 KiB
+   Installed artifact GAP_pkg_anupq                      137.7 KiB
+   Installed artifact GAP_pkg_autpgrp                    217.3 KiB
+   Installed artifact Ninja                              140.6 KiB
+   Installed artifact GAP_pkg_numericalsgps              7.0 MiB
+   Installed artifact GAP_pkg_nofoma                     224.4 KiB
+   Installed artifact snappy                             28.2 KiB
+   Installed artifact GAP_pkg_rds                        448.7 KiB
+   Installed artifact GAP_pkg_profiling                  378.6 KiB
+   Installed artifact GAP_pkg_gradedringforhomalg        238.5 KiB
+   Installed artifact GAP_pkg_gauss                      256.4 KiB
+   Installed artifact GAP_pkg_alnuth                     264.6 KiB
+   Installed artifact libcxxwrap_julia                   7.0 MiB
+   Installed artifact GAP_pkg_aclib                      257.2 KiB
+   Installed artifact GAP_pkg_juliainterface             92.2 KiB
+   Installed artifact GAP_pkg_polenta                    323.8 KiB
+   Installed artifact GAP_pkg_matricesforhomalg          753.1 KiB
+   Installed artifact GAP_pkg_guava                      156.2 KiB
+   Installed artifact GAP_pkg_mapclass                   293.7 KiB
+   Installed artifact GAP_pkg_toolsforhomalg             318.1 KiB
+   Installed artifact GAP_pkg_liealgdb                   486.2 KiB
+   Installed artifact GAP_pkg_corelg                     1.3 MiB
+   Installed artifact GAP_pkg_normalizinterface          44.8 KiB
+   Installed artifact GAP_pkg_deepthought                11.0 KiB
+   Installed artifact GAP_pkg_smallclassnr               206.0 KiB
+   Installed artifact GAP_pkg_simpcomp                   54.9 KiB
+   Installed artifact GAP_pkg_generalizedmorphismsforcap 343.3 KiB
+   Installed artifact GAP_pkg_unipot                     211.9 KiB
+   Installed artifact GAP_pkg_walrus                     320.3 KiB
+   Installed artifact Perl                               12.6 MiB
+   Installed artifact GAP_pkg_smallantimagmas            1.1 MiB
+   Installed artifact GAP_pkg_spinsym                    378.0 KiB
+   Installed artifact GAP_pkg_cohomolo                   422.4 KiB
+   Installed artifact GAP_pkg_wpe                        393.8 KiB
+   Installed artifact nauty                              16.8 MiB
+   Installed artifact GAP_pkg_guava                      2.5 MiB
+   Installed artifact TOPCOM                             753.7 KiB
+   Installed artifact GAP_pkg_xmod                       1.1 MiB
+   Installed artifact GAP_pkg_edim                       12.5 KiB
+   Installed artifact GAP_pkg_sla                        1.0 MiB
+   Installed artifact GAP_pkg_sgpviz                     722.2 KiB
+   Installed artifact GAP_pkg_primgrp                    13.9 MiB
+   Installed artifact GAP_pkg_sophus                     286.6 KiB
+   Installed artifact GAP_pkg_atlasrep                   2.2 MiB
+   Installed artifact METIS                              1.0 MiB
+   Installed artifact boost                              22.0 MiB
+   Installed artifact GAP_pkg_fr                         1.6 MiB
+   Installed artifact GAP_pkg_toric                      345.0 KiB
+   Installed artifact GAP_pkg_cddinterface               325.9 KiB
+   Installed artifact GAP_pkg_crystcat                   272.9 KiB
+   Installed artifact GAP_pkg_crisp                      296.8 KiB
+   Installed artifact SCIP                               17.7 MiB
+   Installed artifact GAP_pkg_repsn                      255.6 KiB
+   Installed artifact GAP_pkg_modulargroup               306.7 KiB
+   Installed artifact GAP_pkg_edim                       338.3 KiB
+   Installed artifact GAP_pkg_autodoc                    519.9 KiB
+   Installed artifact GAP_pkg_cubefree                   215.2 KiB
+   Installed artifact ASL                                253.6 KiB
+   Installed artifact GAP_pkg_tomlib                     50.8 MiB
+   Installed artifact GAP_pkg_float                      593.5 KiB
+   Installed artifact GAP_pkg_cryst                      246.1 KiB
+   Installed artifact GAP_pkg_standardff                 442.9 KiB
+   Installed artifact GAP_pkg_anupq                      1.2 MiB
+   Installed artifact GAP_pkg_guarana                    686.7 KiB
+   Installed artifact GAP_pkg_yangbaxter                 49.8 MiB
+   Installed artifact ZLatDB                             139.4 KiB
+   Installed artifact GAP_pkg_packagemanager             220.9 KiB
+   Installed artifact HermLatDB                          23.5 KiB
+   Installed artifact GAP_pkg_intpic                     1.5 MiB
+   Installed artifact GAP_pkg_profiling                  36.9 KiB
+   Installed artifact GAP_pkg_examplesforhomalg          214.6 KiB
+   Installed artifact GAP_pkg_format                     218.4 KiB
+   Installed artifact GAP_pkg_polycyclic                 673.3 KiB
+   Installed artifact GAP                                991.0 KiB
+   Installed artifact GAP_pkg_grape                      1.8 MiB
+   Installed artifact Hwloc                              2.6 MiB
+   Installed artifact GAP_pkg_modulepresentationsforcap  202.4 KiB
+   Installed artifact GAP_pkg_transgrp                   56.3 MiB
+   Installed artifact GAP_pkg_datastructures             326.9 KiB
+   Installed artifact GAP_pkg_monoidalcategories         761.0 KiB
+   Installed artifact GAP_pkg_singular                   343.1 KiB
+   Installed artifact Singular                           8.3 MiB
+   Installed artifact GAP_pkg_gradedmodules              309.5 KiB
+   Installed artifact GAP_pkg_digraphs                   187.0 KiB
+   Installed artifact GAP_pkg_crypting                   150.8 KiB
+   Installed artifact GAP_pkg_cvec                       521.7 KiB
+   Installed artifact GAP_pkg_forms                      511.3 KiB
+   Installed artifact GAP_pkg_nq                         572.7 KiB
+   Installed artifact GAP_pkg_matgrp                     112.2 KiB
+   Installed artifact GAP_pkg_fwtree                     577.7 KiB
+   Installed artifact Ncurses                            999.4 KiB
+   Installed artifact bliss                              125.2 KiB
+   Installed artifact GAP_pkg_datastructures             20.7 KiB
+   Installed artifact GAP_pkg_qdistrnd                   378.0 KiB
+   Installed artifact GAP_pkg_ugaly                      445.7 KiB
+   Installed artifact GAP_pkg_groupoids                  831.1 KiB
+   Installed artifact GAP_pkg_lpres                      395.8 KiB
+   Installed artifact GAP_pkg_ringsforhomalg             1.1 MiB
+   Installed artifact GAP_pkg_caratinterface             6.8 MiB
+   Installed artifact GAP_pkg_modules                    550.7 KiB
+   Installed artifact GAP_pkg_ace                        58.0 KiB
+   Installed artifact GAP_pkg_qpa                        1.4 MiB
+   Installed artifact GAP_pkg_xmodalg                    500.6 KiB
+   Installed artifact MUMPS_seq                          4.5 MiB
+   Installed artifact GAP_pkg_wedderga                   732.2 KiB
+   Installed artifact GAP_pkg_patternclass               1.5 MiB
+   Installed artifact GAP_pkg_gauss                      9.9 KiB
+   Installed artifact ClassicalModularPolynomialsDB      19.8 MiB
+   Installed artifact GAP_pkg_classicpres                133.1 KiB
+   Installed artifact GAP_pkg_zeromqinterface            15.9 KiB
+   Installed artifact GAP_pkg_twistedconjugacy           377.0 KiB
+   Installed artifact GAP_pkg_cohomolo                   268.1 KiB
+   Installed artifact QuadLatDB                          1.8 MiB
+   Installed artifact GAP_pkg_genss                      349.0 KiB
+   Installed artifact GAP_pkg_fplsa                      183.1 KiB
+   Installed artifact GAP_pkg_normalizinterface          367.1 KiB
+   Installed artifact GAP_pkg_grpconst                   216.5 KiB
+   Installed artifact polymake_oscarnumber               3.0 MiB
+   Installed artifact AtkinModularPolynomialsDB          8.3 MiB
+   Installed artifact GAP_pkg_sco                        238.8 KiB
+   Installed artifact GAP_pkg_ferret                     192.4 KiB
+   Installed artifact GAP_pkg_congruence                 323.7 KiB
+   Installed artifact GAP_pkg_lins                       336.3 KiB
+   Installed artifact GAP_pkg_loops                      1.1 MiB
+   Installed artifact GAP_pkg_ctbllib                    16.9 MiB
+   Installed artifact GAP_pkg_gaussforhomalg             220.3 KiB
+   Installed artifact GAP_pkg_smallsemi                  19.7 MiB
+   Installed artifact GAP_pkg_kbmag                      3.0 MiB
+   Installed artifact GAP_pkg_thelma                     380.2 KiB
+   Installed artifact GAP_pkg_gapdoc                     1.5 MiB
+   Installed artifact GAP_pkg_io_forhomalg               92.0 KiB
+   Installed artifact GAP_pkg_digraphs                   2.7 MiB
+   Installed artifact f4ncgb                             2.0 MiB
+   Installed artifact GAP_pkg_cddinterface               14.5 KiB
+   Installed artifact GAP_pkg_resclasses                 329.4 KiB
+   Installed artifact GAP_pkg_float                      59.9 KiB
+   Installed artifact GAP_pkg_linearalgebraforcap        264.0 KiB
+   Installed artifact GAP_pkg_radiroot                   193.1 KiB
+   Installed artifact GAP_pkg_francy                     580.5 KiB
+   Installed artifact GAP_pkg_fga                        263.4 KiB
+   Installed artifact GAP_pkg_sotgrps                    1.1 MiB
+   Installed artifact GAP_pkg_homalgtocas                221.9 KiB
+   Installed artifact GAP_pkg_kbmag                      759.5 KiB
+   Installed artifact GAP_pkg_help                       539.4 KiB
+   Installed artifact GAP_pkg_alco                       487.9 KiB
+   Installed artifact GAP_pkg_liepring                   2.5 MiB
+   Installed artifact GAP_pkg_irredsol                   18.3 MiB
+   Installed artifact GAP_pkg_browse                     1.4 MiB
+    Updating `~/HomotopyGetsReal/dev/scratch/oscar_investigation/Project.toml`
+  [f1435218] + Oscar v1.8.0
+    Updating `~/HomotopyGetsReal/dev/scratch/oscar_investigation/Manifest.toml`
+  [c3fe647b] + AbstractAlgebra v0.50.2
+⌅ [66b61cbe] + AlgebraicSolving v0.10.6
+  [f01c122e] + BinaryWrappers v0.2.0
+  [944b1d66] + CodecZlib v0.7.8
+  [1f15a43c] + CxxWrap v0.17.5
+  [55939f99] + DecFP v1.4.2
+  [c863536a] + GAP v0.17.3
+  [3e1990a7] + Hecke v0.39.21
+  [0f8b85d8] + JSON3 v1.14.3
+  [4fe8b98c] + Mongoc v0.10.1
+  [2edaba10] + Nemo v0.56.1
+  [f1435218] + Oscar v1.8.0
+  [d720cf60] + Polymake v0.13.12
+  [fb686558] + RandomExtensions v0.4.4
+  [bcd08a7b] + Singular v0.28.15
+  [856f2bd8] + StructTypes v1.11.0
+  [ae81ac8f] + ASL_jll v0.1.3+0
+  [47200ebd] + DecFP_jll v2.0.300+0
+  [5cd7a574] + GAP_jll v400.1600.0+0
+  [de1ad85e] + GAP_lib_jll v400.1600.0+0
+  [6e11effc] + GAP_pkg_ace_jll v501.70000.0+0
+  [995f5adf] + GAP_pkg_anupq_jll v301.30300.0+0
+⌅ [6e540885] + GAP_pkg_browse_jll v101.82200.0+0
+  [b60ae38f] + GAP_pkg_caratinterface_jll v201.30900.0+0
+  [edf6cd94] + GAP_pkg_cddinterface_jll v202600.30200.0+0
+  [386407dc] + GAP_pkg_cohomolo_jll v101.61200.0+0
+  [3b5f52f3] + GAP_pkg_crypting_jll v1.100600.1+0
+  [deeb07ae] + GAP_pkg_curlinterface_jll v201.40300.0+0
+  [03de9d45] + GAP_pkg_cvec_jll v201.80500.0+0
+  [66bcec33] + GAP_pkg_datastructures_jll v1.40100.0+0
+  [27af9300] + GAP_pkg_deepthought_jll v101.900.1+0
+  [ce5c30f6] + GAP_pkg_digraphs_jll v101.140000.0+0
+  [aa0ab9cb] + GAP_pkg_edim_jll v101.30800.1+0
+  [d6652ff9] + GAP_pkg_ferret_jll v101.1600.0+0
+  [b73cfdca] + GAP_pkg_float_jll v101.1000.0+0
+  [f51f7fb6] + GAP_pkg_fplsa_jll v101.20800.0+0
+  [296a3c51] + GAP_pkg_gauss_jll v202500.120100.0+0
+  [70456840] + GAP_pkg_guava_jll v301.210000.0+0
+  [19a9678b] + GAP_pkg_io_jll v401.90300.1+0
+  [b348cf08] + GAP_pkg_json_jll v201.40000.0+0
+  [ba154793] + GAP_pkg_juliainterface_jll v0.170000.0+0
+  [74c39be2] + GAP_pkg_kbmag_jll v101.51100.0+0
+  [74f4ad05] + GAP_pkg_normalizinterface_jll v101.50100.0+0
+  [00bf61e5] + GAP_pkg_nq_jll v201.51100.0+0
+  [b689cd95] + GAP_pkg_orb_jll v501.10000.0+0
+  [d3697a66] + GAP_pkg_profiling_jll v201.60200.1+0
+  [6263fdc2] + GAP_pkg_semigroups_jll v501.60300.0+0
+  [1c659ad8] + GAP_pkg_simpcomp_jll v201.11400.0+0
+  [abf7faeb] + GAP_pkg_zeromqinterface_jll v1.180000.0+0
+  [e8aa6df9] + GLPK_jll v5.0.2+0
+⌃ [e33a78d0] + Hwloc_jll v2.12.1+0
+  [9cc047cb] + Ipopt_jll v300.1400.1902+0
+  [d00139f3] + METIS_jll v5.1.3+0
+  [e8b5fb6c] + MPFI_jll v1.5.6+0
+  [d7ed1dd3] + MUMPS_seq_jll v500.900.100+0
+⌅ [90100e71] + MongoC_jll v1.28.1+0
+  [68e3532b] + Ncurses_jll v6.6.0+2
+  [76642167] + Ninja_jll v1.13.1+0
+  [80dd9cbb] + PPL_jll v1.2.1+0
+  [83958c19] + Perl_jll v5.34.1+0
+  [05236dd9] + Readline_jll v8.3.3+0
+⌅ [e5ac4fe4] + SCIP_jll v900.200.400+0
+  [319450e9] + SPRAL_jll v2025.9.18+0
+  [43d676ae] + Singular_jll v404.101.510+0
+  [36f60fef] + TOPCOM_jll v0.17.8+0
+  [8f1865be] + ZeroMQ_jll v4.3.6+0
+  [508c9074] + bliss_jll v0.77.0+1
+  [28df3c45] + boost_jll v1.87.0+0
+  [f07e07eb] + cddlib_jll v0.94.15+0
+  [5558cf25] + cohomCalg_jll v0.32.0+0
+  [160f184c] + f4ncgb_jll v100.0.101+0
+  [1493ae25] + lib4ti2_jll v1.6.10+0
+  [3eaa8342] + libcxxwrap_julia_jll v0.14.10+1
+  [4d8266f6] + libpolymake_julia_jll v0.14.9+0
+⌅ [99c76e05] + libsemigroups_jll v3.5.5+1
+  [ae4fbd8f] + libsingular_julia_jll v0.47.15+0
+  [a9144af2] + libsodium_jll v1.0.21+0
+  [3873f7d0] + lrslib_jll v0.3.3+0
+⌅ [6d01cc9a] + msolve_jll v0.900.504+0
+  [55c6dc9b] + nauty_jll v2.8.10+1
+  [6690c6e9] + normaliz_jll v300.1100.101+0
+  [7c209550] + polymake_jll v400.1500.5+0
+  [10f31823] + polymake_oscarnumber_jll v0.3.19+0
+  [fe1e1685] + snappy_jll v1.2.3+0
+  [4af54fe1] + LazyArtifacts v1.11.0
+        Info Packages marked with ⌃ and ⌅ have new versions available. Those with ⌃ may be upgradable, but those with ⌅ are restricted by compatibility constraints from upgrading. To see why use `status --outdated -m`
+Precompiling packages...
+    624.9 ms  ✓ libsodium_jll
+    623.9 ms  ✓ METIS_jll
+    738.9 ms  ✓ GAP_pkg_cohomolo_jll
+    972.8 ms  ✓ StructTypes
+    320.8 ms  ✓ Ninja_jll
+   1028.4 ms  ✓ GAP_pkg_kbmag_jll
+    344.5 ms  ✓ Hwloc_jll
+    360.7 ms  ✓ libcxxwrap_julia_jll
+    315.0 ms  ✓ GAP_lib_jll
+    232.2 ms  ✓ BinaryWrappers
+    335.6 ms  ✓ snappy_jll
+    443.5 ms  ✓ Ncurses_jll
+    338.6 ms  ✓ GAP_pkg_ace_jll
+    984.0 ms  ✓ ZeroMQ_jll
+    378.8 ms  ✓ libsemigroups_jll
+    357.6 ms  ✓ GAP_pkg_fplsa_jll
+    347.2 ms  ✓ DecFP_jll
+    345.0 ms  ✓ GAP_pkg_simpcomp_jll
+    392.9 ms  ✓ MPFI_jll
+    383.9 ms  ✓ GAP_pkg_guava_jll
+    335.9 ms  ✓ cohomCalg_jll
+    342.8 ms  ✓ GAP_pkg_anupq_jll
+    400.2 ms  ✓ PPL_jll
+    352.4 ms  ✓ bliss_jll
+    354.6 ms  ✓ GAP_pkg_nq_jll
+    389.4 ms  ✓ lrslib_jll
+    354.1 ms  ✓ cddlib_jll
+    355.6 ms  ✓ GLPK_jll
+   1235.9 ms  ✓ GAP_pkg_caratinterface_jll
+   1104.1 ms  ✓ nauty_jll
+    889.8 ms  ✓ boost_jll
+   1815.0 ms  ✓ AbstractAlgebra → TestExt
+    435.1 ms  ✓ msolve_jll
+    371.7 ms  ✓ ASL_jll
+   1328.9 ms  ✓ SpecialFunctions
+   1876.2 ms  ✓ MUMPS_seq_jll
+    839.0 ms  ✓ SPRAL_jll
+   7371.6 ms  ✓ Static
+   4529.1 ms  ✓ JSON3
+   1013.4 ms  ✓ MongoC_jll
+   2247.3 ms  ✓ Readline_jll
+    510.1 ms  ✓ Singular_jll
+   2060.8 ms  ✓ TOPCOM_jll
+   1214.9 ms  ✓ lib4ti2_jll
+  12586.5 ms  ✓ PrettyTables
+   3895.6 ms  ✓ AlgebraicSolving
+   1284.4 ms  ✓ SpecialFunctions → SpecialFunctionsChainRulesCoreExt
+    287.9 ms  ✓ ColorVectorSpace → SpecialFunctionsExt
+   8834.5 ms  ✓ normaliz_jll
+    964.4 ms  ✓ StatsFuns
+   1990.5 ms  ✓ DecFP
+  12184.3 ms  ✓ f4ncgb_jll
+    593.5 ms  ✓ BitTwiddlingConvenienceFunctions
+   7035.9 ms  ✓ Arblib
+    322.4 ms  ✓ CPUSummary
+   4571.5 ms  ✓ Ipopt_jll
+   1548.2 ms  ✓ Perl_jll
+    384.9 ms  ✓ GAP_jll
+    560.6 ms  ✓ StatsFuns → StatsFunsInverseFunctionsExt
+    746.2 ms  ✓ StatsFuns → StatsFunsChainRulesCoreExt
+   2319.3 ms  ✓ libsingular_julia_jll
+    746.2 ms  ✓ HostCPUFeatures
+   5993.5 ms  ✓ StaticArrayInterface
+   2059.1 ms  ✓ Mongoc
+    794.3 ms  ✓ IntervalArithmetic → IntervalArithmeticArblibExt
+    691.3 ms  ✓ PolyesterWeave
+  26350.0 ms  ✓ CxxWrap
+   1533.3 ms  ✓ SCIP_jll
+    358.6 ms  ✓ GAP_pkg_profiling_jll
+    578.2 ms  ✓ GAP_pkg_cvec_jll
+   1454.7 ms  ✓ GAP_pkg_browse_jll
+   1744.3 ms  ✓ BinaryWrappers → Perl_jllExt
+    325.3 ms  ✓ GAP_pkg_io_jll
+    320.8 ms  ✓ GAP_pkg_orb_jll
+    318.7 ms  ✓ GAP_pkg_juliainterface_jll
+    315.9 ms  ✓ GAP_pkg_ferret_jll
+    929.3 ms  ✓ GAP_pkg_zeromqinterface_jll
+    341.2 ms  ✓ GAP_pkg_datastructures_jll
+   1209.9 ms  ✓ GAP_pkg_semigroups_jll
+    355.0 ms  ✓ GAP_pkg_deepthought_jll
+    366.4 ms  ✓ GAP_pkg_curlinterface_jll
+    327.3 ms  ✓ GAP_pkg_cddinterface_jll
+    337.4 ms  ✓ GAP_pkg_gauss_jll
+    799.7 ms  ✓ GAP_pkg_float_jll
+    332.6 ms  ✓ GAP_pkg_json_jll
+    345.4 ms  ✓ GAP_pkg_edim_jll
+    355.4 ms  ✓ GAP_pkg_digraphs_jll
+    980.1 ms  ✓ GAP_pkg_normalizinterface_jll
+    348.0 ms  ✓ GAP_pkg_crypting_jll
+    366.8 ms  ✓ CloseOpenIntervals
+    394.5 ms  ✓ StaticArrayInterface → StaticArrayInterfaceOffsetArraysExt
+    626.3 ms  ✓ StaticArrayInterface → StaticArrayInterfaceStaticArraysExt
+    358.5 ms  ✓ LayoutPointers
+   3001.0 ms  ✓ Distributions
+   1334.2 ms  ✓ Distributions → DistributionsTestExt
+   1072.0 ms  ✓ Distributions → DistributionsChainRulesCoreExt
+   5823.5 ms  ✓ polymake_jll
+   5622.0 ms  ✓ VectorizationBase
+   1240.2 ms  ✓ SimpleRandom
+   2503.5 ms  ✓ KernelDensity
+   3029.9 ms  ✓ libpolymake_julia_jll
+   1972.8 ms  ✓ SLEEFPirates
+   2451.7 ms  ✓ SimpleGraphs
+   1781.3 ms  ✓ polymake_oscarnumber_jll
+  14821.8 ms  ✓ Singular
+  12510.1 ms  ✓ GAP
+   5732.5 ms  ✓ GAP → NemoExt
+  61447.0 ms  ✓ Hecke
+  14145.5 ms  ✓ LoopVectorization
+    760.0 ms  ✓ LoopVectorization → SpecialFunctionsExt
+   5513.8 ms  ✓ Hecke → GAPExt
+   7405.0 ms  ✓ HomotopyContinuation
+  33797.7 ms  ✓ Polymake
+  18342.3 ms  ✓ Hecke → PolymakeExt
+  78651.0 ms  ✓ Makie
+   4982.4 ms  ✓ Polynomials → PolynomialsMakieExt
+              ✗ GLMakie
+  44585.3 ms  ✓ Oscar
+              ✗ HomotopyGetsReal
+  15331.0 ms  ✓ Oscar → HomotopyContinuationExt
+  118 dependencies successfully precompiled in 166 seconds. 371 already precompiled.
+
+The following 1 direct dependency failed to precompile:
+
+HomotopyGetsReal 
+
+Failed to precompile HomotopyGetsReal [4051f461-4a5e-492e-9237-10b01d865883] to "/Users/juancagc/.julia/compiled/v1.12/HomotopyGetsReal/jl_JNwtkd".
+[42263] signal 11 (2): Segmentation fault: 11
+in expression starting at /Users/juancagc/.julia/packages/Makie/XzVRj/precompile/shared-precompile.jl:6
+_glfwGetMonitorPosCocoa at /Users/juancagc/.julia/artifacts/80bb151e4d99a3b40bf88216dc326e34c0a62c30/lib/libglfw.3.4.dylib (unknown line)
+GetMonitorPos at /Users/juancagc/.julia/packages/GLFW/wA4ue/src/glfw3.jl:553
+MonitorProperties at /Users/juancagc/.julia/packages/GLMakie/A7mVm/src/glwindow.jl:204
+window_area at /Users/juancagc/.julia/packages/GLMakie/A7mVm/src/events.jl:45
+connect_screen at /Users/juancagc/.julia/packages/Makie/XzVRj/src/interaction/events.jl:19
+display_scene! at /Users/juancagc/.julia/packages/GLMakie/A7mVm/src/screen.jl:522
+unknown function (ip: 0x168528493) at (unknown file)
+#Screen#35 at /Users/juancagc/.julia/packages/GLMakie/A7mVm/src/screen.jl:540
+Screen at /Users/juancagc/.julia/packages/GLMakie/A7mVm/src/screen.jl:533
+unknown function (ip: 0x168260087) at (unknown file)
+getscreen at /Users/juancagc/.julia/packages/Makie/XzVRj/src/display.jl:444
+#1539 at /Users/juancagc/.julia/packages/Makie/XzVRj/src/display.jl:487
+lock at ./lock.jl:335
+#colorbuffer#1537 at /Users/juancagc/.julia/packages/Makie/XzVRj/src/display.jl:479 [inlined]
+colorbuffer at /Users/juancagc/.julia/packages/Makie/XzVRj/src/display.jl:478 [inlined]
+colorbuffer at /Users/juancagc/.julia/packages/Makie/XzVRj/src/display.jl:478
+unknown function (ip: 0x16801819b) at (unknown file)
+jl_apply at /Users/julia/.julia/scratchspaces/a66863c6-20e8-4ff4-8a62-49f30b1f605e/agent-cache/default-honeycrisp-XG3Q6T6R70.0/build/default-honeycrisp-XG3Q6T6R70-0/julialang/julia-release-1-dot-12/src/./julia.h:2391 [inlined]
+do_call at /Users/julia/.julia/scratchspaces/a66863c6-20e8-4ff4-8a62-49f30b1f605e/agent-cache/default-honeycrisp-XG3Q6T6R70.0/build/default-honeycrisp-XG3Q6T6R70-0/julialang/julia-release-1-dot-12/src/interpreter.c:123
+eval_stmt_value at /Users/julia/.julia/scratchspaces/a66863c6-20e8-4ff4-8a62-49f30b1f605e/agent-cache/default-honeycrisp-XG3Q6T6R70.0/build/default-honeycrisp-XG3Q6T6R70-0/julialang/julia-release-1-dot-12/src/interpreter.c:194
+eval_body at /Users/julia/.julia/scratchspaces/a66863c6-20e8-4ff4-8a62-49f30b1f605e/agent-cache/default-honeycrisp-XG3Q6T6R70.0/build/default-honeycrisp-XG3Q6T6R70-0/julialang/julia-release-1-dot-12/src/interpreter.c:689
+jl_interpret_toplevel_thunk at /Users/julia/.julia/scratchspaces/a66863c6-20e8-4ff4-8a62-49f30b1f605e/agent-cache/default-honeycrisp-XG3Q6T6R70.0/build/default-honeycrisp-XG3Q6T6R70-0/julialang/julia-release-1-dot-12/src/interpreter.c:898
+jl_toplevel_eval_flex at /Users/julia/.julia/scratchspaces/a66863c6-20e8-4ff4-8a62-49f30b1f605e/agent-cache/default-honeycrisp-XG3Q6T6R70.0/build/default-honeycrisp-XG3Q6T6R70-0/julialang/julia-release-1-dot-12/src/toplevel.c:1035
+jl_toplevel_eval_flex at /Users/julia/.julia/scratchspaces/a66863c6-20e8-4ff4-8a62-49f30b1f605e/agent-cache/default-honeycrisp-XG3Q6T6R70.0/build/default-honeycrisp-XG3Q6T6R70-0/julialang/julia-release-1-dot-12/src/toplevel.c:975
+ijl_toplevel_eval at /Users/julia/.julia/scratchspaces/a66863c6-20e8-4ff4-8a62-49f30b1f605e/agent-cache/default-honeycrisp-XG3Q6T6R70.0/build/default-honeycrisp-XG3Q6T6R70-0/julialang/julia-release-1-dot-12/src/toplevel.c:1047 [inlined]
+ijl_toplevel_eval_in at /Users/julia/.julia/scratchspaces/a66863c6-20e8-4ff4-8a62-49f30b1f605e/agent-cache/default-honeycrisp-XG3Q6T6R70.0/build/default-honeycrisp-XG3Q6T6R70-0/julialang/julia-release-1-dot-12/src/toplevel.c:1092
+eval at ./boot.jl:489
+include_string at ./loading.jl:2870
+_include at ./loading.jl:2930
+include at ./Base.jl:307
+IncludeInto at ./Base.jl:308
+jfptr_IncludeInto_97062 at /Users/juancagc/.julia/compiled/v1.12/Makie/iZ1Bl_m3zUq.dylib (unknown line)
+macro expansion at /Users/juancagc/.julia/packages/GLMakie/A7mVm/src/precompiles.jl:24 [inlined]
+macro expansion at /Users/juancagc/.julia/packages/PrecompileTools/QUxvR/src/workloads.jl:70 [inlined]
+macro expansion at /Users/juancagc/.julia/packages/GLMakie/A7mVm/src/precompiles.jl:17 [inlined]
+macro expansion at /Users/juancagc/.julia/packages/PrecompileTools/QUxvR/src/workloads.jl:118 [inlined]
+top-level scope at /Users/juancagc/.julia/packages/GLMakie/A7mVm/src/precompiles.jl:15
+jl_toplevel_eval_flex at /Users/julia/.julia/scratchspaces/a66863c6-20e8-4ff4-8a62-49f30b1f605e/agent-cache/default-honeycrisp-XG3Q6T6R70.0/build/default-honeycrisp-XG3Q6T6R70-0/julialang/julia-release-1-dot-12/src/toplevel.c:1024
+jl_toplevel_eval_flex at /Users/julia/.julia/scratchspaces/a66863c6-20e8-4ff4-8a62-49f30b1f605e/agent-cache/default-honeycrisp-XG3Q6T6R70.0/build/default-honeycrisp-XG3Q6T6R70-0/julialang/julia-release-1-dot-12/src/toplevel.c:975
+ijl_toplevel_eval at /Users/julia/.julia/scratchspaces/a66863c6-20e8-4ff4-8a62-49f30b1f605e/agent-cache/default-honeycrisp-XG3Q6T6R70.0/build/default-honeycrisp-XG3Q6T6R70-0/julialang/julia-release-1-dot-12/src/toplevel.c:1047 [inlined]
+ijl_toplevel_eval_in at /Users/julia/.julia/scratchspaces/a66863c6-20e8-4ff4-8a62-49f30b1f605e/agent-cache/default-honeycrisp-XG3Q6T6R70.0/build/default-honeycrisp-XG3Q6T6R70-0/julialang/julia-release-1-dot-12/src/toplevel.c:1092
+eval at ./boot.jl:489
+include_string at ./loading.jl:2870
+_include at ./loading.jl:2930
+include at ./Base.jl:307
+IncludeInto at ./Base.jl:308
+jfptr_IncludeInto_71092.1 at /Users/juancagc/.julia/juliaup/julia-1.12.4+0.aarch64.apple.darwin14/lib/julia/sys.dylib (unknown line)
+jl_apply at /Users/julia/.julia/scratchspaces/a66863c6-20e8-4ff4-8a62-49f30b1f605e/agent-cache/default-honeycrisp-XG3Q6T6R70.0/build/default-honeycrisp-XG3Q6T6R70-0/julialang/julia-release-1-dot-12/src/./julia.h:2391 [inlined]
+do_call at /Users/julia/.julia/scratchspaces/a66863c6-20e8-4ff4-8a62-49f30b1f605e/agent-cache/default-honeycrisp-XG3Q6T6R70.0/build/default-honeycrisp-XG3Q6T6R70-0/julialang/julia-release-1-dot-12/src/interpreter.c:123
+eval_stmt_value at /Users/julia/.julia/scratchspaces/a66863c6-20e8-4ff4-8a62-49f30b1f605e/agent-cache/default-honeycrisp-XG3Q6T6R70.0/build/default-honeycrisp-XG3Q6T6R70-0/julialang/julia-release-1-dot-12/src/interpreter.c:194
+eval_body at /Users/julia/.julia/scratchspaces/a66863c6-20e8-4ff4-8a62-49f30b1f605e/agent-cache/default-honeycrisp-XG3Q6T6R70.0/build/default-honeycrisp-XG3Q6T6R70-0/julialang/julia-release-1-dot-12/src/interpreter.c:689
+jl_interpret_toplevel_thunk at /Users/julia/.julia/scratchspaces/a66863c6-20e8-4ff4-8a62-49f30b1f605e/agent-cache/default-honeycrisp-XG3Q6T6R70.0/build/default-honeycrisp-XG3Q6T6R70-0/julialang/julia-release-1-dot-12/src/interpreter.c:898
+jl_toplevel_eval_flex at /Users/julia/.julia/scratchspaces/a66863c6-20e8-4ff4-8a62-49f30b1f605e/agent-cache/default-honeycrisp-XG3Q6T6R70.0/build/default-honeycrisp-XG3Q6T6R70-0/julialang/julia-release-1-dot-12/src/toplevel.c:1035
+jl_eval_module_expr at /Users/julia/.julia/scratchspaces/a66863c6-20e8-4ff4-8a62-49f30b1f605e/agent-cache/default-honeycrisp-XG3Q6T6R70.0/build/default-honeycrisp-XG3Q6T6R70-0/julialang/julia-release-1-dot-12/src/toplevel.c:197 [inlined]
+jl_toplevel_eval_flex at /Users/julia/.julia/scratchspaces/a66863c6-20e8-4ff4-8a62-49f30b1f605e/agent-cache/default-honeycrisp-XG3Q6T6R70.0/build/default-honeycrisp-XG3Q6T6R70-0/julialang/julia-release-1-dot-12/src/toplevel.c:814
+jl_toplevel_eval_flex at /Users/julia/.julia/scratchspaces/a66863c6-20e8-4ff4-8a62-49f30b1f605e/agent-cache/default-honeycrisp-XG3Q6T6R70.0/build/default-honeycrisp-XG3Q6T6R70-0/julialang/julia-release-1-dot-12/src/toplevel.c:975
+ijl_toplevel_eval at /Users/julia/.julia/scratchspaces/a66863c6-20e8-4ff4-8a62-49f30b1f605e/agent-cache/default-honeycrisp-XG3Q6T6R70.0/build/default-honeycrisp-XG3Q6T6R70-0/julialang/julia-release-1-dot-12/src/toplevel.c:1047 [inlined]
+ijl_toplevel_eval_in at /Users/julia/.julia/scratchspaces/a66863c6-20e8-4ff4-8a62-49f30b1f605e/agent-cache/default-honeycrisp-XG3Q6T6R70.0/build/default-honeycrisp-XG3Q6T6R70-0/julialang/julia-release-1-dot-12/src/toplevel.c:1092
+eval at ./boot.jl:489
+include_string at ./loading.jl:2870
+_include at ./loading.jl:2930
+include at ./Base.jl:306
+include_package_for_output at ./loading.jl:3024
+jfptr_include_package_for_output_62245.1 at /Users/juancagc/.julia/juliaup/julia-1.12.4+0.aarch64.apple.darwin14/lib/julia/sys.dylib (unknown line)
+jl_apply at /Users/julia/.julia/scratchspaces/a66863c6-20e8-4ff4-8a62-49f30b1f605e/agent-cache/default-honeycrisp-XG3Q6T6R70.0/build/default-honeycrisp-XG3Q6T6R70-0/julialang/julia-release-1-dot-12/src/./julia.h:2391 [inlined]
+do_call at /Users/julia/.julia/scratchspaces/a66863c6-20e8-4ff4-8a62-49f30b1f605e/agent-cache/default-honeycrisp-XG3Q6T6R70.0/build/default-honeycrisp-XG3Q6T6R70-0/julialang/julia-release-1-dot-12/src/interpreter.c:123
+eval_stmt_value at /Users/julia/.julia/scratchspaces/a66863c6-20e8-4ff4-8a62-49f30b1f605e/agent-cache/default-honeycrisp-XG3Q6T6R70.0/build/default-honeycrisp-XG3Q6T6R70-0/julialang/julia-release-1-dot-12/src/interpreter.c:194
+eval_body at /Users/julia/.julia/scratchspaces/a66863c6-20e8-4ff4-8a62-49f30b1f605e/agent-cache/default-honeycrisp-XG3Q6T6R70.0/build/default-honeycrisp-XG3Q6T6R70-0/julialang/julia-release-1-dot-12/src/interpreter.c:689
+jl_interpret_toplevel_thunk at /Users/julia/.julia/scratchspaces/a66863c6-20e8-4ff4-8a62-49f30b1f605e/agent-cache/default-honeycrisp-XG3Q6T6R70.0/build/default-honeycrisp-XG3Q6T6R70-0/julialang/julia-release-1-dot-12/src/interpreter.c:898
+jl_toplevel_eval_flex at /Users/julia/.julia/scratchspaces/a66863c6-20e8-4ff4-8a62-49f30b1f605e/agent-cache/default-honeycrisp-XG3Q6T6R70.0/build/default-honeycrisp-XG3Q6T6R70-0/julialang/julia-release-1-dot-12/src/toplevel.c:1035
+jl_toplevel_eval_flex at /Users/julia/.julia/scratchspaces/a66863c6-20e8-4ff4-8a62-49f30b1f605e/agent-cache/default-honeycrisp-XG3Q6T6R70.0/build/default-honeycrisp-XG3Q6T6R70-0/julialang/julia-release-1-dot-12/src/toplevel.c:975
+ijl_toplevel_eval at /Users/julia/.julia/scratchspaces/a66863c6-20e8-4ff4-8a62-49f30b1f605e/agent-cache/default-honeycrisp-XG3Q6T6R70.0/build/default-honeycrisp-XG3Q6T6R70-0/julialang/julia-release-1-dot-12/src/toplevel.c:1047 [inlined]
+ijl_toplevel_eval_in at /Users/julia/.julia/scratchspaces/a66863c6-20e8-4ff4-8a62-49f30b1f605e/agent-cache/default-honeycrisp-XG3Q6T6R70.0/build/default-honeycrisp-XG3Q6T6R70-0/julialang/julia-release-1-dot-12/src/toplevel.c:1092
+eval at ./boot.jl:489
+include_string at ./loading.jl:2870
+include_string at ./loading.jl:2880 [inlined]
+exec_options at ./client.jl:315
+_start at ./client.jl:550
+jfptr__start_70416.1 at /Users/juancagc/.julia/juliaup/julia-1.12.4+0.aarch64.apple.darwin14/lib/julia/sys.dylib (unknown line)
+jl_apply at /Users/julia/.julia/scratchspaces/a66863c6-20e8-4ff4-8a62-49f30b1f605e/agent-cache/default-honeycrisp-XG3Q6T6R70.0/build/default-honeycrisp-XG3Q6T6R70-0/julialang/julia-release-1-dot-12/src/./julia.h:2391 [inlined]
+true_main at /Users/julia/.julia/scratchspaces/a66863c6-20e8-4ff4-8a62-49f30b1f605e/agent-cache/default-honeycrisp-XG3Q6T6R70.0/build/default-honeycrisp-XG3Q6T6R70-0/julialang/julia-release-1-dot-12/src/jlapi.c:971
+jl_repl_entrypoint at /Users/julia/.julia/scratchspaces/a66863c6-20e8-4ff4-8a62-49f30b1f605e/agent-cache/default-honeycrisp-XG3Q6T6R70.0/build/default-honeycrisp-XG3Q6T6R70-0/julialang/julia-release-1-dot-12/src/jlapi.c:1139
+Allocations: 77667753 (Pool: 77666219; Big: 1534); GC: 24
+ERROR: LoadError: Failed to precompile GLMakie [e9467ef8-e4e7-5192-8a1a-b1aee30e663a] to "/Users/juancagc/.julia/compiled/v1.12/GLMakie/jl_DLVgpo".
+Stacktrace:
+  [1] error(s::String)
+    @ Base ./error.jl:44
+  [2] compilecache(pkg::Base.PkgId, path::String, internal_stderr::IO, internal_stdout::IO, keep_loaded_modules::Bool; flags::Cmd, cacheflags::Base.CacheFlags, reasons::Dict{String, Int64}, loadable_exts::Nothing)
+    @ Base ./loading.jl:3311
+  [3] (::Base.var"#__require_prelocked##0#__require_prelocked##1"{Base.PkgId, String, Dict{String, Int64}})()
+    @ Base ./loading.jl:2679
+  [4] mkpidlock(f::Base.var"#__require_prelocked##0#__require_prelocked##1"{Base.PkgId, String, Dict{String, Int64}}, at::String, pid::Int32; kwopts::@Kwargs{stale_age::Int64, wait::Bool})
+    @ FileWatching.Pidfile ~/.julia/juliaup/julia-1.12.4+0.aarch64.apple.darwin14/share/julia/stdlib/v1.12/FileWatching/src/pidfile.jl:93
+  [5] #mkpidlock#7
+    @ ~/.julia/juliaup/julia-1.12.4+0.aarch64.apple.darwin14/share/julia/stdlib/v1.12/FileWatching/src/pidfile.jl:88 [inlined]
+  [6] trymkpidlock(::Function, ::Vararg{Any}; kwargs::@Kwargs{stale_age::Int64})
+    @ FileWatching.Pidfile ~/.julia/juliaup/julia-1.12.4+0.aarch64.apple.darwin14/share/julia/stdlib/v1.12/FileWatching/src/pidfile.jl:114
+  [7] #invokelatest_gr#232
+    @ ./reflection.jl:1297 [inlined]
+  [8] invokelatest_gr
+    @ ./reflection.jl:1289 [inlined]
+  [9] maybe_cachefile_lock(f::Base.var"#__require_prelocked##0#__require_prelocked##1"{Base.PkgId, String, Dict{String, Int64}}, pkg::Base.PkgId, srcpath::String; stale_age::Int64)
+    @ Base ./loading.jl:3882
+ [10] maybe_cachefile_lock
+    @ ./loading.jl:3879 [inlined]
+ [11] __require_prelocked(pkg::Base.PkgId, env::String)
+    @ Base ./loading.jl:2665
+ [12] _require_prelocked(uuidkey::Base.PkgId, env::String)
+    @ Base ./loading.jl:2493
+ [13] macro expansion
+    @ ./loading.jl:2421 [inlined]
+ [14] macro expansion
+    @ ./lock.jl:376 [inlined]
+ [15] __require(into::Module, mod::Symbol)
+    @ Base ./loading.jl:2386
+ [16] require(into::Module, mod::Symbol)
+    @ Base ./loading.jl:2362
+ [17] top-level scope
+    @ ~/HomotopyGetsReal/src/HomotopyGetsReal.jl:46
+ [18] include(mod::Module, _path::String)
+    @ Base ./Base.jl:306
+ [19] include_package_for_output(pkg::Base.PkgId, input::String, depot_path::Vector{String}, dl_load_path::Vector{String}, load_path::Vector{String}, concrete_deps::Vector{Pair{Base.PkgId, UInt128}}, source::Nothing)
+    @ Base ./loading.jl:3024
+ [20] top-level scope
+    @ stdin:5
+ [21] eval(m::Module, e::Any)
+    @ Core ./boot.jl:489
+ [22] include_string(mapexpr::typeof(identity), mod::Module, code::String, filename::String)
+    @ Base ./loading.jl:2870
+ [23] include_string
+    @ ./loading.jl:2880 [inlined]
+ [24] exec_options(opts::Base.JLOptions)
+    @ Base ./client.jl:315
+ [25] _start()
+    @ Base ./client.jl:550
+in expression starting at /Users/juancagc/HomotopyGetsReal/src/HomotopyGetsReal.jl:39
+in expression starting at stdin:     Cloning git-repo `https://github.com/taboege/OscarHomotopyContinuation`
+    Updating git-repo `https://github.com/taboege/OscarHomotopyContinuation`
+   Resolving package versions...
+    Updating `~/HomotopyGetsReal/dev/scratch/oscar_investigation/Project.toml`
+  [c41f96c7] + OscarHomotopyContinuation v0.1.0 `https://github.com/taboege/OscarHomotopyContinuation#main`
+    Updating `~/HomotopyGetsReal/dev/scratch/oscar_investigation/Manifest.toml`
+  [c41f96c7] + OscarHomotopyContinuation v0.1.0 `https://github.com/taboege/OscarHomotopyContinuation#main`
+Precompiling packages...
+              ✗ GLMakie
+  15340.7 ms  ✓ OscarHomotopyContinuation
+              ✗ HomotopyGetsReal
+  1 dependency successfully precompiled in 26 seconds. 489 already precompiled.
+
+The following 1 direct dependency failed to precompile:
+
+HomotopyGetsReal 
+
+Failed to precompile HomotopyGetsReal [4051f461-4a5e-492e-9237-10b01d865883] to "/Users/juancagc/.julia/compiled/v1.12/HomotopyGetsReal/jl_aHr35u".
+[42343] signal 11 (2): Segmentation fault: 11
+in expression starting at /Users/juancagc/.julia/packages/Makie/XzVRj/precompile/shared-precompile.jl:6
+_glfwGetMonitorPosCocoa at /Users/juancagc/.julia/artifacts/80bb151e4d99a3b40bf88216dc326e34c0a62c30/lib/libglfw.3.4.dylib (unknown line)
+GetMonitorPos at /Users/juancagc/.julia/packages/GLFW/wA4ue/src/glfw3.jl:553
+MonitorProperties at /Users/juancagc/.julia/packages/GLMakie/A7mVm/src/glwindow.jl:204
+window_area at /Users/juancagc/.julia/packages/GLMakie/A7mVm/src/events.jl:45
+connect_screen at /Users/juancagc/.julia/packages/Makie/XzVRj/src/interaction/events.jl:19
+display_scene! at /Users/juancagc/.julia/packages/GLMakie/A7mVm/src/screen.jl:522
+unknown function (ip: 0x16819c493) at (unknown file)
+#Screen#35 at /Users/juancagc/.julia/packages/GLMakie/A7mVm/src/screen.jl:540
+Screen at /Users/juancagc/.julia/packages/GLMakie/A7mVm/src/screen.jl:533
+unknown function (ip: 0x167f24087) at (unknown file)
+getscreen at /Users/juancagc/.julia/packages/Makie/XzVRj/src/display.jl:444
+#1539 at /Users/juancagc/.julia/packages/Makie/XzVRj/src/display.jl:487
+lock at ./lock.jl:335
+#colorbuffer#1537 at /Users/juancagc/.julia/packages/Makie/XzVRj/src/display.jl:479 [inlined]
+colorbuffer at /Users/juancagc/.julia/packages/Makie/XzVRj/src/display.jl:478 [inlined]
+colorbuffer at /Users/juancagc/.julia/packages/Makie/XzVRj/src/display.jl:478
+unknown function (ip: 0x167cec19b) at (unknown file)
+jl_apply at /Users/julia/.julia/scratchspaces/a66863c6-20e8-4ff4-8a62-49f30b1f605e/agent-cache/default-honeycrisp-XG3Q6T6R70.0/build/default-honeycrisp-XG3Q6T6R70-0/julialang/julia-release-1-dot-12/src/./julia.h:2391 [inlined]
+do_call at /Users/julia/.julia/scratchspaces/a66863c6-20e8-4ff4-8a62-49f30b1f605e/agent-cache/default-honeycrisp-XG3Q6T6R70.0/build/default-honeycrisp-XG3Q6T6R70-0/julialang/julia-release-1-dot-12/src/interpreter.c:123
+eval_stmt_value at /Users/julia/.julia/scratchspaces/a66863c6-20e8-4ff4-8a62-49f30b1f605e/agent-cache/default-honeycrisp-XG3Q6T6R70.0/build/default-honeycrisp-XG3Q6T6R70-0/julialang/julia-release-1-dot-12/src/interpreter.c:194
+eval_body at /Users/julia/.julia/scratchspaces/a66863c6-20e8-4ff4-8a62-49f30b1f605e/agent-cache/default-honeycrisp-XG3Q6T6R70.0/build/default-honeycrisp-XG3Q6T6R70-0/julialang/julia-release-1-dot-12/src/interpreter.c:689
+jl_interpret_toplevel_thunk at /Users/julia/.julia/scratchspaces/a66863c6-20e8-4ff4-8a62-49f30b1f605e/agent-cache/default-honeycrisp-XG3Q6T6R70.0/build/default-honeycrisp-XG3Q6T6R70-0/julialang/julia-release-1-dot-12/src/interpreter.c:898
+jl_toplevel_eval_flex at /Users/julia/.julia/scratchspaces/a66863c6-20e8-4ff4-8a62-49f30b1f605e/agent-cache/default-honeycrisp-XG3Q6T6R70.0/build/default-honeycrisp-XG3Q6T6R70-0/julialang/julia-release-1-dot-12/src/toplevel.c:1035
+jl_toplevel_eval_flex at /Users/julia/.julia/scratchspaces/a66863c6-20e8-4ff4-8a62-49f30b1f605e/agent-cache/default-honeycrisp-XG3Q6T6R70.0/build/default-honeycrisp-XG3Q6T6R70-0/julialang/julia-release-1-dot-12/src/toplevel.c:975
+ijl_toplevel_eval at /Users/julia/.julia/scratchspaces/a66863c6-20e8-4ff4-8a62-49f30b1f605e/agent-cache/default-honeycrisp-XG3Q6T6R70.0/build/default-honeycrisp-XG3Q6T6R70-0/julialang/julia-release-1-dot-12/src/toplevel.c:1047 [inlined]
+ijl_toplevel_eval_in at /Users/julia/.julia/scratchspaces/a66863c6-20e8-4ff4-8a62-49f30b1f605e/agent-cache/default-honeycrisp-XG3Q6T6R70.0/build/default-honeycrisp-XG3Q6T6R70-0/julialang/julia-release-1-dot-12/src/toplevel.c:1092
+eval at ./boot.jl:489
+include_string at ./loading.jl:2870
+_include at ./loading.jl:2930
+include at ./Base.jl:307
+IncludeInto at ./Base.jl:308
+jfptr_IncludeInto_97062 at /Users/juancagc/.julia/compiled/v1.12/Makie/iZ1Bl_m3zUq.dylib (unknown line)
+macro expansion at /Users/juancagc/.julia/packages/GLMakie/A7mVm/src/precompiles.jl:24 [inlined]
+macro expansion at /Users/juancagc/.julia/packages/PrecompileTools/QUxvR/src/workloads.jl:70 [inlined]
+macro expansion at /Users/juancagc/.julia/packages/GLMakie/A7mVm/src/precompiles.jl:17 [inlined]
+macro expansion at /Users/juancagc/.julia/packages/PrecompileTools/QUxvR/src/workloads.jl:118 [inlined]
+top-level scope at /Users/juancagc/.julia/packages/GLMakie/A7mVm/src/precompiles.jl:15
+jl_toplevel_eval_flex at /Users/julia/.julia/scratchspaces/a66863c6-20e8-4ff4-8a62-49f30b1f605e/agent-cache/default-honeycrisp-XG3Q6T6R70.0/build/default-honeycrisp-XG3Q6T6R70-0/julialang/julia-release-1-dot-12/src/toplevel.c:1024
+jl_toplevel_eval_flex at /Users/julia/.julia/scratchspaces/a66863c6-20e8-4ff4-8a62-49f30b1f605e/agent-cache/default-honeycrisp-XG3Q6T6R70.0/build/default-honeycrisp-XG3Q6T6R70-0/julialang/julia-release-1-dot-12/src/toplevel.c:975
+ijl_toplevel_eval at /Users/julia/.julia/scratchspaces/a66863c6-20e8-4ff4-8a62-49f30b1f605e/agent-cache/default-honeycrisp-XG3Q6T6R70.0/build/default-honeycrisp-XG3Q6T6R70-0/julialang/julia-release-1-dot-12/src/toplevel.c:1047 [inlined]
+ijl_toplevel_eval_in at /Users/julia/.julia/scratchspaces/a66863c6-20e8-4ff4-8a62-49f30b1f605e/agent-cache/default-honeycrisp-XG3Q6T6R70.0/build/default-honeycrisp-XG3Q6T6R70-0/julialang/julia-release-1-dot-12/src/toplevel.c:1092
+eval at ./boot.jl:489
+include_string at ./loading.jl:2870
+_include at ./loading.jl:2930
+include at ./Base.jl:307
+IncludeInto at ./Base.jl:308
+jfptr_IncludeInto_71092.1 at /Users/juancagc/.julia/juliaup/julia-1.12.4+0.aarch64.apple.darwin14/lib/julia/sys.dylib (unknown line)
+jl_apply at /Users/julia/.julia/scratchspaces/a66863c6-20e8-4ff4-8a62-49f30b1f605e/agent-cache/default-honeycrisp-XG3Q6T6R70.0/build/default-honeycrisp-XG3Q6T6R70-0/julialang/julia-release-1-dot-12/src/./julia.h:2391 [inlined]
+do_call at /Users/julia/.julia/scratchspaces/a66863c6-20e8-4ff4-8a62-49f30b1f605e/agent-cache/default-honeycrisp-XG3Q6T6R70.0/build/default-honeycrisp-XG3Q6T6R70-0/julialang/julia-release-1-dot-12/src/interpreter.c:123
+eval_stmt_value at /Users/julia/.julia/scratchspaces/a66863c6-20e8-4ff4-8a62-49f30b1f605e/agent-cache/default-honeycrisp-XG3Q6T6R70.0/build/default-honeycrisp-XG3Q6T6R70-0/julialang/julia-release-1-dot-12/src/interpreter.c:194
+eval_body at /Users/julia/.julia/scratchspaces/a66863c6-20e8-4ff4-8a62-49f30b1f605e/agent-cache/default-honeycrisp-XG3Q6T6R70.0/build/default-honeycrisp-XG3Q6T6R70-0/julialang/julia-release-1-dot-12/src/interpreter.c:689
+jl_interpret_toplevel_thunk at /Users/julia/.julia/scratchspaces/a66863c6-20e8-4ff4-8a62-49f30b1f605e/agent-cache/default-honeycrisp-XG3Q6T6R70.0/build/default-honeycrisp-XG3Q6T6R70-0/julialang/julia-release-1-dot-12/src/interpreter.c:898
+jl_toplevel_eval_flex at /Users/julia/.julia/scratchspaces/a66863c6-20e8-4ff4-8a62-49f30b1f605e/agent-cache/default-honeycrisp-XG3Q6T6R70.0/build/default-honeycrisp-XG3Q6T6R70-0/julialang/julia-release-1-dot-12/src/toplevel.c:1035
+jl_eval_module_expr at /Users/julia/.julia/scratchspaces/a66863c6-20e8-4ff4-8a62-49f30b1f605e/agent-cache/default-honeycrisp-XG3Q6T6R70.0/build/default-honeycrisp-XG3Q6T6R70-0/julialang/julia-release-1-dot-12/src/toplevel.c:197 [inlined]
+jl_toplevel_eval_flex at /Users/julia/.julia/scratchspaces/a66863c6-20e8-4ff4-8a62-49f30b1f605e/agent-cache/default-honeycrisp-XG3Q6T6R70.0/build/default-honeycrisp-XG3Q6T6R70-0/julialang/julia-release-1-dot-12/src/toplevel.c:814
+jl_toplevel_eval_flex at /Users/julia/.julia/scratchspaces/a66863c6-20e8-4ff4-8a62-49f30b1f605e/agent-cache/default-honeycrisp-XG3Q6T6R70.0/build/default-honeycrisp-XG3Q6T6R70-0/julialang/julia-release-1-dot-12/src/toplevel.c:975
+ijl_toplevel_eval at /Users/julia/.julia/scratchspaces/a66863c6-20e8-4ff4-8a62-49f30b1f605e/agent-cache/default-honeycrisp-XG3Q6T6R70.0/build/default-honeycrisp-XG3Q6T6R70-0/julialang/julia-release-1-dot-12/src/toplevel.c:1047 [inlined]
+ijl_toplevel_eval_in at /Users/julia/.julia/scratchspaces/a66863c6-20e8-4ff4-8a62-49f30b1f605e/agent-cache/default-honeycrisp-XG3Q6T6R70.0/build/default-honeycrisp-XG3Q6T6R70-0/julialang/julia-release-1-dot-12/src/toplevel.c:1092
+eval at ./boot.jl:489
+include_string at ./loading.jl:2870
+_include at ./loading.jl:2930
+include at ./Base.jl:306
+include_package_for_output at ./loading.jl:3024
+jfptr_include_package_for_output_62245.1 at /Users/juancagc/.julia/juliaup/julia-1.12.4+0.aarch64.apple.darwin14/lib/julia/sys.dylib (unknown line)
+jl_apply at /Users/julia/.julia/scratchspaces/a66863c6-20e8-4ff4-8a62-49f30b1f605e/agent-cache/default-honeycrisp-XG3Q6T6R70.0/build/default-honeycrisp-XG3Q6T6R70-0/julialang/julia-release-1-dot-12/src/./julia.h:2391 [inlined]
+do_call at /Users/julia/.julia/scratchspaces/a66863c6-20e8-4ff4-8a62-49f30b1f605e/agent-cache/default-honeycrisp-XG3Q6T6R70.0/build/default-honeycrisp-XG3Q6T6R70-0/julialang/julia-release-1-dot-12/src/interpreter.c:123
+eval_stmt_value at /Users/julia/.julia/scratchspaces/a66863c6-20e8-4ff4-8a62-49f30b1f605e/agent-cache/default-honeycrisp-XG3Q6T6R70.0/build/default-honeycrisp-XG3Q6T6R70-0/julialang/julia-release-1-dot-12/src/interpreter.c:194
+eval_body at /Users/julia/.julia/scratchspaces/a66863c6-20e8-4ff4-8a62-49f30b1f605e/agent-cache/default-honeycrisp-XG3Q6T6R70.0/build/default-honeycrisp-XG3Q6T6R70-0/julialang/julia-release-1-dot-12/src/interpreter.c:689
+jl_interpret_toplevel_thunk at /Users/julia/.julia/scratchspaces/a66863c6-20e8-4ff4-8a62-49f30b1f605e/agent-cache/default-honeycrisp-XG3Q6T6R70.0/build/default-honeycrisp-XG3Q6T6R70-0/julialang/julia-release-1-dot-12/src/interpreter.c:898
+jl_toplevel_eval_flex at /Users/julia/.julia/scratchspaces/a66863c6-20e8-4ff4-8a62-49f30b1f605e/agent-cache/default-honeycrisp-XG3Q6T6R70.0/build/default-honeycrisp-XG3Q6T6R70-0/julialang/julia-release-1-dot-12/src/toplevel.c:1035
+jl_toplevel_eval_flex at /Users/julia/.julia/scratchspaces/a66863c6-20e8-4ff4-8a62-49f30b1f605e/agent-cache/default-honeycrisp-XG3Q6T6R70.0/build/default-honeycrisp-XG3Q6T6R70-0/julialang/julia-release-1-dot-12/src/toplevel.c:975
+ijl_toplevel_eval at /Users/julia/.julia/scratchspaces/a66863c6-20e8-4ff4-8a62-49f30b1f605e/agent-cache/default-honeycrisp-XG3Q6T6R70.0/build/default-honeycrisp-XG3Q6T6R70-0/julialang/julia-release-1-dot-12/src/toplevel.c:1047 [inlined]
+ijl_toplevel_eval_in at /Users/julia/.julia/scratchspaces/a66863c6-20e8-4ff4-8a62-49f30b1f605e/agent-cache/default-honeycrisp-XG3Q6T6R70.0/build/default-honeycrisp-XG3Q6T6R70-0/julialang/julia-release-1-dot-12/src/toplevel.c:1092
+eval at ./boot.jl:489
+include_string at ./loading.jl:2870
+include_string at ./loading.jl:2880 [inlined]
+exec_options at ./client.jl:315
+_start at ./client.jl:550
+jfptr__start_70416.1 at /Users/juancagc/.julia/juliaup/julia-1.12.4+0.aarch64.apple.darwin14/lib/julia/sys.dylib (unknown line)
+jl_apply at /Users/julia/.julia/scratchspaces/a66863c6-20e8-4ff4-8a62-49f30b1f605e/agent-cache/default-honeycrisp-XG3Q6T6R70.0/build/default-honeycrisp-XG3Q6T6R70-0/julialang/julia-release-1-dot-12/src/./julia.h:2391 [inlined]
+true_main at /Users/julia/.julia/scratchspaces/a66863c6-20e8-4ff4-8a62-49f30b1f605e/agent-cache/default-honeycrisp-XG3Q6T6R70.0/build/default-honeycrisp-XG3Q6T6R70-0/julialang/julia-release-1-dot-12/src/jlapi.c:971
+jl_repl_entrypoint at /Users/julia/.julia/scratchspaces/a66863c6-20e8-4ff4-8a62-49f30b1f605e/agent-cache/default-honeycrisp-XG3Q6T6R70.0/build/default-honeycrisp-XG3Q6T6R70-0/julialang/julia-release-1-dot-12/src/jlapi.c:1139
+Allocations: 79553743 (Pool: 79552181; Big: 1562); GC: 25
+ERROR: LoadError: Failed to precompile GLMakie [e9467ef8-e4e7-5192-8a1a-b1aee30e663a] to "/Users/juancagc/.julia/compiled/v1.12/GLMakie/jl_a626zS".
+Stacktrace:
+  [1] error(s::String)
+    @ Base ./error.jl:44
+  [2] compilecache(pkg::Base.PkgId, path::String, internal_stderr::IO, internal_stdout::IO, keep_loaded_modules::Bool; flags::Cmd, cacheflags::Base.CacheFlags, reasons::Dict{String, Int64}, loadable_exts::Nothing)
+    @ Base ./loading.jl:3311
+  [3] (::Base.var"#__require_prelocked##0#__require_prelocked##1"{Base.PkgId, String, Dict{String, Int64}})()
+    @ Base ./loading.jl:2679
+  [4] mkpidlock(f::Base.var"#__require_prelocked##0#__require_prelocked##1"{Base.PkgId, String, Dict{String, Int64}}, at::String, pid::Int32; kwopts::@Kwargs{stale_age::Int64, wait::Bool})
+    @ FileWatching.Pidfile ~/.julia/juliaup/julia-1.12.4+0.aarch64.apple.darwin14/share/julia/stdlib/v1.12/FileWatching/src/pidfile.jl:93
+  [5] #mkpidlock#7
+    @ ~/.julia/juliaup/julia-1.12.4+0.aarch64.apple.darwin14/share/julia/stdlib/v1.12/FileWatching/src/pidfile.jl:88 [inlined]
+  [6] trymkpidlock(::Function, ::Vararg{Any}; kwargs::@Kwargs{stale_age::Int64})
+    @ FileWatching.Pidfile ~/.julia/juliaup/julia-1.12.4+0.aarch64.apple.darwin14/share/julia/stdlib/v1.12/FileWatching/src/pidfile.jl:114
+  [7] #invokelatest_gr#232
+    @ ./reflection.jl:1297 [inlined]
+  [8] invokelatest_gr
+    @ ./reflection.jl:1289 [inlined]
+  [9] maybe_cachefile_lock(f::Base.var"#__require_prelocked##0#__require_prelocked##1"{Base.PkgId, String, Dict{String, Int64}}, pkg::Base.PkgId, srcpath::String; stale_age::Int64)
+    @ Base ./loading.jl:3882
+ [10] maybe_cachefile_lock
+    @ ./loading.jl:3879 [inlined]
+ [11] __require_prelocked(pkg::Base.PkgId, env::String)
+    @ Base ./loading.jl:2665
+ [12] _require_prelocked(uuidkey::Base.PkgId, env::String)
+    @ Base ./loading.jl:2493
+ [13] macro expansion
+    @ ./loading.jl:2421 [inlined]
+ [14] macro expansion
+    @ ./lock.jl:376 [inlined]
+ [15] __require(into::Module, mod::Symbol)
+    @ Base ./loading.jl:2386
+ [16] require(into::Module, mod::Symbol)
+    @ Base ./loading.jl:2362
+ [17] top-level scope
+    @ ~/HomotopyGetsReal/src/HomotopyGetsReal.jl:46
+ [18] include(mod::Module, _path::String)
+    @ Base ./Base.jl:306
+ [19] include_package_for_output(pkg::Base.PkgId, input::String, depot_path::Vector{String}, dl_load_path::Vector{String}, load_path::Vector{String}, concrete_deps::Vector{Pair{Base.PkgId, UInt128}}, source::Nothing)
+    @ Base ./loading.jl:3024
+ [20] top-level scope
+    @ stdin:5
+ [21] eval(m::Module, e::Any)
+    @ Core ./boot.jl:489
+ [22] include_string(mapexpr::typeof(identity), mod::Module, code::String, filename::String)
+    @ Base ./loading.jl:2870
+ [23] include_string
+    @ ./loading.jl:2880 [inlined]
+ [24] exec_options(opts::Base.JLOptions)
+    @ Base ./client.jl:315
+ [25] _start()
+    @ Base ./client.jl:550
+in expression starting at /Users/juancagc/HomotopyGetsReal/src/HomotopyGetsReal.jl:39
+in expression starting at stdin:Precompiling packages...
+              ✗ GLMakie
+Info Given HomotopyGetsReal was explicitly requested, output will be shown live [0K
+[0K
+[0K[42385] signal 11 (2): Segmentation fault: 11
+[0Kin expression starting at /Users/juancagc/.julia/packages/Makie/XzVRj/precompile/shared-precompile.jl:6
+[0K_glfwGetMonitorPosCocoa at /Users/juancagc/.julia/artifacts/80bb151e4d99a3b40bf88216dc326e34c0a62c30/lib/libglfw.3.4.dylib (unknown line)
+[0KGetMonitorPos at /Users/juancagc/.julia/packages/GLFW/wA4ue/src/glfw3.jl:553
+[0KMonitorProperties at /Users/juancagc/.julia/packages/GLMakie/A7mVm/src/glwindow.jl:204
+[0Kwindow_area at /Users/juancagc/.julia/packages/GLMakie/A7mVm/src/events.jl:45
+[0Kconnect_screen at /Users/juancagc/.julia/packages/Makie/XzVRj/src/interaction/events.jl:19
+[0Kdisplay_scene! at /Users/juancagc/.julia/packages/GLMakie/A7mVm/src/screen.jl:522
+[0Kunknown function (ip: 0x154f94493) at (unknown file)
+[0K#Screen#35 at /Users/juancagc/.julia/packages/GLMakie/A7mVm/src/screen.jl:540
+[0KScreen at /Users/juancagc/.julia/packages/GLMakie/A7mVm/src/screen.jl:533
+[0Kunknown function (ip: 0x154ccc087) at (unknown file)
+[0Kgetscreen at /Users/juancagc/.julia/packages/Makie/XzVRj/src/display.jl:444
+[0K#1539 at /Users/juancagc/.julia/packages/Makie/XzVRj/src/display.jl:487
+[0Klock at ./lock.jl:335
+[0K#colorbuffer#1537 at /Users/juancagc/.julia/packages/Makie/XzVRj/src/display.jl:479 [inlined]
+[0Kcolorbuffer at /Users/juancagc/.julia/packages/Makie/XzVRj/src/display.jl:478 [inlined]
+[0Kcolorbuffer at /Users/juancagc/.julia/packages/Makie/XzVRj/src/display.jl:478
+[0Kunknown function (ip: 0x154ae419b) at (unknown file)
+[0Kjl_apply at /Users/julia/.julia/scratchspaces/a66863c6-20e8-4ff4-8a62-49f30b1f605e/agent-cache/default-honeycrisp-XG3Q6T6R70.0/build/default-honeycrisp-XG3Q6T6R70-0/julialang/julia-release-1-dot-12/src/./julia.h:2391 [inlined]
+[0Kdo_call at /Users/julia/.julia/scratchspaces/a66863c6-20e8-4ff4-8a62-49f30b1f605e/agent-cache/default-honeycrisp-XG3Q6T6R70.0/build/default-honeycrisp-XG3Q6T6R70-0/julialang/julia-release-1-dot-12/src/interpreter.c:123
+[0Keval_stmt_value at /Users/julia/.julia/scratchspaces/a66863c6-20e8-4ff4-8a62-49f30b1f605e/agent-cache/default-honeycrisp-XG3Q6T6R70.0/build/default-honeycrisp-XG3Q6T6R70-0/julialang/julia-release-1-dot-12/src/interpreter.c:194
+[0Keval_body at /Users/julia/.julia/scratchspaces/a66863c6-20e8-4ff4-8a62-49f30b1f605e/agent-cache/default-honeycrisp-XG3Q6T6R70.0/build/default-honeycrisp-XG3Q6T6R70-0/julialang/julia-release-1-dot-12/src/interpreter.c:689
+[0Kjl_interpret_toplevel_thunk at /Users/julia/.julia/scratchspaces/a66863c6-20e8-4ff4-8a62-49f30b1f605e/agent-cache/default-honeycrisp-XG3Q6T6R70.0/build/default-honeycrisp-XG3Q6T6R70-0/julialang/julia-release-1-dot-12/src/interpreter.c:898
+[0Kjl_toplevel_eval_flex at /Users/julia/.julia/scratchspaces/a66863c6-20e8-4ff4-8a62-49f30b1f605e/agent-cache/default-honeycrisp-XG3Q6T6R70.0/build/default-honeycrisp-XG3Q6T6R70-0/julialang/julia-release-1-dot-12/src/toplevel.c:1035
+[0Kjl_toplevel_eval_flex at /Users/julia/.julia/scratchspaces/a66863c6-20e8-4ff4-8a62-49f30b1f605e/agent-cache/default-honeycrisp-XG3Q6T6R70.0/build/default-honeycrisp-XG3Q6T6R70-0/julialang/julia-release-1-dot-12/src/toplevel.c:975
+[0Kijl_toplevel_eval at /Users/julia/.julia/scratchspaces/a66863c6-20e8-4ff4-8a62-49f30b1f605e/agent-cache/default-honeycrisp-XG3Q6T6R70.0/build/default-honeycrisp-XG3Q6T6R70-0/julialang/julia-release-1-dot-12/src/toplevel.c:1047 [inlined]
+[0Kijl_toplevel_eval_in at /Users/julia/.julia/scratchspaces/a66863c6-20e8-4ff4-8a62-49f30b1f605e/agent-cache/default-honeycrisp-XG3Q6T6R70.0/build/default-honeycrisp-XG3Q6T6R70-0/julialang/julia-release-1-dot-12/src/toplevel.c:1092
+[0Keval at ./boot.jl:489
+[0Kinclude_string at ./loading.jl:2870
+[0K_include at ./loading.jl:2930
+[0Kinclude at ./Base.jl:307
+[0KIncludeInto at ./Base.jl:308
+[0Kjfptr_IncludeInto_97062 at /Users/juancagc/.julia/compiled/v1.12/Makie/iZ1Bl_m3zUq.dylib (unknown line)
+[0Kmacro expansion at /Users/juancagc/.julia/packages/GLMakie/A7mVm/src/precompiles.jl:24 [inlined]
+[0Kmacro expansion at /Users/juancagc/.julia/packages/PrecompileTools/QUxvR/src/workloads.jl:70 [inlined]
+[0Kmacro expansion at /Users/juancagc/.julia/packages/GLMakie/A7mVm/src/precompiles.jl:17 [inlined]
+[0Kmacro expansion at /Users/juancagc/.julia/packages/PrecompileTools/QUxvR/src/workloads.jl:118 [inlined]
+[0Ktop-level scope at /Users/juancagc/.julia/packages/GLMakie/A7mVm/src/precompiles.jl:15
+[0Kjl_toplevel_eval_flex at /Users/julia/.julia/scratchspaces/a66863c6-20e8-4ff4-8a62-49f30b1f605e/agent-cache/default-honeycrisp-XG3Q6T6R70.0/build/default-honeycrisp-XG3Q6T6R70-0/julialang/julia-release-1-dot-12/src/toplevel.c:1024
+[0Kjl_toplevel_eval_flex at /Users/julia/.julia/scratchspaces/a66863c6-20e8-4ff4-8a62-49f30b1f605e/agent-cache/default-honeycrisp-XG3Q6T6R70.0/build/default-honeycrisp-XG3Q6T6R70-0/julialang/julia-release-1-dot-12/src/toplevel.c:975
+[0Kijl_toplevel_eval at /Users/julia/.julia/scratchspaces/a66863c6-20e8-4ff4-8a62-49f30b1f605e/agent-cache/default-honeycrisp-XG3Q6T6R70.0/build/default-honeycrisp-XG3Q6T6R70-0/julialang/julia-release-1-dot-12/src/toplevel.c:1047 [inlined]
+[0Kijl_toplevel_eval_in at /Users/julia/.julia/scratchspaces/a66863c6-20e8-4ff4-8a62-49f30b1f605e/agent-cache/default-honeycrisp-XG3Q6T6R70.0/build/default-honeycrisp-XG3Q6T6R70-0/julialang/julia-release-1-dot-12/src/toplevel.c:1092
+[0Keval at ./boot.jl:489
+[0Kinclude_string at ./loading.jl:2870
+[0K_include at ./loading.jl:2930
+[0Kinclude at ./Base.jl:307
+[0KIncludeInto at ./Base.jl:308
+[0Kjfptr_IncludeInto_71092.1 at /Users/juancagc/.julia/juliaup/julia-1.12.4+0.aarch64.apple.darwin14/lib/julia/sys.dylib (unknown line)
+[0Kjl_apply at /Users/julia/.julia/scratchspaces/a66863c6-20e8-4ff4-8a62-49f30b1f605e/agent-cache/default-honeycrisp-XG3Q6T6R70.0/build/default-honeycrisp-XG3Q6T6R70-0/julialang/julia-release-1-dot-12/src/./julia.h:2391 [inlined]
+[0Kdo_call at /Users/julia/.julia/scratchspaces/a66863c6-20e8-4ff4-8a62-49f30b1f605e/agent-cache/default-honeycrisp-XG3Q6T6R70.0/build/default-honeycrisp-XG3Q6T6R70-0/julialang/julia-release-1-dot-12/src/interpreter.c:123
+[0Keval_stmt_value at /Users/julia/.julia/scratchspaces/a66863c6-20e8-4ff4-8a62-49f30b1f605e/agent-cache/default-honeycrisp-XG3Q6T6R70.0/build/default-honeycrisp-XG3Q6T6R70-0/julialang/julia-release-1-dot-12/src/interpreter.c:194
+[0Keval_body at /Users/julia/.julia/scratchspaces/a66863c6-20e8-4ff4-8a62-49f30b1f605e/agent-cache/default-honeycrisp-XG3Q6T6R70.0/build/default-honeycrisp-XG3Q6T6R70-0/julialang/julia-release-1-dot-12/src/interpreter.c:689
+[0Kjl_interpret_toplevel_thunk at /Users/julia/.julia/scratchspaces/a66863c6-20e8-4ff4-8a62-49f30b1f605e/agent-cache/default-honeycrisp-XG3Q6T6R70.0/build/default-honeycrisp-XG3Q6T6R70-0/julialang/julia-release-1-dot-12/src/interpreter.c:898
+[0Kjl_toplevel_eval_flex at /Users/julia/.julia/scratchspaces/a66863c6-20e8-4ff4-8a62-49f30b1f605e/agent-cache/default-honeycrisp-XG3Q6T6R70.0/build/default-honeycrisp-XG3Q6T6R70-0/julialang/julia-release-1-dot-12/src/toplevel.c:1035
+[0Kjl_eval_module_expr at /Users/julia/.julia/scratchspaces/a66863c6-20e8-4ff4-8a62-49f30b1f605e/agent-cache/default-honeycrisp-XG3Q6T6R70.0/build/default-honeycrisp-XG3Q6T6R70-0/julialang/julia-release-1-dot-12/src/toplevel.c:197 [inlined]
+[0Kjl_toplevel_eval_flex at /Users/julia/.julia/scratchspaces/a66863c6-20e8-4ff4-8a62-49f30b1f605e/agent-cache/default-honeycrisp-XG3Q6T6R70.0/build/default-honeycrisp-XG3Q6T6R70-0/julialang/julia-release-1-dot-12/src/toplevel.c:814
+[0Kjl_toplevel_eval_flex at /Users/julia/.julia/scratchspaces/a66863c6-20e8-4ff4-8a62-49f30b1f605e/agent-cache/default-honeycrisp-XG3Q6T6R70.0/build/default-honeycrisp-XG3Q6T6R70-0/julialang/julia-release-1-dot-12/src/toplevel.c:975
+[0Kijl_toplevel_eval at /Users/julia/.julia/scratchspaces/a66863c6-20e8-4ff4-8a62-49f30b1f605e/agent-cache/default-honeycrisp-XG3Q6T6R70.0/build/default-honeycrisp-XG3Q6T6R70-0/julialang/julia-release-1-dot-12/src/toplevel.c:1047 [inlined]
+[0Kijl_toplevel_eval_in at /Users/julia/.julia/scratchspaces/a66863c6-20e8-4ff4-8a62-49f30b1f605e/agent-cache/default-honeycrisp-XG3Q6T6R70.0/build/default-honeycrisp-XG3Q6T6R70-0/julialang/julia-release-1-dot-12/src/toplevel.c:1092
+[0Keval at ./boot.jl:489
+[0Kinclude_string at ./loading.jl:2870
+[0K_include at ./loading.jl:2930
+[0Kinclude at ./Base.jl:306
+[0Kinclude_package_for_output at ./loading.jl:3024
+[0Kjfptr_include_package_for_output_62245.1 at /Users/juancagc/.julia/juliaup/julia-1.12.4+0.aarch64.apple.darwin14/lib/julia/sys.dylib (unknown line)
+[0Kjl_apply at /Users/julia/.julia/scratchspaces/a66863c6-20e8-4ff4-8a62-49f30b1f605e/agent-cache/default-honeycrisp-XG3Q6T6R70.0/build/default-honeycrisp-XG3Q6T6R70-0/julialang/julia-release-1-dot-12/src/./julia.h:2391 [inlined]
+[0Kdo_call at /Users/julia/.julia/scratchspaces/a66863c6-20e8-4ff4-8a62-49f30b1f605e/agent-cache/default-honeycrisp-XG3Q6T6R70.0/build/default-honeycrisp-XG3Q6T6R70-0/julialang/julia-release-1-dot-12/src/interpreter.c:123
+[0Keval_stmt_value at /Users/julia/.julia/scratchspaces/a66863c6-20e8-4ff4-8a62-49f30b1f605e/agent-cache/default-honeycrisp-XG3Q6T6R70.0/build/default-honeycrisp-XG3Q6T6R70-0/julialang/julia-release-1-dot-12/src/interpreter.c:194
+[0Keval_body at /Users/julia/.julia/scratchspaces/a66863c6-20e8-4ff4-8a62-49f30b1f605e/agent-cache/default-honeycrisp-XG3Q6T6R70.0/build/default-honeycrisp-XG3Q6T6R70-0/julialang/julia-release-1-dot-12/src/interpreter.c:689
+[0Kjl_interpret_toplevel_thunk at /Users/julia/.julia/scratchspaces/a66863c6-20e8-4ff4-8a62-49f30b1f605e/agent-cache/default-honeycrisp-XG3Q6T6R70.0/build/default-honeycrisp-XG3Q6T6R70-0/julialang/julia-release-1-dot-12/src/interpreter.c:898
+[0Kjl_toplevel_eval_flex at /Users/julia/.julia/scratchspaces/a66863c6-20e8-4ff4-8a62-49f30b1f605e/agent-cache/default-honeycrisp-XG3Q6T6R70.0/build/default-honeycrisp-XG3Q6T6R70-0/julialang/julia-release-1-dot-12/src/toplevel.c:1035
+[0Kjl_toplevel_eval_flex at /Users/julia/.julia/scratchspaces/a66863c6-20e8-4ff4-8a62-49f30b1f605e/agent-cache/default-honeycrisp-XG3Q6T6R70.0/build/default-honeycrisp-XG3Q6T6R70-0/julialang/julia-release-1-dot-12/src/toplevel.c:975
+[0Kijl_toplevel_eval at /Users/julia/.julia/scratchspaces/a66863c6-20e8-4ff4-8a62-49f30b1f605e/agent-cache/default-honeycrisp-XG3Q6T6R70.0/build/default-honeycrisp-XG3Q6T6R70-0/julialang/julia-release-1-dot-12/src/toplevel.c:1047 [inlined]
+[0Kijl_toplevel_eval_in at /Users/julia/.julia/scratchspaces/a66863c6-20e8-4ff4-8a62-49f30b1f605e/agent-cache/default-honeycrisp-XG3Q6T6R70.0/build/default-honeycrisp-XG3Q6T6R70-0/julialang/julia-release-1-dot-12/src/toplevel.c:1092
+[0Keval at ./boot.jl:489
+[0Kinclude_string at ./loading.jl:2870
+[0Kinclude_string at ./loading.jl:2880 [inlined]
+[0Kexec_options at ./client.jl:315
+[0K_start at ./client.jl:550
+[0Kjfptr__start_70416.1 at /Users/juancagc/.julia/juliaup/julia-1.12.4+0.aarch64.apple.darwin14/lib/julia/sys.dylib (unknown line)
+[0Kjl_apply at /Users/julia/.julia/scratchspaces/a66863c6-20e8-4ff4-8a62-49f30b1f605e/agent-cache/default-honeycrisp-XG3Q6T6R70.0/build/default-honeycrisp-XG3Q6T6R70-0/julialang/julia-release-1-dot-12/src/./julia.h:2391 [inlined]
+[0Ktrue_main at /Users/julia/.julia/scratchspaces/a66863c6-20e8-4ff4-8a62-49f30b1f605e/agent-cache/default-honeycrisp-XG3Q6T6R70.0/build/default-honeycrisp-XG3Q6T6R70-0/julialang/julia-release-1-dot-12/src/jlapi.c:971
+[0Kjl_repl_entrypoint at /Users/julia/.julia/scratchspaces/a66863c6-20e8-4ff4-8a62-49f30b1f605e/agent-cache/default-honeycrisp-XG3Q6T6R70.0/build/default-honeycrisp-XG3Q6T6R70-0/julialang/julia-release-1-dot-12/src/jlapi.c:1139
+[0KAllocations: 77116929 (Pool: 77115393; Big: 1536); GC: 24
+[0KERROR: LoadError: Failed to precompile GLMakie [e9467ef8-e4e7-5192-8a1a-b1aee30e663a] to "/Users/juancagc/.julia/compiled/v1.12/GLMakie/jl_0wGYAP".
+[0KStacktrace:
+[0K  [1] error(s::String)
+[0K    @ Base ./error.jl:44
+[0K  [2] compilecache(pkg::Base.PkgId, path::String, internal_stderr::IO, internal_stdout::IO, keep_loaded_modules::Bool; flags::Cmd, cacheflags::Base.CacheFlags, reasons::Dict{String, Int64}, loadable_exts::Nothing)
+[0K    @ Base ./loading.jl:3311
+[0K  [3] (::Base.var"#__require_prelocked##0#__require_prelocked##1"{Base.PkgId, String, Dict{String, Int64}})()
+[0K    @ Base ./loading.jl:2679
+[0K  [4] mkpidlock(f::Base.var"#__require_prelocked##0#__require_prelocked##1"{Base.PkgId, String, Dict{String, Int64}}, at::String, pid::Int32; kwopts::@Kwargs{stale_age::Int64, wait::Bool})
+[0K    @ FileWatching.Pidfile ~/.julia/juliaup/julia-1.12.4+0.aarch64.apple.darwin14/share/julia/stdlib/v1.12/FileWatching/src/pidfile.jl:93
+[0K  [5] #mkpidlock#7
+[0K    @ ~/.julia/juliaup/julia-1.12.4+0.aarch64.apple.darwin14/share/julia/stdlib/v1.12/FileWatching/src/pidfile.jl:88 [inlined]
+[0K  [6] trymkpidlock(::Function, ::Vararg{Any}; kwargs::@Kwargs{stale_age::Int64})
+[0K    @ FileWatching.Pidfile ~/.julia/juliaup/julia-1.12.4+0.aarch64.apple.darwin14/share/julia/stdlib/v1.12/FileWatching/src/pidfile.jl:114
+[0K  [7] #invokelatest_gr#232
+[0K    @ ./reflection.jl:1297 [inlined]
+[0K  [8] invokelatest_gr
+[0K    @ ./reflection.jl:1289 [inlined]
+[0K  [9] maybe_cachefile_lock(f::Base.var"#__require_prelocked##0#__require_prelocked##1"{Base.PkgId, String, Dict{String, Int64}}, pkg::Base.PkgId, srcpath::String; stale_age::Int64)
+[0K    @ Base ./loading.jl:3882
+[0K [10] maybe_cachefile_lock
+[0K    @ ./loading.jl:3879 [inlined]
+[0K [11] __require_prelocked(pkg::Base.PkgId, env::String)
+[0K    @ Base ./loading.jl:2665
+[0K [12] _require_prelocked(uuidkey::Base.PkgId, env::String)
+[0K    @ Base ./loading.jl:2493
+[0K [13] macro expansion
+[0K    @ ./loading.jl:2421 [inlined]
+[0K [14] macro expansion
+[0K    @ ./lock.jl:376 [inlined]
+[0K [15] __require(into::Module, mod::Symbol)
+[0K    @ Base ./loading.jl:2386
+[0K [16] require(into::Module, mod::Symbol)
+[0K    @ Base ./loading.jl:2362
+[0K [17] top-level scope
+[0K    @ ~/HomotopyGetsReal/src/HomotopyGetsReal.jl:46
+[0K [18] include(mod::Module, _path::String)
+[0K    @ Base ./Base.jl:306
+[0K [19] include_package_for_output(pkg::Base.PkgId, input::String, depot_path::Vector{String}, dl_load_path::Vector{String}, load_path::Vector{String}, concrete_deps::Vector{Pair{Base.PkgId, UInt128}}, source::Nothing)
+[0K    @ Base ./loading.jl:3024
+[0K [20] top-level scope
+[0K    @ stdin:5
+[0K [21] eval(m::Module, e::Any)
+[0K    @ Core ./boot.jl:489
+[0K [22] include_string(mapexpr::typeof(identity), mod::Module, code::String, filename::String)
+[0K    @ Base ./loading.jl:2870
+[0K [23] include_string
+[0K    @ ./loading.jl:2880 [inlined]
+[0K [24] exec_options(opts::Base.JLOptions)
+[0K    @ Base ./client.jl:315
+[0K [25] _start()
+[0K    @ Base ./client.jl:550
+[0Kin expression starting at /Users/juancagc/HomotopyGetsReal/src/HomotopyGetsReal.jl:39
+[0Kin expression starting at stdin:5
+              ✗ HomotopyGetsReal
+  0 dependencies successfully precompiled in 25 seconds. 398 already precompiled.
+
+ERROR: LoadError: The following 1 direct dependency failed to precompile:
+
+HomotopyGetsReal 
+
+Failed to precompile HomotopyGetsReal [4051f461-4a5e-492e-9237-10b01d865883] to "/Users/juancagc/.julia/compiled/v1.12/HomotopyGetsReal/jl_Yb9Kku".
+[42385] signal 11 (2): Segmentation fault: 11
+in expression starting at /Users/juancagc/.julia/packages/Makie/XzVRj/precompile/shared-precompile.jl:6
+_glfwGetMonitorPosCocoa at /Users/juancagc/.julia/artifacts/80bb151e4d99a3b40bf88216dc326e34c0a62c30/lib/libglfw.3.4.dylib (unknown line)
+GetMonitorPos at /Users/juancagc/.julia/packages/GLFW/wA4ue/src/glfw3.jl:553
+MonitorProperties at /Users/juancagc/.julia/packages/GLMakie/A7mVm/src/glwindow.jl:204
+window_area at /Users/juancagc/.julia/packages/GLMakie/A7mVm/src/events.jl:45
+connect_screen at /Users/juancagc/.julia/packages/Makie/XzVRj/src/interaction/events.jl:19
+display_scene! at /Users/juancagc/.julia/packages/GLMakie/A7mVm/src/screen.jl:522
+unknown function (ip: 0x154f94493) at (unknown file)
+#Screen#35 at /Users/juancagc/.julia/packages/GLMakie/A7mVm/src/screen.jl:540
+Screen at /Users/juancagc/.julia/packages/GLMakie/A7mVm/src/screen.jl:533
+unknown function (ip: 0x154ccc087) at (unknown file)
+getscreen at /Users/juancagc/.julia/packages/Makie/XzVRj/src/display.jl:444
+#1539 at /Users/juancagc/.julia/packages/Makie/XzVRj/src/display.jl:487
+lock at ./lock.jl:335
+#colorbuffer#1537 at /Users/juancagc/.julia/packages/Makie/XzVRj/src/display.jl:479 [inlined]
+colorbuffer at /Users/juancagc/.julia/packages/Makie/XzVRj/src/display.jl:478 [inlined]
+colorbuffer at /Users/juancagc/.julia/packages/Makie/XzVRj/src/display.jl:478
+unknown function (ip: 0x154ae419b) at (unknown file)
+jl_apply at /Users/julia/.julia/scratchspaces/a66863c6-20e8-4ff4-8a62-49f30b1f605e/agent-cache/default-honeycrisp-XG3Q6T6R70.0/build/default-honeycrisp-XG3Q6T6R70-0/julialang/julia-release-1-dot-12/src/./julia.h:2391 [inlined]
+do_call at /Users/julia/.julia/scratchspaces/a66863c6-20e8-4ff4-8a62-49f30b1f605e/agent-cache/default-honeycrisp-XG3Q6T6R70.0/build/default-honeycrisp-XG3Q6T6R70-0/julialang/julia-release-1-dot-12/src/interpreter.c:123
+eval_stmt_value at /Users/julia/.julia/scratchspaces/a66863c6-20e8-4ff4-8a62-49f30b1f605e/agent-cache/default-honeycrisp-XG3Q6T6R70.0/build/default-honeycrisp-XG3Q6T6R70-0/julialang/julia-release-1-dot-12/src/interpreter.c:194
+eval_body at /Users/julia/.julia/scratchspaces/a66863c6-20e8-4ff4-8a62-49f30b1f605e/agent-cache/default-honeycrisp-XG3Q6T6R70.0/build/default-honeycrisp-XG3Q6T6R70-0/julialang/julia-release-1-dot-12/src/interpreter.c:689
+jl_interpret_toplevel_thunk at /Users/julia/.julia/scratchspaces/a66863c6-20e8-4ff4-8a62-49f30b1f605e/agent-cache/default-honeycrisp-XG3Q6T6R70.0/build/default-honeycrisp-XG3Q6T6R70-0/julialang/julia-release-1-dot-12/src/interpreter.c:898
+jl_toplevel_eval_flex at /Users/julia/.julia/scratchspaces/a66863c6-20e8-4ff4-8a62-49f30b1f605e/agent-cache/default-honeycrisp-XG3Q6T6R70.0/build/default-honeycrisp-XG3Q6T6R70-0/julialang/julia-release-1-dot-12/src/toplevel.c:1035
+jl_toplevel_eval_flex at /Users/julia/.julia/scratchspaces/a66863c6-20e8-4ff4-8a62-49f30b1f605e/agent-cache/default-honeycrisp-XG3Q6T6R70.0/build/default-honeycrisp-XG3Q6T6R70-0/julialang/julia-release-1-dot-12/src/toplevel.c:975
+ijl_toplevel_eval at /Users/julia/.julia/scratchspaces/a66863c6-20e8-4ff4-8a62-49f30b1f605e/agent-cache/default-honeycrisp-XG3Q6T6R70.0/build/default-honeycrisp-XG3Q6T6R70-0/julialang/julia-release-1-dot-12/src/toplevel.c:1047 [inlined]
+ijl_toplevel_eval_in at /Users/julia/.julia/scratchspaces/a66863c6-20e8-4ff4-8a62-49f30b1f605e/agent-cache/default-honeycrisp-XG3Q6T6R70.0/build/default-honeycrisp-XG3Q6T6R70-0/julialang/julia-release-1-dot-12/src/toplevel.c:1092
+eval at ./boot.jl:489
+include_string at ./loading.jl:2870
+_include at ./loading.jl:2930
+include at ./Base.jl:307
+IncludeInto at ./Base.jl:308
+jfptr_IncludeInto_97062 at /Users/juancagc/.julia/compiled/v1.12/Makie/iZ1Bl_m3zUq.dylib (unknown line)
+macro expansion at /Users/juancagc/.julia/packages/GLMakie/A7mVm/src/precompiles.jl:24 [inlined]
+macro expansion at /Users/juancagc/.julia/packages/PrecompileTools/QUxvR/src/workloads.jl:70 [inlined]
+macro expansion at /Users/juancagc/.julia/packages/GLMakie/A7mVm/src/precompiles.jl:17 [inlined]
+macro expansion at /Users/juancagc/.julia/packages/PrecompileTools/QUxvR/src/workloads.jl:118 [inlined]
+top-level scope at /Users/juancagc/.julia/packages/GLMakie/A7mVm/src/precompiles.jl:15
+jl_toplevel_eval_flex at /Users/julia/.julia/scratchspaces/a66863c6-20e8-4ff4-8a62-49f30b1f605e/agent-cache/default-honeycrisp-XG3Q6T6R70.0/build/default-honeycrisp-XG3Q6T6R70-0/julialang/julia-release-1-dot-12/src/toplevel.c:1024
+jl_toplevel_eval_flex at /Users/julia/.julia/scratchspaces/a66863c6-20e8-4ff4-8a62-49f30b1f605e/agent-cache/default-honeycrisp-XG3Q6T6R70.0/build/default-honeycrisp-XG3Q6T6R70-0/julialang/julia-release-1-dot-12/src/toplevel.c:975
+ijl_toplevel_eval at /Users/julia/.julia/scratchspaces/a66863c6-20e8-4ff4-8a62-49f30b1f605e/agent-cache/default-honeycrisp-XG3Q6T6R70.0/build/default-honeycrisp-XG3Q6T6R70-0/julialang/julia-release-1-dot-12/src/toplevel.c:1047 [inlined]
+ijl_toplevel_eval_in at /Users/julia/.julia/scratchspaces/a66863c6-20e8-4ff4-8a62-49f30b1f605e/agent-cache/default-honeycrisp-XG3Q6T6R70.0/build/default-honeycrisp-XG3Q6T6R70-0/julialang/julia-release-1-dot-12/src/toplevel.c:1092
+eval at ./boot.jl:489
+include_string at ./loading.jl:2870
+_include at ./loading.jl:2930
+include at ./Base.jl:307
+IncludeInto at ./Base.jl:308
+jfptr_IncludeInto_71092.1 at /Users/juancagc/.julia/juliaup/julia-1.12.4+0.aarch64.apple.darwin14/lib/julia/sys.dylib (unknown line)
+jl_apply at /Users/julia/.julia/scratchspaces/a66863c6-20e8-4ff4-8a62-49f30b1f605e/agent-cache/default-honeycrisp-XG3Q6T6R70.0/build/default-honeycrisp-XG3Q6T6R70-0/julialang/julia-release-1-dot-12/src/./julia.h:2391 [inlined]
+do_call at /Users/julia/.julia/scratchspaces/a66863c6-20e8-4ff4-8a62-49f30b1f605e/agent-cache/default-honeycrisp-XG3Q6T6R70.0/build/default-honeycrisp-XG3Q6T6R70-0/julialang/julia-release-1-dot-12/src/interpreter.c:123
+eval_stmt_value at /Users/julia/.julia/scratchspaces/a66863c6-20e8-4ff4-8a62-49f30b1f605e/agent-cache/default-honeycrisp-XG3Q6T6R70.0/build/default-honeycrisp-XG3Q6T6R70-0/julialang/julia-release-1-dot-12/src/interpreter.c:194
+eval_body at /Users/julia/.julia/scratchspaces/a66863c6-20e8-4ff4-8a62-49f30b1f605e/agent-cache/default-honeycrisp-XG3Q6T6R70.0/build/default-honeycrisp-XG3Q6T6R70-0/julialang/julia-release-1-dot-12/src/interpreter.c:689
+jl_interpret_toplevel_thunk at /Users/julia/.julia/scratchspaces/a66863c6-20e8-4ff4-8a62-49f30b1f605e/agent-cache/default-honeycrisp-XG3Q6T6R70.0/build/default-honeycrisp-XG3Q6T6R70-0/julialang/julia-release-1-dot-12/src/interpreter.c:898
+jl_toplevel_eval_flex at /Users/julia/.julia/scratchspaces/a66863c6-20e8-4ff4-8a62-49f30b1f605e/agent-cache/default-honeycrisp-XG3Q6T6R70.0/build/default-honeycrisp-XG3Q6T6R70-0/julialang/julia-release-1-dot-12/src/toplevel.c:1035
+jl_eval_module_expr at /Users/julia/.julia/scratchspaces/a66863c6-20e8-4ff4-8a62-49f30b1f605e/agent-cache/default-honeycrisp-XG3Q6T6R70.0/build/default-honeycrisp-XG3Q6T6R70-0/julialang/julia-release-1-dot-12/src/toplevel.c:197 [inlined]
+jl_toplevel_eval_flex at /Users/julia/.julia/scratchspaces/a66863c6-20e8-4ff4-8a62-49f30b1f605e/agent-cache/default-honeycrisp-XG3Q6T6R70.0/build/default-honeycrisp-XG3Q6T6R70-0/julialang/julia-release-1-dot-12/src/toplevel.c:814
+jl_toplevel_eval_flex at /Users/julia/.julia/scratchspaces/a66863c6-20e8-4ff4-8a62-49f30b1f605e/agent-cache/default-honeycrisp-XG3Q6T6R70.0/build/default-honeycrisp-XG3Q6T6R70-0/julialang/julia-release-1-dot-12/src/toplevel.c:975
+ijl_toplevel_eval at /Users/julia/.julia/scratchspaces/a66863c6-20e8-4ff4-8a62-49f30b1f605e/agent-cache/default-honeycrisp-XG3Q6T6R70.0/build/default-honeycrisp-XG3Q6T6R70-0/julialang/julia-release-1-dot-12/src/toplevel.c:1047 [inlined]
+ijl_toplevel_eval_in at /Users/julia/.julia/scratchspaces/a66863c6-20e8-4ff4-8a62-49f30b1f605e/agent-cache/default-honeycrisp-XG3Q6T6R70.0/build/default-honeycrisp-XG3Q6T6R70-0/julialang/julia-release-1-dot-12/src/toplevel.c:1092
+eval at ./boot.jl:489
+include_string at ./loading.jl:2870
+_include at ./loading.jl:2930
+include at ./Base.jl:306
+include_package_for_output at ./loading.jl:3024
+jfptr_include_package_for_output_62245.1 at /Users/juancagc/.julia/juliaup/julia-1.12.4+0.aarch64.apple.darwin14/lib/julia/sys.dylib (unknown line)
+jl_apply at /Users/julia/.julia/scratchspaces/a66863c6-20e8-4ff4-8a62-49f30b1f605e/agent-cache/default-honeycrisp-XG3Q6T6R70.0/build/default-honeycrisp-XG3Q6T6R70-0/julialang/julia-release-1-dot-12/src/./julia.h:2391 [inlined]
+do_call at /Users/julia/.julia/scratchspaces/a66863c6-20e8-4ff4-8a62-49f30b1f605e/agent-cache/default-honeycrisp-XG3Q6T6R70.0/build/default-honeycrisp-XG3Q6T6R70-0/julialang/julia-release-1-dot-12/src/interpreter.c:123
+eval_stmt_value at /Users/julia/.julia/scratchspaces/a66863c6-20e8-4ff4-8a62-49f30b1f605e/agent-cache/default-honeycrisp-XG3Q6T6R70.0/build/default-honeycrisp-XG3Q6T6R70-0/julialang/julia-release-1-dot-12/src/interpreter.c:194
+eval_body at /Users/julia/.julia/scratchspaces/a66863c6-20e8-4ff4-8a62-49f30b1f605e/agent-cache/default-honeycrisp-XG3Q6T6R70.0/build/default-honeycrisp-XG3Q6T6R70-0/julialang/julia-release-1-dot-12/src/interpreter.c:689
+jl_interpret_toplevel_thunk at /Users/julia/.julia/scratchspaces/a66863c6-20e8-4ff4-8a62-49f30b1f605e/agent-cache/default-honeycrisp-XG3Q6T6R70.0/build/default-honeycrisp-XG3Q6T6R70-0/julialang/julia-release-1-dot-12/src/interpreter.c:898
+jl_toplevel_eval_flex at /Users/julia/.julia/scratchspaces/a66863c6-20e8-4ff4-8a62-49f30b1f605e/agent-cache/default-honeycrisp-XG3Q6T6R70.0/build/default-honeycrisp-XG3Q6T6R70-0/julialang/julia-release-1-dot-12/src/toplevel.c:1035
+jl_toplevel_eval_flex at /Users/julia/.julia/scratchspaces/a66863c6-20e8-4ff4-8a62-49f30b1f605e/agent-cache/default-honeycrisp-XG3Q6T6R70.0/build/default-honeycrisp-XG3Q6T6R70-0/julialang/julia-release-1-dot-12/src/toplevel.c:975
+ijl_toplevel_eval at /Users/julia/.julia/scratchspaces/a66863c6-20e8-4ff4-8a62-49f30b1f605e/agent-cache/default-honeycrisp-XG3Q6T6R70.0/build/default-honeycrisp-XG3Q6T6R70-0/julialang/julia-release-1-dot-12/src/toplevel.c:1047 [inlined]
+ijl_toplevel_eval_in at /Users/julia/.julia/scratchspaces/a66863c6-20e8-4ff4-8a62-49f30b1f605e/agent-cache/default-honeycrisp-XG3Q6T6R70.0/build/default-honeycrisp-XG3Q6T6R70-0/julialang/julia-release-1-dot-12/src/toplevel.c:1092
+eval at ./boot.jl:489
+include_string at ./loading.jl:2870
+include_string at ./loading.jl:2880 [inlined]
+exec_options at ./client.jl:315
+_start at ./client.jl:550
+jfptr__start_70416.1 at /Users/juancagc/.julia/juliaup/julia-1.12.4+0.aarch64.apple.darwin14/lib/julia/sys.dylib (unknown line)
+jl_apply at /Users/julia/.julia/scratchspaces/a66863c6-20e8-4ff4-8a62-49f30b1f605e/agent-cache/default-honeycrisp-XG3Q6T6R70.0/build/default-honeycrisp-XG3Q6T6R70-0/julialang/julia-release-1-dot-12/src/./julia.h:2391 [inlined]
+true_main at /Users/julia/.julia/scratchspaces/a66863c6-20e8-4ff4-8a62-49f30b1f605e/agent-cache/default-honeycrisp-XG3Q6T6R70.0/build/default-honeycrisp-XG3Q6T6R70-0/julialang/julia-release-1-dot-12/src/jlapi.c:971
+jl_repl_entrypoint at /Users/julia/.julia/scratchspaces/a66863c6-20e8-4ff4-8a62-49f30b1f605e/agent-cache/default-honeycrisp-XG3Q6T6R70.0/build/default-honeycrisp-XG3Q6T6R70-0/julialang/julia-release-1-dot-12/src/jlapi.c:1139
+Allocations: 77116929 (Pool: 77115393; Big: 1536); GC: 24
+ERROR: LoadError: Failed to precompile GLMakie [e9467ef8-e4e7-5192-8a1a-b1aee30e663a] to "/Users/juancagc/.julia/compiled/v1.12/GLMakie/jl_0wGYAP".
+Stacktrace:
+  [1] error(s::String)
+    @ Base ./error.jl:44
+  [2] compilecache(pkg::Base.PkgId, path::String, internal_stderr::IO, internal_stdout::IO, keep_loaded_modules::Bool; flags::Cmd, cacheflags::Base.CacheFlags, reasons::Dict{String, Int64}, loadable_exts::Nothing)
+    @ Base ./loading.jl:3311
+  [3] (::Base.var"#__require_prelocked##0#__require_prelocked##1"{Base.PkgId, String, Dict{String, Int64}})()
+    @ Base ./loading.jl:2679
+  [4] mkpidlock(f::Base.var"#__require_prelocked##0#__require_prelocked##1"{Base.PkgId, String, Dict{String, Int64}}, at::String, pid::Int32; kwopts::@Kwargs{stale_age::Int64, wait::Bool})
+    @ FileWatching.Pidfile ~/.julia/juliaup/julia-1.12.4+0.aarch64.apple.darwin14/share/julia/stdlib/v1.12/FileWatching/src/pidfile.jl:93
+  [5] #mkpidlock#7
+    @ ~/.julia/juliaup/julia-1.12.4+0.aarch64.apple.darwin14/share/julia/stdlib/v1.12/FileWatching/src/pidfile.jl:88 [inlined]
+  [6] trymkpidlock(::Function, ::Vararg{Any}; kwargs::@Kwargs{stale_age::Int64})
+    @ FileWatching.Pidfile ~/.julia/juliaup/julia-1.12.4+0.aarch64.apple.darwin14/share/julia/stdlib/v1.12/FileWatching/src/pidfile.jl:114
+  [7] #invokelatest_gr#232
+    @ ./reflection.jl:1297 [inlined]
+  [8] invokelatest_gr
+    @ ./reflection.jl:1289 [inlined]
+  [9] maybe_cachefile_lock(f::Base.var"#__require_prelocked##0#__require_prelocked##1"{Base.PkgId, String, Dict{String, Int64}}, pkg::Base.PkgId, srcpath::String; stale_age::Int64)
+    @ Base ./loading.jl:3882
+ [10] maybe_cachefile_lock
+    @ ./loading.jl:3879 [inlined]
+ [11] __require_prelocked(pkg::Base.PkgId, env::String)
+    @ Base ./loading.jl:2665
+ [12] _require_prelocked(uuidkey::Base.PkgId, env::String)
+    @ Base ./loading.jl:2493
+ [13] macro expansion
+    @ ./loading.jl:2421 [inlined]
+ [14] macro expansion
+    @ ./lock.jl:376 [inlined]
+ [15] __require(into::Module, mod::Symbol)
+    @ Base ./loading.jl:2386
+ [16] require(into::Module, mod::Symbol)
+    @ Base ./loading.jl:2362
+ [17] top-level scope
+    @ ~/HomotopyGetsReal/src/HomotopyGetsReal.jl:46
+ [18] include(mod::Module, _path::String)
+    @ Base ./Base.jl:306
+ [19] include_package_for_output(pkg::Base.PkgId, input::String, depot_path::Vector{String}, dl_load_path::Vector{String}, load_path::Vector{String}, concrete_deps::Vector{Pair{Base.PkgId, UInt128}}, source::Nothing)
+    @ Base ./loading.jl:3024
+ [20] top-level scope
+    @ stdin:5
+ [21] eval(m::Module, e::Any)
+    @ Core ./boot.jl:489
+ [22] include_string(mapexpr::typeof(identity), mod::Module, code::String, filename::String)
+    @ Base ./loading.jl:2870
+ [23] include_string
+    @ ./loading.jl:2880 [inlined]
+ [24] exec_options(opts::Base.JLOptions)
+    @ Base ./client.jl:315
+ [25] _start()
+    @ Base ./client.jl:550
+in expression starting at /Users/juancagc/HomotopyGetsReal/src/HomotopyGetsReal.jl:39
+in expression starting at stdin:
+in expression starting at /Users/juancagc/HomotopyGetsReal/dev/scratch/oscar_investigation/setup_and_time.jl:47
+=== Pkg.develop(HGR) ===
+Pkg.develop(HGR): 5.4s
+
+=== Pkg.add("Oscar") ===
+Pkg.add(Oscar): 216.8s
+
+=== Pkg.add(url=OscarHomotopyContinuation bridge) ===
+Pkg.add(url=bridge): 28.3s -- SUCCEEDED
+
+=== First `using Oscar` (precompile timing) ===
+using Oscar (first, incl. precompile): 11.1s
+
+=== `using OscarHomotopyContinuation` ===
+using OscarHomotopyContinuation: 2.4s
+
+=== `using HomotopyGetsReal` (alongside Oscar) ===
+EXIT_CODE=1

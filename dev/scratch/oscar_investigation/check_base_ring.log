@@ -1,0 +1,3 @@
+base_ring(I): Multivariate polynomial ring in 3 variables over QQ
+gens(base_ring(I)): QQMPolyRingElem[x, y, z]
+base_ring(I) === R: true

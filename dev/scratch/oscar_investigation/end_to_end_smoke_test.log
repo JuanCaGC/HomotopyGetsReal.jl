@@ -1,0 +1,35 @@
+======================================================================
+Building ellipsoid via Oscar, ring order [c_var, a_var, b_var]
+======================================================================
+F.variables (right before decompose call): Variable[c_var, a_var, b_var]
+gens(base_ring(I)):                          QQMPolyRingElem[c_var, a_var, b_var]
+Matches expected [c_var, a_var, b_var] order? true
+
+======================================================================
+Running decompose_3d_surface(F, cfg)
+======================================================================
+Ran without error.
+
+======================================================================
+Counts
+======================================================================
+vertices=2  edges=2  faces=2
+mesh_vertices=19352  mesh_triangles=39188
+
+======================================================================
+Residuals: |F(p)| over every mesh point, F.variables order used directly
+======================================================================
+n=19352
+mean=7.362462255423305e-7
+median=2.9296847614546095e-8
+p90=6.282842533039676e-8
+max=0.0001994195511934027
+
+======================================================================
+Saving render
+======================================================================
+Saved: /Users/juancagc/HomotopyGetsReal/dev/scratch/oscar_investigation/end_to_end_ellipsoid.png
+
+RAN_OK=true  ORDER_OK=true  MEDIAN_RESIDUAL=2.9296847614546095e-8
+
+SMOKE TEST DONE

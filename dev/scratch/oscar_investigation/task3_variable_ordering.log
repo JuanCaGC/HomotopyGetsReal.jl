@@ -1,0 +1,33 @@
+======================================================================
+Test 1: astroid, ring order [z_var, x_var, y_var] (z FIRST -- stress
+test against decompose_3d_surface's own "z LAST" convention)
+======================================================================
+gens(R) order: QQMPolyRingElem[z_var, x_var, y_var]
+
+Bridge-built HomotopyContinuation.System(I).variables: Variable[x_var, y_var]
+gens(parent(f_astroid)) order:                          QQMPolyRingElem[z_var, x_var, y_var]
+
+Does sys.variables match gens(R) order EXACTLY? false
+
+======================================================================
+Test 2: ellipsoid, ring order [c_var, a_var, b_var] (arbitrary,
+non-alphabetical, 3 variables all actually used -- second
+independent check with a genuinely 3-variable surface)
+======================================================================
+gens(R2) order: QQMPolyRingElem[c_var, a_var, b_var]
+
+Bridge-built HomotopyContinuation.System(I2).variables: Variable[a_var, b_var, c_var]
+gens(parent(f_ellipsoid)) order:                          QQMPolyRingElem[c_var, a_var, b_var]
+
+Does sys2.variables match gens(R2) order EXACTLY? false
+
+======================================================================
+HEADLINE RESULT
+======================================================================
+Test 1 (astroid, z_var first, 1 unused variable):  matches gens() order = false
+Test 2 (ellipsoid, arbitrary 3-var order):          matches gens() order = false
+
+Bridge's System(I) does NOT reliably preserve gens(parent(f)) order --
+this is the silent-reordering bug, confirmed live.
+
+TASK 3 DONE

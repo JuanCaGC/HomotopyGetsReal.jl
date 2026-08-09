@@ -1,0 +1,15 @@
+
+=== INTERMEDIATE (edge=20, midslice=25) ===
+INTERMEDIATE: wall=36.87s  mesh_verts=13056  mesh_tris=28867  naked_edges=42
+Saved PNG: /Users/juancagc/HomotopyGetsReal/dev/scratch/capability_survey/renders/taubin_heart_intermediate_density_MATCHED_ZOOM.png
+Saved PDF: /Users/juancagc/HomotopyGetsReal/dev/scratch/capability_survey/renders/taubin_heart_intermediate_density_MATCHED_ZOOM.pdf  (14.489 MB, 15192662 bytes)
+
+=== PRODUCTION (re-measured for a real PDF size) (edge=50, midslice=100) ===
+PRODUCTION (re-measured for a real PDF size): wall=23.71s  mesh_verts=132298  mesh_tris=273252  naked_edges=63
+Saved PNG: /Users/juancagc/HomotopyGetsReal/dev/scratch/capability_survey/renders/taubin_heart_production_density_MATCHED_ZOOM.png
+Saved PDF: /Users/juancagc/HomotopyGetsReal/dev/scratch/capability_survey/renders/taubin_heart_production_density_MATCHED_ZOOM.pdf  (138.388 MB, 145109856 bytes)
+
+=== THREE-WAY SUMMARY (current edge=8 figure checked separately via `ls`) ===
+intermediate (edge=20,midslice=25): naked_edges=42  tris=28867  pdf=14.489MB  wall=36.9s
+production   (edge=50,midslice=100): naked_edges=63  tris=273252  pdf=138.388MB  wall=23.7s
+ALL DONE

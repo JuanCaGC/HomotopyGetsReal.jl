@@ -1,0 +1,31 @@
+{
+  "category": "surface",
+  "config": {
+    "edge_sample_density": 6,
+    "midslice_sample_density": 8
+  },
+  "edge_count": 2,
+  "equation": "x^2 + y^2 - z",
+  "error": null,
+  "face_count": 2,
+  "fixture_name": "elliptic_paraboloid",
+  "mesh_triangle_count": 310,
+  "mesh_vertex_count": 161,
+  "notes": "",
+  "outcome": "clean_success",
+  "residuals": {
+    "max": 2.7243288514000596e-7,
+    "mean": 6.485676689179973e-8,
+    "median": 4.829266231354268e-8,
+    "n_points": 161,
+    "p90": 1.4478514742677362e-7,
+    "p99": 2.3614319388798184e-7
+  },
+  "vertex_counts": {
+    "Artificial": 0,
+    "Boundary": 0,
+    "Critical": 2,
+    "Singular": 0
+  },
+  "wall_time_seconds": 23.82923197746277
+}

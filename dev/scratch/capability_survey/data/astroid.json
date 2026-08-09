@@ -1,0 +1,30 @@
+{
+  "category": "curve",
+  "config": {
+    "edge_sample_density": 6
+  },
+  "edge_count": 4,
+  "equation": "(x^2+y^2-1)^3 + 27*x^2*y^2",
+  "error": null,
+  "face_count": null,
+  "fixture_name": "astroid",
+  "mesh_triangle_count": null,
+  "mesh_vertex_count": null,
+  "notes": "This run found all 4 cusps as Singular vertices (0 Artificial fallback, 0 Critical) -- matches the 'good' ~3/5 outcome documented in docs/DESIGN_NOTES.md (historically ~2/5 runs miss 1-2 cusps due to HC.jl polyhedral-solve unreliability at multiplicity>=2 critical points). Residuals in baseline range. No errors_log entry: this run matches, not contradicts, the documented prediction.",
+  "outcome": "clean_success",
+  "residuals": {
+    "max": 5.893415008784153e-8,
+    "mean": 1.3645099445023887e-8,
+    "median": 2.3084739120271536e-9,
+    "n_points": 24,
+    "p90": 5.89340775333791e-8,
+    "p99": 5.893414957713894e-8
+  },
+  "vertex_counts": {
+    "Artificial": 0,
+    "Boundary": 0,
+    "Critical": 0,
+    "Singular": 4
+  },
+  "wall_time_seconds": 15.716798067092896
+}

@@ -1,0 +1,4 @@
+=== Running fixture: sphere ===
+Saved render: /Users/juancagc/HomotopyGetsReal/dev/scratch/capability_survey/renders/sphere.png
+Saved JSON: /Users/juancagc/HomotopyGetsReal/dev/scratch/capability_survey/data/sphere.json
+=== Done: sphere (outcome=clean_success, wall_time=22.98s) ===

@@ -1,0 +1,4 @@
+=== Running fixture: elliptic_two_components ===
+Saved render: /Users/juancagc/HomotopyGetsReal/dev/scratch/capability_survey/renders/elliptic_two_components.png
+Saved JSON: /Users/juancagc/HomotopyGetsReal/dev/scratch/capability_survey/data/elliptic_two_components.json
+=== Done: elliptic_two_components (outcome=clean_success, wall_time=16.92s) ===

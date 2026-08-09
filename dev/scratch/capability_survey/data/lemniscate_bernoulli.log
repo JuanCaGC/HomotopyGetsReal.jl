@@ -1,0 +1,4 @@
+=== Running fixture: lemniscate_bernoulli ===
+Saved render: /Users/juancagc/HomotopyGetsReal/dev/scratch/capability_survey/renders/lemniscate_bernoulli.png
+Saved JSON: /Users/juancagc/HomotopyGetsReal/dev/scratch/capability_survey/data/lemniscate_bernoulli.json
+=== Done: lemniscate_bernoulli (outcome=clean_success, wall_time=15.64s) ===

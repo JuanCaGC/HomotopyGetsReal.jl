@@ -1,0 +1,31 @@
+{
+  "category": "surface",
+  "config": {
+    "edge_sample_density": 6,
+    "midslice_sample_density": 8
+  },
+  "edge_count": 14,
+  "equation": "(x^2+(1.2*y)^2+z^2-1)^3 - x^2*z^3 - 0.1*(1.2*y)^2*z^3",
+  "error": null,
+  "face_count": 14,
+  "fixture_name": "taubin_heart",
+  "mesh_triangle_count": 2236,
+  "mesh_vertex_count": 1174,
+  "notes": "median (2.32e-8) matches baseline; max (2.85e-5)/p99 (2.27e-6) elevated, consistent with docs/DESIGN_NOTES.md's documented Taubin-heart-specific degraded conditioning near its singular locus/notch (not a new discrepancy -- matches existing prediction, no errors_log entry). 10 Critical + 4 Artificial, 0 Singular (this run used the default deflate=false path).",
+  "outcome": "clean_success",
+  "residuals": {
+    "max": 2.8528400778160545e-5,
+    "mean": 1.884150117894878e-7,
+    "median": 2.3162646869967496e-8,
+    "n_points": 1174,
+    "p90": 1.6445825028466033e-7,
+    "p99": 2.267964212194112e-6
+  },
+  "vertex_counts": {
+    "Artificial": 4,
+    "Boundary": 0,
+    "Critical": 10,
+    "Singular": 0
+  },
+  "wall_time_seconds": 34.18014693260193
+}

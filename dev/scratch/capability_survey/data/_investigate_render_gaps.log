@@ -1,0 +1,21 @@
+
+=== TORUS bare (survey config, projection=:random, rng=Xoshiro(42)) ===
+torus_bare: wall=48.44s  vertices=8  edges=8  faces=8  mesh_verts=680  mesh_tris=1280  naked_edges=80
+
+=== TORUS incidence=true (same config) ===
+torus_incidence: wall=4.25s  vertices=8  edges=8  faces=8  mesh_verts=640  mesh_tris=1607  naked_edges=8
+
+=== TAUBIN_HEART bare (survey config) ===
+taubin_heart_bare: wall=17.74s  vertices=14  edges=14  faces=14  mesh_verts=1174  mesh_tris=2236  naked_edges=132
+
+=== TAUBIN_HEART incidence=true (same config) ===
+taubin_heart_incidence: wall=11.59s  vertices=14  edges=14  faces=14  mesh_verts=1140  mesh_tris=2924  naked_edges=29
+
+=== HYPERBOLOID_ONE_SHEET default density (edge_sample_density=50, midslice_sample_density=100) ===
+hyperboloid_one_sheet_default_density: wall=8.62s  vertices=2  edges=2  faces=2  mesh_verts=19698  mesh_tris=39200  naked_edges=196
+
+=== SUMMARY ===
+torus:        naked_edges bare=80  incidence=8
+taubin_heart: naked_edges bare=132  incidence=29
+hyperboloid_one_sheet: naked_edges @ default density = 196 (survey/coarse density not re-measured here, only visually compared)
+ALL DONE

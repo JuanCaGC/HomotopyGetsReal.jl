@@ -1,0 +1,4 @@
+=== Running fixture: three_concurrent_lines_reducible ===
+Saved render: /Users/juancagc/HomotopyGetsReal/dev/scratch/capability_survey/renders/three_concurrent_lines_reducible.png
+Saved JSON: /Users/juancagc/HomotopyGetsReal/dev/scratch/capability_survey/data/three_concurrent_lines_reducible.json
+=== Done: three_concurrent_lines_reducible (outcome=clean_success, wall_time=18.43s) ===

@@ -1,0 +1,36 @@
+{
+  "category": "surface",
+  "config": {
+    "bbox_z": [
+      -4.0,
+      4.0
+    ],
+    "edge_sample_density": 6,
+    "midslice_sample_density": 8,
+    "projection": "random"
+  },
+  "edge_count": 20,
+  "equation": "(x^2+y^2+z^2)^2 - 4*(x^2+y^2)",
+  "error": null,
+  "face_count": 20,
+  "fixture_name": "horn_torus_projection_random",
+  "mesh_triangle_count": 3172,
+  "mesh_vertex_count": 1647,
+  "notes": "",
+  "outcome": "clean_success",
+  "residuals": {
+    "max": 0.0008512963705866861,
+    "mean": 8.889980266655584e-6,
+    "median": 2.311925495490641e-7,
+    "n_points": 1647,
+    "p90": 1.1726353204011275e-6,
+    "p99": 0.00028413692712112525
+  },
+  "vertex_counts": {
+    "Artificial": 8,
+    "Boundary": 0,
+    "Critical": 12,
+    "Singular": 0
+  },
+  "wall_time_seconds": 20.95366096496582
+}

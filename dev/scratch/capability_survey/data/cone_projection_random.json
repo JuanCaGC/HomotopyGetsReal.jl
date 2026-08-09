@@ -1,0 +1,36 @@
+{
+  "category": "surface",
+  "config": {
+    "bbox_z": [
+      -4.0,
+      4.0
+    ],
+    "edge_sample_density": 6,
+    "midslice_sample_density": 8,
+    "projection": "random"
+  },
+  "edge_count": null,
+  "equation": "x^2 + y^2 - z^2",
+  "error": "_robust_slice_at_z: slab [-6.7539277964725635, 6.7539277964725635] still fails the vertex-type and/or gradient-magnitude gate after the original midpoint plus 8 perturbed retries (cfg.z_mid_retry_frac=0.01, cfg.z_mid_gradient_ratio_tol=0.01); giving up rather than silently proceeding with a slice known to be untrustworthy.\nStacktrace:\n  [1] _robust_slice_at_z(F::System, patch::@NamedTuple{f::Expression, fx::Expression, fy::Expression, fz::Expression, x_var::Variable, y_var::Variable, z_var::Variable, F_for_tracking::System}, z_bottom::Float64, z_top::Float64, cfg::HomotopyConfig{Float64}; deflate::Bool)\n    @ HomotopyGetsReal ~/HomotopyGetsReal/src/SurfaceDecomposition.jl:385\n  [2] _robust_slice_at_z\n    @ ~/HomotopyGetsReal/src/SurfaceDecomposition.jl:286 [inlined]\n  [3] decompose_3d_surface(F::System, cfg::HomotopyConfig{Float64}; projection::Nothing, rng::TaskLocalRNG, incidence::Bool, deflate::Bool)\n    @ HomotopyGetsReal ~/HomotopyGetsReal/src/SurfaceDecomposition.jl:1930\n  [4] decompose_3d_surface\n    @ ~/HomotopyGetsReal/src/SurfaceDecomposition.jl:1798 [inlined]\n  [5] decompose_3d_surface(F::System, cfg::HomotopyConfig{Float64}; projection::Symbol, rng::Xoshiro, incidence::Bool, deflate::Bool)\n    @ HomotopyGetsReal ~/HomotopyGetsReal/src/SurfaceDecomposition.jl:1828\n  [6] decompose_3d_surface\n    @ ~/HomotopyGetsReal/src/SurfaceDecomposition.jl:1798 [inlined]\n  [7] try_decompose(label::String, F::System, eqn_str::String, cfg::HomotopyConfig{Float64}; extra_kwargs::@NamedTuple{projection::Symbol, rng::Xoshiro})\n    @ Main ~/HomotopyGetsReal/dev/scratch/capability_survey/investigate_cone_horntorus_workarounds.jl:62\n  [8] top-level scope\n    @ ~/HomotopyGetsReal/dev/scratch/capability_survey/investigate_cone_horntorus_workarounds.jl:137\n  [9] include(mod::Module, _path::String)\n    @ Base ./Base.jl:306\n [10] exec_options(opts::Base.JLOptions)\n    @ Base ./client.jl:317\n [11] _start()\n    @ Base ./client.jl:550",
+  "face_count": null,
+  "fixture_name": "cone_projection_random",
+  "mesh_triangle_count": null,
+  "mesh_vertex_count": null,
+  "notes": "",
+  "outcome": "exception",
+  "residuals": {
+    "max": null,
+    "mean": null,
+    "median": null,
+    "n_points": 0,
+    "p90": null,
+    "p99": null
+  },
+  "vertex_counts": {
+    "Artificial": null,
+    "Boundary": null,
+    "Critical": null,
+    "Singular": null
+  },
+  "wall_time_seconds": 16.185799837112427
+}

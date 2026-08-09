@@ -1,0 +1,42 @@
+=== Running fixture: empty_surface ===
+Plotting failed (non-fatal):
+ArgumentError: reducing over an empty collection is not allowed; consider supplying `init` to the reducer
+Stacktrace:
+  [1] _empty_reduce_error()
+    @ Base ./reduce.jl:311
+  [2] mapreduce_empty(f::Function, op::Function, T::Type)
+    @ Base ./reduce.jl:313
+  [3] reduce_empty(op::Base.MappingRF{Base.ExtremaMap{typeof(identity)}, typeof(Base._extrema_rf)}, ::Type{Float64})
+    @ Base ./reduce.jl:350
+  [4] reduce_empty_iter
+    @ ./reduce.jl:373 [inlined]
+  [5] mapreduce_empty_iter(f::Function, op::Function, itr::Vector{Float64}, ItrEltype::Base.HasEltype)
+    @ Base ./reduce.jl:369
+  [6] _mapreduce(f::Base.ExtremaMap{typeof(identity)}, op::typeof(Base._extrema_rf), ::IndexLinear, A::Vector{Float64})
+    @ Base ./reduce.jl:421
+  [7] _mapreduce_dim
+    @ ./reducedim.jl:334 [inlined]
+  [8] mapreduce
+    @ ./reducedim.jl:326 [inlined]
+  [9] _extrema
+    @ ./reducedim.jl:984 [inlined]
+ [10] _extrema
+    @ ./reducedim.jl:983 [inlined]
+ [11] extrema
+    @ ./reducedim.jl:979 [inlined]
+ [12] _near_constant_colorrange(colorvals::Vector{Float64})
+    @ HomotopyGetsReal ~/HomotopyGetsReal/src/Visuals.jl:210
+ [13] plot_surface_decomposition(mesh::GeometryBasics.Mesh{3, Float32, TriangleFace{Int64}, (:position,), Tuple{Vector{Point{3, Float32}}}, Vector{TriangleFace{Int64}}}; color_by::Symbol, colormap::Symbol, show_wireframe::Bool, show_colorbar::Bool, vertices::Nothing, cfg::HomotopyConfig{Float64})
+    @ HomotopyGetsReal ~/HomotopyGetsReal/src/Visuals.jl:282
+ [14] main()
+    @ Main ~/HomotopyGetsReal/dev/scratch/capability_survey/run_fixture.jl:314
+ [15] top-level scope
+    @ ~/HomotopyGetsReal/dev/scratch/capability_survey/run_fixture.jl:351
+ [16] include(mod::Module, _path::String)
+    @ Base ./Base.jl:306
+ [17] exec_options(opts::Base.JLOptions)
+    @ Base ./client.jl:317
+ [18] _start()
+    @ Base ./client.jl:550
+Saved JSON: /Users/juancagc/HomotopyGetsReal/dev/scratch/capability_survey/data/empty_surface.json
+=== Done: empty_surface (outcome=clean_success, wall_time=15.63s) ===

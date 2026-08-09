@@ -1,0 +1,4 @@
+=== Running fixture: folium_descartes ===
+Saved render: /Users/juancagc/HomotopyGetsReal/dev/scratch/capability_survey/renders/folium_descartes.png
+Saved JSON: /Users/juancagc/HomotopyGetsReal/dev/scratch/capability_survey/data/folium_descartes.json
+=== Done: folium_descartes (outcome=clean_success, wall_time=15.91s) ===

@@ -1,0 +1,36 @@
+{
+  "category": "surface",
+  "config": {
+    "bbox_z": [
+      -4.0,
+      4.3
+    ],
+    "edge_sample_density": 6,
+    "midslice_sample_density": 8,
+    "projection": null
+  },
+  "edge_count": 0,
+  "equation": "(x^2+y^2+z^2)^2 - 4*(x^2+y^2)",
+  "error": null,
+  "face_count": 0,
+  "fixture_name": "horn_torus_asymmetric_bbox",
+  "mesh_triangle_count": 0,
+  "mesh_vertex_count": 0,
+  "notes": "",
+  "outcome": "empty_real_locus",
+  "residuals": {
+    "max": null,
+    "mean": null,
+    "median": null,
+    "n_points": 0,
+    "p90": null,
+    "p99": null
+  },
+  "vertex_counts": {
+    "Artificial": 0,
+    "Boundary": 0,
+    "Critical": 0,
+    "Singular": 0
+  },
+  "wall_time_seconds": 7.0894670486450195
+}

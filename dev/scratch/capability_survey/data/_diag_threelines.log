@@ -1,0 +1,13 @@
+Total vertices: 7
+  id=1 type=Boundary coords=[-4.0, 4.0] residual=0.0 referenced_by_edge=true metadata=Dict{Symbol, Any}(:tolerance_used => 1.0e-5, :fixed_variable => [:x, :y], :singular_values => [45.254833995939045], :jacobian_rank => 1, :fixed_value => 0.0, :cluster_member_ids => [1, 9], :cluster_size => 2)
+  id=2 type=Boundary coords=[-4.0, -4.0] residual=0.0 referenced_by_edge=true metadata=Dict{Symbol, Any}(:tolerance_used => 1.0e-5, :fixed_variable => [:x, :y], :singular_values => [45.254833995939045], :jacobian_rank => 1, :fixed_value => -4.0, :cluster_member_ids => [2, 7], :cluster_size => 2)
+  id=3 type=Boundary coords=[4.0, 4.0] residual=0.0 referenced_by_edge=true metadata=Dict{Symbol, Any}(:tolerance_used => 1.0e-5, :fixed_variable => [:x, :y], :singular_values => [45.254833995939045], :jacobian_rank => 1, :fixed_value => 4.0, :cluster_member_ids => [3, 8], :cluster_size => 2)
+  id=4 type=Boundary coords=[4.0, -4.0] residual=0.0 referenced_by_edge=true metadata=Dict{Symbol, Any}(:tolerance_used => 1.0e-5, :fixed_variable => [:x, :y], :singular_values => [45.254833995939045], :jacobian_rank => 1, :fixed_value => 0.0, :cluster_member_ids => [4, 6], :cluster_size => 2)
+  id=5 type=Boundary coords=[0.0, -4.0] residual=0.0 referenced_by_edge=false metadata=Dict{Symbol, Any}(:tolerance_used => 1.0e-5, :fixed_variable => :y, :singular_values => [16.0], :jacobian_rank => 1, :fixed_value => -4.0, :cluster_member_ids => [5], :cluster_size => 1)
+  id=10 type=Boundary coords=[0.0, 4.0] residual=0.0 referenced_by_edge=false metadata=Dict{Symbol, Any}(:tolerance_used => 1.0e-5, :fixed_variable => :y, :singular_values => [16.0], :jacobian_rank => 1, :fixed_value => 4.0, :cluster_member_ids => [10], :cluster_size => 1)
+  id=11 type=Artificial coords=[0.0, -1.440944494681213e-14] residual=0.0 referenced_by_edge=true metadata=Dict{Symbol, Any}(:tolerance_used => 0.0001, :origin => :endpoint_fallback)
+Total edges: 4
+  id=1 left=2 right=11 n_samples=6
+  id=2 left=1 right=11 n_samples=6
+  id=3 left=11 right=3 n_samples=6
+  id=4 left=11 right=4 n_samples=6

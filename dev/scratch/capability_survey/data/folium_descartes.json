@@ -1,0 +1,30 @@
+{
+  "category": "curve",
+  "config": {
+    "edge_sample_density": 6
+  },
+  "edge_count": 5,
+  "equation": "x^3 + y^3 - 3*x*y",
+  "error": null,
+  "face_count": null,
+  "fixture_name": "folium_descartes",
+  "mesh_triangle_count": null,
+  "mesh_vertex_count": null,
+  "notes": "This officially-captured run itself appears structurally sound (1 Critical [loop turning pt], 1 Singular [node], 2 Boundary [both unbounded-arc bbox exits], 1 Artificial [:endpoint_fallback bridging point, which happened to land exactly on-curve]). However, 2 immediate diagnostic re-runs of the IDENTICAL fixture/config found run-to-run nondeterminism: 1 of 2 reruns reproduced this same good 5-vertex/5-edge topology, but the other produced a BROKEN 4-edge topology with vertex id4 (a real Boundary vertex, exactly on-curve) never referenced by any edge -- i.e. a whole curve segment (the unbounded branch's tail from x=1.5874 to x=3.0255) silently dropped from the output, no exception. See errors_log.md.",
+  "outcome": "success_with_caveats",
+  "residuals": {
+    "max": 7.513879225484743e-7,
+    "mean": 2.76674734420553e-8,
+    "median": 1.5535295272428584e-11,
+    "n_points": 30,
+    "p90": 1.1115160040986477e-8,
+    "p99": 5.429356872665998e-7
+  },
+  "vertex_counts": {
+    "Artificial": 1,
+    "Boundary": 2,
+    "Critical": 1,
+    "Singular": 1
+  },
+  "wall_time_seconds": 15.913641929626465
+}

@@ -1,0 +1,4 @@
+=== Running fixture: nodal_cubic ===
+Saved render: /Users/juancagc/HomotopyGetsReal/dev/scratch/capability_survey/renders/nodal_cubic.png
+Saved JSON: /Users/juancagc/HomotopyGetsReal/dev/scratch/capability_survey/data/nodal_cubic.json
+=== Done: nodal_cubic (outcome=clean_success, wall_time=17.35s) ===

@@ -1,0 +1,4 @@
+=== Running fixture: hyperboloid_two_sheets_reducible ===
+Saved render: /Users/juancagc/HomotopyGetsReal/dev/scratch/capability_survey/renders/hyperboloid_two_sheets_reducible.png
+Saved JSON: /Users/juancagc/HomotopyGetsReal/dev/scratch/capability_survey/data/hyperboloid_two_sheets_reducible.json
+=== Done: hyperboloid_two_sheets_reducible (outcome=clean_success, wall_time=23.7s) ===

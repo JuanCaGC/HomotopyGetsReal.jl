@@ -1,0 +1,12 @@
+Total vertices: 5
+  id=1 type=Critical coords=[1.5874010519681994, 1.259921049894873] residual=0.0 referenced_by_edge=true
+  id=2 type=Singular coords=[0.0, 0.0] residual=0.0 referenced_by_edge=true
+  id=3 type=Boundary coords=[-4.0, 3.025490653236657] residual=2.1316282072803006e-14 referenced_by_edge=true
+  id=4 type=Boundary coords=[3.0254906532366572, -4.0] residual=0.0 referenced_by_edge=true
+  id=5 type=Artificial coords=[1.5874010519681994, -2.5198420997897464] residual=0.0 referenced_by_edge=true
+Total edges: 5
+  id=1 left=3 right=2 n_samples=6
+  id=2 left=2 right=1 n_samples=6
+  id=3 left=2 right=1 n_samples=6
+  id=4 left=2 right=5 n_samples=6
+  id=5 left=5 right=4 n_samples=6

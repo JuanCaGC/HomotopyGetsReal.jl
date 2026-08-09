@@ -1,0 +1,11 @@
+Total vertices: 5
+  id=1 type=Singular coords=ComplexF64[-0.0 - 0.0im, -0.0 - 0.0im] metadata=Dict{Symbol, Any}(:tolerance_used => 1.0e-6, :singular_values => [3.0, 0.0], :jacobian_rank => 1, :cluster_member_ids => [1], :cluster_size => 1)
+  id=2 type=Critical coords=ComplexF64[1.5874010519681994 - 3.851859888774472e-34im, 1.259921049894873 + 0.0im] metadata=Dict{Symbol, Any}(:tolerance_used => 1.0e-6, :singular_values => [8.277524141426431, 3.4519040291803575], :jacobian_rank => 2, :cluster_member_ids => [2], :cluster_size => 1)
+  id=3 type=Boundary coords=ComplexF64[-4.0 + 0.0im, 3.0254906532366572 + 0.0im] metadata=Dict{Symbol, Any}(:tolerance_used => 1.0e-5, :fixed_variable => :x, :singular_values => [55.42737841920681], :jacobian_rank => 1, :fixed_value => -4.0, :cluster_member_ids => [1], :cluster_size => 1)
+  id=4 type=Boundary coords=ComplexF64[3.0254906532366572 + 0.0im, -4.0 + 0.0im] metadata=Dict{Symbol, Any}(:tolerance_used => 1.0e-5, :fixed_variable => :y, :singular_values => [55.42737841920681], :jacobian_rank => 1, :fixed_value => -4.0, :cluster_member_ids => [2], :cluster_size => 1)
+  id=5 type=Artificial coords=ComplexF64[1.5874010519681994 + 0.0im, -2.5198420997897464 - 3.5718355977571093e-102im] metadata=Dict{Symbol, Any}(:tolerance_used => 0.0001, :origin => :endpoint_fallback)
+Total edges: 4
+  id=1 left=3 right=1 n_samples=6 is_singular=true
+  id=2 left=1 right=2 n_samples=6 is_singular=true
+  id=3 left=1 right=5 n_samples=6 is_singular=true
+  id=4 left=1 right=2 n_samples=6 is_singular=true

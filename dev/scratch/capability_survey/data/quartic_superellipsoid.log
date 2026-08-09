@@ -1,0 +1,4 @@
+=== Running fixture: quartic_superellipsoid ===
+Saved render: /Users/juancagc/HomotopyGetsReal/dev/scratch/capability_survey/renders/quartic_superellipsoid.png
+Saved JSON: /Users/juancagc/HomotopyGetsReal/dev/scratch/capability_survey/data/quartic_superellipsoid.json
+=== Done: quartic_superellipsoid (outcome=clean_success, wall_time=24.11s) ===

@@ -1,0 +1,31 @@
+{
+  "category": "surface",
+  "config": {
+    "edge_sample_density": 6,
+    "midslice_sample_density": 8
+  },
+  "edge_count": 0,
+  "equation": "x^2 + y^2 + z^2 + 1",
+  "error": null,
+  "face_count": 0,
+  "fixture_name": "empty_surface",
+  "mesh_triangle_count": 0,
+  "mesh_vertex_count": 0,
+  "notes": "x^2+y^2+z^2+1 has no real points; decompose_3d_surface handles this gracefully (0/0/0/0, no exception) -- confirms the 'empty_real_locus' clean-result prediction. Hit the same plot_surface_decomposition empty-mesh ArgumentError already logged for horn_torus/cone (3rd occurrence, same root cause -- not re-logged in full detail, see errors_log.md horn_torus entry). PLOT FAILED: ArgumentError: reducing over an empty collection is not allowed; consider supplying `init` to the reducer\nStacktrace:\n  [1] _empty_reduce_error()\n    @ Base ./reduce.jl:311\n  [2] mapreduce_empty(f::Function, op::Function, T::Type)\n    @ Base ./reduce.jl:313\n  [3] reduce_empty(op::Base.MappingRF{Base.ExtremaMap{typeof(identity)}, typeof(Base._extrema_rf)}, ::Type{Float64})\n    @ Base ./reduce.jl:350\n  [4] reduce_empty_iter\n    @ ./reduce.jl:373 [inlined]\n  [5] mapreduce_empty_iter(f::Function, op ",
+  "outcome": "empty_real_locus",
+  "residuals": {
+    "max": null,
+    "mean": null,
+    "median": null,
+    "n_points": 0,
+    "p90": null,
+    "p99": null
+  },
+  "vertex_counts": {
+    "Artificial": 0,
+    "Boundary": 0,
+    "Critical": 0,
+    "Singular": 0
+  },
+  "wall_time_seconds": 15.627907991409302
+}

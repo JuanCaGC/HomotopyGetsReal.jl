@@ -1,0 +1,11 @@
+=== TAUBIN full-defaults config: edge_sample_density=50, midslice_sample_density=100, bbox_x=(-4.0, 4.0), bbox_y=(-4.0, 4.0), bbox_z=(-4.0, 4.0) ===
+taubin_full_defaults_incidence: wall=57.74s  vertices=14  edges=14  faces=14  mesh_verts=132292  mesh_tris=273199  naked_edges=56
+
+=== TAUBIN actual-paper-figure config: edge_sample_density=8, midslice_sample_density=8, bbox=(-1.5,1.5)/(-1.5,1.5)/(-1.3,1.3) ===
+taubin_paper_config_incidence: wall=10.43s  vertices=14  edges=14  faces=14  mesh_verts=1586  mesh_tris=3966  naked_edges=30
+
+=== SUMMARY ===
+coarse survey config (edge=6, midslice=8, default bbox), incidence=true: naked_edges=29 (measured in the prior follow-up)
+full HomotopyConfig{Float64}() defaults (edge=50, midslice=100, default bbox), incidence=true: naked_edges=56
+actual paper-figure config (edge=8, midslice=8, tightened bbox), incidence=true: naked_edges=30
+ALL DONE

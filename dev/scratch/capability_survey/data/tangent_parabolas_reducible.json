@@ -1,0 +1,30 @@
+{
+  "category": "curve",
+  "config": {
+    "edge_sample_density": 6
+  },
+  "edge_count": 4,
+  "equation": "y^2 - x^4  [= (y-x^2)(y+x^2)]",
+  "error": null,
+  "face_count": null,
+  "fixture_name": "tangent_parabolas_reducible",
+  "mesh_triangle_count": null,
+  "mesh_vertex_count": null,
+  "notes": "",
+  "outcome": "clean_success",
+  "residuals": {
+    "max": 7.50904050050849e-9,
+    "mean": 1.3312113356089839e-9,
+    "median": 3.087327615780566e-11,
+    "n_points": 24,
+    "p90": 7.50904050050849e-9,
+    "p99": 7.50904050050849e-9
+  },
+  "vertex_counts": {
+    "Artificial": 0,
+    "Boundary": 4,
+    "Critical": 0,
+    "Singular": 1
+  },
+  "wall_time_seconds": 17.131287097930908
+}

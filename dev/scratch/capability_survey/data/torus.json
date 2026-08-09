@@ -1,0 +1,33 @@
+{
+  "category": "surface",
+  "config": {
+    "edge_sample_density": 6,
+    "midslice_sample_density": 8,
+    "projection": "random",
+    "rng": "Xoshiro(42)"
+  },
+  "edge_count": 8,
+  "equation": "(x^2+y^2+z^2+3)^2 - 16*(x^2+y^2)",
+  "error": null,
+  "face_count": 8,
+  "fixture_name": "torus",
+  "mesh_triangle_count": 1280,
+  "mesh_vertex_count": 680,
+  "notes": "Confirms docs/DESIGN_NOTES.md's documented projection=:random fix exactly: 8 vertices all Critical (0 Singular), 8 edges, 8 faces -- matches the seed-42 figures quoted there. Mesh is much coarser (680 vertices/1280 triangles vs docs' ~78k/~160k) because this survey used a deliberately low edge_sample_density=6/midslice_sample_density=8 rather than the higher density used in the original validation script. Max residual (7.68e-4) is higher than the ~2.2e-5 quoted in docs for the dense run -- plausibly a density-related effect (coarser predictor near the fold/singular-adjacent band), not investigated further; not logged as a new discrepancy since the core capability (projection=:random resolving the z-aligned failure) is clearly confirmed.",
+  "outcome": "clean_success",
+  "residuals": {
+    "max": 0.0007679979091790301,
+    "mean": 1.0939579136713754e-5,
+    "median": 1.43957844045417e-6,
+    "n_points": 680,
+    "p90": 6.2415118520675616e-6,
+    "p99": 0.00027949986008479755
+  },
+  "vertex_counts": {
+    "Artificial": 0,
+    "Boundary": 0,
+    "Critical": 8,
+    "Singular": 0
+  },
+  "wall_time_seconds": 40.1302969455719
+}

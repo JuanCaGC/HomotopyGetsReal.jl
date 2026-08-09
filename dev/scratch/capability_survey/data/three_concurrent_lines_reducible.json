@@ -1,0 +1,30 @@
+{
+  "category": "curve",
+  "config": {
+    "edge_sample_density": 6
+  },
+  "edge_count": 4,
+  "equation": "x*(x-y)*(x+y)",
+  "error": null,
+  "face_count": null,
+  "fixture_name": "three_concurrent_lines_reducible",
+  "mesh_triangle_count": null,
+  "mesh_vertex_count": null,
+  "notes": "The vertical line component x=0 is completely absent from the edge graph -- its 2 boundary vertices (0,4)/(0,-4) are found (correctly, exactly on-curve) but never referenced by any edge, a structural consequence of x-parametrized slicing being unable to represent a component that only exists at a single x-value. The triple point at the origin (where all 3 lines concur) is found and used to stitch the OTHER 2 lines together, but classified v_type=Artificial (:endpoint_fallback), not Singular, despite being a genuine algebraic singularity -- 0 Singular vertices total. See errors_log.md.",
+  "outcome": "success_with_caveats",
+  "residuals": {
+    "max": 0.0,
+    "mean": 0.0,
+    "median": 0.0,
+    "n_points": 24,
+    "p90": 0.0,
+    "p99": 0.0
+  },
+  "vertex_counts": {
+    "Artificial": 1,
+    "Boundary": 6,
+    "Critical": 0,
+    "Singular": 0
+  },
+  "wall_time_seconds": 18.42786693572998
+}

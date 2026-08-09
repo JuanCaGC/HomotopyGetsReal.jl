@@ -1,0 +1,31 @@
+{
+  "category": "surface",
+  "config": {
+    "edge_sample_density": 6,
+    "midslice_sample_density": 8
+  },
+  "edge_count": 4,
+  "equation": "x^2 + y^2 - z^2 + 1",
+  "error": null,
+  "face_count": 4,
+  "fixture_name": "hyperboloid_two_sheets_reducible",
+  "mesh_triangle_count": 620,
+  "mesh_vertex_count": 322,
+  "notes": "Both disconnected sheets (z>=1 and z<=-1) correctly found and separated: counts (4 Critical, 4 edges, 4 faces) exactly double the hyperboloid_one_sheet fixture's own 2/2/2, consistent with 2 symmetric unbounded components each contributing its own tip vertex + 2 edges/faces. Residuals in a comparable range to the one-sheet case. No discrepancy.",
+  "outcome": "clean_success",
+  "residuals": {
+    "max": 1.0897315405600239e-6,
+    "mean": 2.505204135595028e-7,
+    "median": 1.711017603156506e-7,
+    "n_points": 322,
+    "p90": 6.888286634421092e-7,
+    "p99": 1.0897315405600239e-6
+  },
+  "vertex_counts": {
+    "Artificial": 0,
+    "Boundary": 0,
+    "Critical": 4,
+    "Singular": 0
+  },
+  "wall_time_seconds": 23.703533172607422
+}

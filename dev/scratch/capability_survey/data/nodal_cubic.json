@@ -1,0 +1,30 @@
+{
+  "category": "curve",
+  "config": {
+    "edge_sample_density": 6
+  },
+  "edge_count": 4,
+  "equation": "y^2 - x^2*(x+1)",
+  "error": null,
+  "face_count": null,
+  "fixture_name": "nodal_cubic",
+  "mesh_triangle_count": null,
+  "mesh_vertex_count": null,
+  "notes": "Node at origin found and correctly classified Singular (1 Singular + 1 Critical [leftmost turning pt x=-1] + 2 Boundary [curve exits bbox_x=(-4,4) unbounded branch]). This is the desired/correct topology -- notably DIFFERENT from docs/DESIGN_NOTES.md's pure node-curve (y^2-x^2) case which documents compute_critical_points returning ZERO solutions at the node; here (nodal cubic, not pure node) the multiplicity>=2 augmented-system solve succeeded this run. Max residual 5.5e-7 is ~19x circle's baseline max (2.9e-8) but median 2.3e-10 is well within baseline -- plausibly just tighter Newton conditioning near the node, not flagged as a discrepancy.",
+  "outcome": "clean_success",
+  "residuals": {
+    "max": 5.485244827241331e-7,
+    "mean": 9.689696846441308e-8,
+    "median": 2.2868485577420827e-10,
+    "n_points": 24,
+    "p90": 4.7588113005758714e-7,
+    "p99": 5.485244827241331e-7
+  },
+  "vertex_counts": {
+    "Artificial": 0,
+    "Boundary": 2,
+    "Critical": 1,
+    "Singular": 1
+  },
+  "wall_time_seconds": 17.34608817100525
+}

@@ -1,0 +1,4 @@
+=== Running fixture: astroid ===
+Saved render: /Users/juancagc/HomotopyGetsReal/dev/scratch/capability_survey/renders/astroid.png
+Saved JSON: /Users/juancagc/HomotopyGetsReal/dev/scratch/capability_survey/data/astroid.json
+=== Done: astroid (outcome=clean_success, wall_time=15.72s) ===

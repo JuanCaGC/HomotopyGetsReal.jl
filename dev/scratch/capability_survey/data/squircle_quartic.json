@@ -1,0 +1,30 @@
+{
+  "category": "curve",
+  "config": {
+    "edge_sample_density": 6
+  },
+  "edge_count": 2,
+  "equation": "x^4 + y^4 - 1",
+  "error": null,
+  "face_count": null,
+  "fixture_name": "squircle_quartic",
+  "mesh_triangle_count": null,
+  "mesh_vertex_count": null,
+  "notes": "The 2 genuine critical (vertical-tangent) points at (+-1,0) ARE located, at essentially exact coordinates, but classified v_type=Singular (not Critical) because the augmented system [f,f_y]'s Jacobian is rank-deficient there (jacobian_rank=1, singular_values=[4,0]) -- an artifact of f_y=4y^3 vanishing to order 3 in y, NOT because the curve itself is singular (F_original gradient (4x^3,4y^3)=(4,0) at (1,0), full rank 1, geometrically smooth). Additionally, edge construction bypasses these 2 found points entirely: both edges' endpoints are 4 separate Artificial :endpoint_fallback vertices at (+-1,+-1), none of which lie on the curve at all (|f(1,1)|=1). Visual confirmation in renders/squircle_quartic.png: the render shows only 2 tiny disconnected arc fragments near the top and bottom (roughly the curve's corner regions near (+-0.85,+-0.85)-ish), NOT the full closed squircle boundary -- the 2 Singular markers at (+-1,0) are plotted as isolated points with no curve reaching them at all. The bulk of the curve (through (1,0), (-1,0), and the true top/bottom apexes near (0,+-1)) is missing from the render entirely, not merely mislabeled -- worse than the JSON vertex/residual summary alone suggested. See errors_log.md entry.",
+  "outcome": "success_with_caveats",
+  "residuals": {
+    "max": 9.596236637543498e-7,
+    "mean": 3.200232945495725e-7,
+    "median": 3.814769611309998e-10,
+    "n_points": 12,
+    "p90": 9.596236637432475e-7,
+    "p99": 9.596236637543498e-7
+  },
+  "vertex_counts": {
+    "Artificial": 4,
+    "Boundary": 0,
+    "Critical": 0,
+    "Singular": 2
+  },
+  "wall_time_seconds": 15.369274854660034
+}

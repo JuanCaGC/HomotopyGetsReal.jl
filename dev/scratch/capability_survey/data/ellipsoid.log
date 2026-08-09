@@ -1,0 +1,4 @@
+=== Running fixture: ellipsoid ===
+Saved render: /Users/juancagc/HomotopyGetsReal/dev/scratch/capability_survey/renders/ellipsoid.png
+Saved JSON: /Users/juancagc/HomotopyGetsReal/dev/scratch/capability_survey/data/ellipsoid.json
+=== Done: ellipsoid (outcome=clean_success, wall_time=23.62s) ===

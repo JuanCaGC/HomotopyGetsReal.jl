@@ -1,0 +1,31 @@
+{
+  "category": "surface",
+  "config": {
+    "edge_sample_density": 6,
+    "midslice_sample_density": 8
+  },
+  "edge_count": null,
+  "equation": "x^2 - y^2*z",
+  "error": "OverflowError: Cannot compute a start system.\nStacktrace:\n  [1] _\n    @ ~/.julia/packages/HomotopyContinuation/S9V3Q/src/polyhedral.jl:26 [inlined]\n  [2] PolyhedralStartSolutionsIterator\n    @ ~/.julia/packages/HomotopyContinuation/S9V3Q/src/polyhedral.jl:15 [inlined]\n  [3] PolyhedralStartSolutionsIterator\n    @ ~/.julia/packages/HomotopyContinuation/S9V3Q/src/polyhedral.jl:34 [inlined]\n  [4] polyhedral(support::Vector{Matrix{Int32}}, start_coeffs::Vector{Vector{ComplexF64}}, target_coeffs::Vector{Vector{ComplexF64}}; endgame_options::EndgameOptions, tracker_options::TrackerOptions, only_torus::Bool, only_non_zero::Bool, compile::Symbol, show_progress::Bool, kwargs::@Kwargs{})\n    @ HomotopyContinuation ~/.julia/packages/HomotopyContinuation/S9V3Q/src/polyhedral.jl:420\n  [5] polyhedral\n    @ ~/.julia/packages/HomotopyContinuation/S9V3Q/src/polyhedral.jl:369 [inlined]\n  [6] #polyhedral#245\n    @ ~/.julia/packages/HomotopyContinuation/S9V3Q/src/polyhedral.jl:356 [inlined]\n  [7] polyhedral(f::System; compile::Symbol, target_parameters::Nothing, kwargs::@Kwargs{show_progress::Bool})\n    @ HomotopyContinuation ~/.julia/packages/HomotopyContinuation/S9V3Q/src/polyhedral.jl:289\n  [8] polyhedral\n    @ ~/.julia/packages/HomotopyContinuation/S9V3Q/src/polyhedral.jl:256 [inlined]\n  [9] solver_startsolutions(F::System, starts::Nothing; seed::UInt32, start_system::Symbol, generic_parameters::Nothing, p₁::Nothing, start_parameters::Nothing, p₀::Nothing, target_parameters::Nothing, compile::Symbol, start_subspace::Nothing, target_subspace::Nothing, intrinsic::Nothing, show_progress::Bool, kwargs::@Kwargs{})\n    @ HomotopyContinuation ~/.julia/packages/HomotopyContinuation/S9V3Q/src/solve.jl:164\n [10] solver_startsolutions (repeats 2 times)\n    @ ~/.julia/packages/HomotopyContinuation/S9V3Q/src/solve.jl:117 [inlined]\n [11] solve(args::System; show_progress::Bool, threading::Bool, catch_interrupt::Bool, target_parameters::Nothing, stop_early_cb::Function, transform_result::Nothing, transform_parameters::typeof(identity), flatten::Nothing, target_subspaces::Nothing, iterator_only::Bool, bitmask::Nothing, kwargs::@Kwargs{})\n    @ HomotopyContinuation ~/.julia/packages/HomotopyContinuation/S9V3Q/src/solve.jl:497\n [12] solve\n    @ ~/.julia/packages/HomotopyContinuation/S9V3Q/src/solve.jl:451 [inlined]\n [13] intersect_bounding_object(F::System, cfg::HomotopyConfig{Float64}; deflate::Bool, F_original::System)\n    @ HomotopyGetsReal ~/HomotopyGetsReal/src/Solver.jl:873\n [14] intersect_bounding_object\n    @ ~/HomotopyGetsReal/src/Solver.jl:824 [inlined]\n [15] decompose_1d_curve(F::System, cfg::HomotopyConfig{Float64}; deflate::Bool)\n    @ HomotopyGetsReal ~/HomotopyGetsReal/src/Topology.jl:371\n [16] decompose_1d_curve\n    @ ~/HomotopyGetsReal/src/Topology.jl:359 [inlined]\n [17] slice_at_z(F::System, z_val::Float64, cfg::HomotopyConfig{Float64}; deflate::Bool)\n    @ HomotopyGetsReal ~/HomotopyGetsReal/src/SurfaceDecomposition.jl:103\n [18] slice_at_z\n    @ ~/HomotopyGetsReal/src/SurfaceDecomposition.jl:92 [inlined]\n [19] _robust_slice_at_z(F::System, patch::@NamedTuple{f::Expression, fx::Expression, fy::Expression, fz::Expression, x_var::Variable, y_var::Variable, z_var::Variable, F_for_tracking::System}, z_bottom::Float64, z_top::Float64, cfg::HomotopyConfig{Float64}; deflate::Bool)\n    @ HomotopyGetsReal ~/HomotopyGetsReal/src/SurfaceDecomposition.jl:372\n [20] _robust_slice_at_z\n    @ ~/HomotopyGetsReal/src/SurfaceDecomposition.jl:286 [inlined]\n [21] decompose_3d_surface(F::System, cfg::HomotopyConfig{Float64}; projection::Nothing, rng::TaskLocalRNG, incidence::Bool, deflate::Bool)\n    @ HomotopyGetsReal ~/HomotopyGetsReal/src/SurfaceDecomposition.jl:1930\n [22] decompose_3d_surface\n    @ ~/HomotopyGetsReal/src/SurfaceDecomposition.jl:1798 [inlined]\n [23] main()\n    @ Main ~/HomotopyGetsReal/dev/scratch/capability_survey/run_fixture.jl:261\n [24] top-level scope\n    @ ~/HomotopyGetsReal/dev/scratch/capability_survey/run_fixture.jl:351\n [25] include(mod::Module, _path::String)\n    @ Base ./Base.jl:306\n [26] exec_options(opts::Base.JLOptions)\n    @ Base ./client.jl:317\n [27] _start()\n    @ Base ./client.jl:550",
+  "face_count": null,
+  "fixture_name": "whitney_umbrella",
+  "mesh_triangle_count": null,
+  "mesh_vertex_count": null,
+  "notes": "CONFIRMS the documented prediction in docs/DESIGN_NOTES.md exactly (Backlog: 'Uncaught exception when compute_critical_z_slices finds zero critical z-values...' entry): bare/default call (no deflate=true) throws OverflowError: Cannot compute a start system, originating in intersect_bounding_object -> HC.jl's solve -> polyhedral start system construction, reached via decompose_3d_surface -> _robust_slice_at_z -> slice_at_z -> decompose_1d_curve -> intersect_bounding_object, at the naive bbox-midpoint z=0 slab (the degenerate z-axis). This is a confirmation of an already-documented gap, not a new discrepancy.",
+  "outcome": "exception",
+  "residuals": {
+    "max": null,
+    "mean": null,
+    "median": null,
+    "n_points": 0,
+    "p90": null,
+    "p99": null
+  },
+  "vertex_counts": {
+    "Artificial": null,
+    "Boundary": null,
+    "Critical": null,
+    "Singular": null
+  },
+  "wall_time_seconds": 15.852066040039062
+}

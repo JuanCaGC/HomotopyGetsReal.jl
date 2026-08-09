@@ -1,0 +1,18 @@
+======================================================================
+decompose_3d_surface(F, cfg; incidence=true) -- candidate at edge=20, midslice=25
+======================================================================
+  decompose_3d_surface(incidence=true): 46.42s
+  main vertices:       14 total  Dict("Artificial" => 4, "Critical" => 10, "Boundary" => 0, "Singular" => 0)
+  fold-anchor vertices: 6 total  Dict("Artificial" => 0, "Critical" => 4, "Boundary" => 0, "Singular" => 2)
+  combined overlay:    20 total  Dict("Artificial" => 4, "Critical" => 14, "Boundary" => 0, "Singular" => 2)
+  naked_edges: 39
+  mesh_verts=13056  mesh_tris=28943
+
+======================================================================
+Candidate figure: mesh + combined VertexType overlay, same composition as taubin_singular_structure.pdf
+======================================================================
+  wrote /Users/juancagc/HomotopyGetsReal/paper_artifacts/figures/taubin_singular_structure_CANDIDATE.pdf (14.537 MB, 15243474 bytes)
+  wrote /Users/juancagc/HomotopyGetsReal/paper_artifacts/figures/taubin_singular_structure_CANDIDATE_preview.png
+NOTE: paper_artifacts/results.json was NOT touched. The original
+taubin_singular_structure.pdf was NOT overwritten.
+ALL DONE

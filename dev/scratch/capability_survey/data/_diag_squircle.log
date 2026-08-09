@@ -1,0 +1,10 @@
+Total vertices: 6
+  id=1 type=Singular coords=ComplexF64[1.0000000000000009 + 8.296841292029852e-19im, -0.0 + 0.0im] metadata=Dict{Symbol, Any}(:tolerance_used => 1.0e-6, :singular_values => [4.000000000000011, 0.0], :jacobian_rank => 1, :cluster_member_ids => [1], :cluster_size => 1)
+  id=2 type=Singular coords=ComplexF64[-1.0 + 3.676274987540704e-19im, 0.0 + 0.0im] metadata=Dict{Symbol, Any}(:tolerance_used => 1.0e-6, :singular_values => [4.0, 0.0], :jacobian_rank => 1, :cluster_member_ids => [2], :cluster_size => 1)
+  id=3 type=Artificial coords=ComplexF64[-1.0 + 0.0im, 1.0 + 0.0im] metadata=Dict{Symbol, Any}(:tolerance_used => 0.0001, :origin => :endpoint_fallback)
+  id=4 type=Artificial coords=ComplexF64[1.0000000000000009 + 0.0im, 1.0 + 0.0im] metadata=Dict{Symbol, Any}(:tolerance_used => 0.0001, :origin => :endpoint_fallback)
+  id=5 type=Artificial coords=ComplexF64[-1.0 + 0.0im, -1.0 + 0.0im] metadata=Dict{Symbol, Any}(:tolerance_used => 0.0001, :origin => :endpoint_fallback)
+  id=6 type=Artificial coords=ComplexF64[1.0000000000000009 + 0.0im, -1.0 + 0.0im] metadata=Dict{Symbol, Any}(:tolerance_used => 0.0001, :origin => :endpoint_fallback)
+Total edges: 2
+  id=1 left=3 right=4 n_samples=6 is_singular=false
+  id=2 left=5 right=6 n_samples=6 is_singular=false

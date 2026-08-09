@@ -1,0 +1,36 @@
+{
+  "category": "surface",
+  "config": {
+    "bbox_z": [
+      -4.0,
+      4.3
+    ],
+    "edge_sample_density": 6,
+    "midslice_sample_density": 8,
+    "projection": null
+  },
+  "edge_count": 2,
+  "equation": "x^2 + y^2 - z^2",
+  "error": null,
+  "face_count": 2,
+  "fixture_name": "cone_asymmetric_bbox",
+  "mesh_triangle_count": 170,
+  "mesh_vertex_count": 98,
+  "notes": "",
+  "outcome": "clean_success",
+  "residuals": {
+    "max": 16.0,
+    "mean": 0.5048392336176324,
+    "median": 1.184866391668038e-7,
+    "n_points": 98,
+    "p90": 1.4896692022148272e-6,
+    "p99": 12.235528837662942
+  },
+  "vertex_counts": {
+    "Artificial": 0,
+    "Boundary": 0,
+    "Critical": 2,
+    "Singular": 0
+  },
+  "wall_time_seconds": 27.109532117843628
+}

@@ -1,0 +1,12 @@
+=== Recomputing paper-config mesh (edge=8, midslice=8, tight bbox) ===
+paper_config: wall=43.55s  mesh_verts=1586  mesh_tris=3934  naked_edges=31
+Saved: taubin_heart_paper_config_MATCHED_ZOOM.png
+
+=== Recomputing production-density mesh (edge=50, midslice=100, default wide bbox) ===
+production_density: wall=25.22s  mesh_verts=132298  mesh_tris=272906  naked_edges=62
+Saved: taubin_heart_production_density_MATCHED_ZOOM.png
+
+=== SUMMARY (both rendered through the SAME zoom_cfg axis limits: bbox_x=bbox_y=(-1.5,1.5), bbox_z=(-1.3,1.3)) ===
+paper_config (edge=8,midslice=8):        naked_edges=31  wall=43.55s
+production_density (edge=50,midslice=100): naked_edges=62  wall=25.22s
+ALL DONE

@@ -1,0 +1,26 @@
+Precompiling packages...
+   6712.1 ms  ✓ HomotopyGetsReal
+  1 dependency successfully precompiled in 8 seconds. 399 already precompiled.
+
+=== cone_asymmetric_bbox ===
+  wall=27.11s  vertices=2 Dict{String, Any}("Artificial" => 0, "Critical" => 2, "Boundary" => 0, "Singular" => 0)  edges=2  faces=2  mesh_pts=98  mesh_tris=170
+  residuals: Dict{String, Any}("median" => 1.184866391668038e-7, "n_points" => 98, "max" => 16.0, "mean" => 0.5048392336176324, "p90" => 1.4896692022148272e-6, "p99" => 12.235528837662942)
+  Saved render: /Users/juancagc/HomotopyGetsReal/dev/scratch/capability_survey/renders/cone_asymmetric_bbox.png
+
+=== horn_torus_asymmetric_bbox ===
+  wall=7.09s  vertices=0 Dict{String, Any}("Artificial" => 0, "Critical" => 0, "Boundary" => 0, "Singular" => 0)  edges=0  faces=0  mesh_pts=0  mesh_tris=0
+
+=== cone_projection_random ===
+  EXCEPTION: _robust_slice_at_z: slab [-6.7539277964725635, 6.7539277964725635] still fails the vertex-type and/or gradient-magnitude gate after the original midpoint plus 8 perturbed retries (cfg.z_mid_retry_frac=0.01, cfg.z_mid_gradient_ratio_tol=0.01); giving up rather than silently proceeding with a slice known to be untrustworthy.
+
+=== horn_torus_projection_random ===
+  wall=20.95s  vertices=20 Dict{String, Any}("Artificial" => 8, "Critical" => 12, "Boundary" => 0, "Singular" => 0)  edges=20  faces=20  mesh_pts=1647  mesh_tris=3172
+  residuals: Dict{String, Any}("median" => 2.311925495490641e-7, "n_points" => 1647, "max" => 0.0008512963705866861, "mean" => 8.889980266655584e-6, "p90" => 1.1726353204011275e-6, "p99" => 0.00028413692712112525)
+  Saved render: /Users/juancagc/HomotopyGetsReal/dev/scratch/capability_survey/renders/horn_torus_projection_random.png
+
+=== SUMMARY ===
+  A_cone => worked
+  A_horn_torus => still_empty
+  B_cone => exception
+  B_horn_torus => worked
+ALL DONE

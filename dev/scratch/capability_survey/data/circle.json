@@ -1,0 +1,30 @@
+{
+  "category": "curve",
+  "config": {
+    "edge_sample_density": 6
+  },
+  "edge_count": 2,
+  "equation": "x^2 + y^2 - 1",
+  "error": null,
+  "face_count": null,
+  "fixture_name": "circle",
+  "mesh_triangle_count": null,
+  "mesh_vertex_count": null,
+  "notes": "",
+  "outcome": "clean_success",
+  "residuals": {
+    "max": 2.9139465951288912e-8,
+    "mean": 9.713200905629252e-9,
+    "median": 9.033884751374899e-13,
+    "n_points": 12,
+    "p90": 2.913931264059144e-8,
+    "p99": 2.9139465951288912e-8
+  },
+  "vertex_counts": {
+    "Artificial": 0,
+    "Boundary": 0,
+    "Critical": 2,
+    "Singular": 0
+  },
+  "wall_time_seconds": 14.786278009414673
+}

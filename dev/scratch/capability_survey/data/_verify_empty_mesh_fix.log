@@ -1,0 +1,19 @@
+Precompiling packages...
+   6625.7 ms  ✓ HomotopyGetsReal
+  1 dependency successfully precompiled in 8 seconds. 399 already precompiled.
+┌ Warning: plot_surface_decomposition: mesh has zero points/triangles -- decompose_3d_surface returned a completely empty decomposition (a known outcome for some fixtures, e.g. a surface whose only critical z lands exactly on an undetected degenerate point -- see docs/DESIGN_NOTES.md, "HC.jl polyhedral-solve reliability"). Returning an empty axes frame instead of plotting a mesh.
+└ @ HomotopyGetsReal ~/HomotopyGetsReal/src/Visuals.jl:279
+
+=== cone ===
+  vertices=0  edges=0  faces=0  mesh_pts=0  mesh_tris=0
+  PASS: rendered without error -> /Users/juancagc/HomotopyGetsReal/dev/scratch/capability_survey/renders/cone_POST_FIX.png
+
+=== horn_torus ===
+  vertices=0  edges=0  faces=0  mesh_pts=0  mesh_tris=0
+  PASS: rendered without error -> /Users/juancagc/HomotopyGetsReal/dev/scratch/capability_survey/renders/horn_torus_POST_FIX.png
+
+=== empty_surface ===
+  vertices=0  edges=0  faces=0  mesh_pts=0  mesh_tris=0
+  PASS: rendered without error -> /Users/juancagc/HomotopyGetsReal/dev/scratch/capability_survey/renders/empty_surface_POST_FIX.png
+
+ALL DONE

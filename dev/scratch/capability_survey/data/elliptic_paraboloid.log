@@ -1,0 +1,4 @@
+=== Running fixture: elliptic_paraboloid ===
+Saved render: /Users/juancagc/HomotopyGetsReal/dev/scratch/capability_survey/renders/elliptic_paraboloid.png
+Saved JSON: /Users/juancagc/HomotopyGetsReal/dev/scratch/capability_survey/data/elliptic_paraboloid.json
+=== Done: elliptic_paraboloid (outcome=clean_success, wall_time=23.83s) ===

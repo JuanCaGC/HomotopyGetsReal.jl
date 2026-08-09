@@ -1,0 +1,24 @@
+ERROR: LoadError: UndefVarError: `GeometryBasics` not defined in `Main`
+Suggestion: check for spelling errors or missing imports.
+Hint: GeometryBasics is loaded but not imported in the active module Main.
+Stacktrace:
+ [1] top-level scope
+   @ ~/HomotopyGetsReal/dev/scratch/capability_survey/_diag_superellipsoid.jl:29
+ [2] include(mod::Module, _path::String)
+   @ Base ./Base.jl:306
+ [3] exec_options(opts::Base.JLOptions)
+   @ Base ./client.jl:317
+ [4] _start()
+   @ Base ./client.jl:550
+in expression starting at /Users/juancagc/HomotopyGetsReal/dev/scratch/capability_survey/_diag_superellipsoid.jl:29
+Total vertices: 6
+  id=1 type=Singular coords=[0.9999999999999993, -0.0, -3.3306690738754696e-16] residual=2.6645352591003757e-15 referenced_by_edge=false metadata=Dict{Symbol, Any}(:tolerance_used => 1.0e-6, :singular_values => [3.999999999999992, 0.0], :jacobian_rank => 1, :cluster_member_ids => [1], :cluster_size => 1)
+  id=2 type=Singular coords=[-0.9999999999999999, -0.0, -3.3306690738754696e-16] residual=4.440892098500626e-16 referenced_by_edge=false metadata=Dict{Symbol, Any}(:tolerance_used => 1.0e-6, :singular_values => [3.9999999999999987, 0.0], :jacobian_rank => 1, :cluster_member_ids => [2], :cluster_size => 1)
+  id=3 type=Artificial coords=[-0.9999999999999999, 1.0, -3.3306690738754696e-16] residual=0.9999999999999996 referenced_by_edge=true metadata=Dict{Symbol, Any}(:tolerance_used => 0.0001, :origin => :endpoint_fallback)
+  id=4 type=Artificial coords=[0.9999999999999993, 1.0, -3.3306690738754696e-16] residual=0.9999999999999973 referenced_by_edge=true metadata=Dict{Symbol, Any}(:tolerance_used => 0.0001, :origin => :endpoint_fallback)
+  id=5 type=Artificial coords=[-0.9999999999999999, -1.0, -3.3306690738754696e-16] residual=0.9999999999999996 referenced_by_edge=true metadata=Dict{Symbol, Any}(:tolerance_used => 0.0001, :origin => :endpoint_fallback)
+  id=6 type=Artificial coords=[0.9999999999999993, -1.0, -3.3306690738754696e-16] residual=0.9999999999999973 referenced_by_edge=true metadata=Dict{Symbol, Any}(:tolerance_used => 0.0001, :origin => :endpoint_fallback)
+Total edges: 2
+  id=1 left=3 right=4 n_samples=6
+  id=2 left=5 right=6 n_samples=6
+Total faces: 2

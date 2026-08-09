@@ -1,0 +1,30 @@
+{
+  "category": "curve",
+  "config": {
+    "edge_sample_density": 6
+  },
+  "edge_count": 4,
+  "equation": "y^2 - x*(x-1)*(x+1)",
+  "error": null,
+  "face_count": null,
+  "fixture_name": "elliptic_two_components",
+  "mesh_triangle_count": null,
+  "mesh_vertex_count": null,
+  "notes": "Both disconnected real components correctly found and separated: 3 Critical vertices at exactly x=-1, x=0, x=1 (the bounded oval's two turning points plus the unbounded branch's own leftmost point), 2 Boundary vertices where the unbounded branch exits bbox_x=4, 4 edges (2 for the oval, 2 for the unbounded branch) -- no merging or dropping of either component. This was the specific thing this fixture was chosen to check; it passed cleanly.",
+  "outcome": "clean_success",
+  "residuals": {
+    "max": 5.200411421490969e-7,
+    "mean": 5.012060124570672e-8,
+    "median": 7.695038217736538e-10,
+    "n_points": 24,
+    "p90": 5.373598221947162e-8,
+    "p99": 5.200411420469564e-7
+  },
+  "vertex_counts": {
+    "Artificial": 0,
+    "Boundary": 2,
+    "Critical": 3,
+    "Singular": 0
+  },
+  "wall_time_seconds": 16.91743493080139
+}

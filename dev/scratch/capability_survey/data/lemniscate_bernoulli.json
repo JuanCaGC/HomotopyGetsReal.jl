@@ -1,0 +1,30 @@
+{
+  "category": "curve",
+  "config": {
+    "edge_sample_density": 6
+  },
+  "edge_count": 4,
+  "equation": "(x^2+y^2)^2 - x^2 + y^2",
+  "error": null,
+  "face_count": null,
+  "fixture_name": "lemniscate_bernoulli",
+  "mesh_triangle_count": null,
+  "mesh_vertex_count": null,
+  "notes": "",
+  "outcome": "clean_success",
+  "residuals": {
+    "max": 7.669706697521761e-7,
+    "mean": 1.620017112793235e-7,
+    "median": 2.8374969485156498e-8,
+    "n_points": 24,
+    "p90": 7.669393108811206e-7,
+    "p99": 7.669706696500356e-7
+  },
+  "vertex_counts": {
+    "Artificial": 0,
+    "Boundary": 0,
+    "Critical": 2,
+    "Singular": 1
+  },
+  "wall_time_seconds": 15.637890815734863
+}

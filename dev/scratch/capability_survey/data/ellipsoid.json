@@ -1,0 +1,31 @@
+{
+  "category": "surface",
+  "config": {
+    "edge_sample_density": 6,
+    "midslice_sample_density": 8
+  },
+  "edge_count": 2,
+  "equation": "x^2 + 4*y^2 + 9*z^2 - 1",
+  "error": null,
+  "face_count": 2,
+  "fixture_name": "ellipsoid",
+  "mesh_triangle_count": 316,
+  "mesh_vertex_count": 160,
+  "notes": "median (2.57e-8) and p90 (5.97e-8) are in the sphere baseline range, but max (1.00e-5) and p99 (1.00e-5) jump ~170x above p90 -- a small number of outlier mesh points (roughly 1-2 of 160) are far worse than the rest. Plausibly connected to docs/DESIGN_NOTES.md's own documented 'ellipsoid discovery' (Face tracking, Adaptive re-anchoring section): fixed literal patch lines can lose transversal intersection with the level curve nearer the poles for an asymmetric ellipsoid specifically (not the sphere, whose radial symmetry is a documented special case), even though the two-gate re-anchoring mechanism generally handles it. Not investigated further; see errors_log.md.",
+  "outcome": "success_with_caveats",
+  "residuals": {
+    "max": 1.0002641210538066e-5,
+    "mean": 5.258816833931396e-7,
+    "median": 2.573162048019606e-8,
+    "n_points": 160,
+    "p90": 5.97463534646181e-8,
+    "p99": 1.0002641087719644e-5
+  },
+  "vertex_counts": {
+    "Artificial": 0,
+    "Boundary": 0,
+    "Critical": 2,
+    "Singular": 0
+  },
+  "wall_time_seconds": 23.620423078536987
+}

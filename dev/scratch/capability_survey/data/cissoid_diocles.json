@@ -1,0 +1,30 @@
+{
+  "category": "curve",
+  "config": {
+    "edge_sample_density": 6
+  },
+  "edge_count": 2,
+  "equation": "y^2*(2-x) - x^3",
+  "error": null,
+  "face_count": null,
+  "fixture_name": "cissoid_diocles",
+  "mesh_triangle_count": null,
+  "mesh_vertex_count": null,
+  "notes": "",
+  "outcome": "clean_success",
+  "residuals": {
+    "max": 9.162758329850362e-10,
+    "mean": 2.182043249791358e-10,
+    "median": 2.3166801810248216e-11,
+    "n_points": 12,
+    "p90": 8.593098121956191e-10,
+    "p99": 9.162758329850362e-10
+  },
+  "vertex_counts": {
+    "Artificial": 0,
+    "Boundary": 2,
+    "Critical": 0,
+    "Singular": 1
+  },
+  "wall_time_seconds": 17.652415990829468
+}

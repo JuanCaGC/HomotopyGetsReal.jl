@@ -1,0 +1,31 @@
+{
+  "category": "surface",
+  "config": {
+    "edge_sample_density": 6,
+    "midslice_sample_density": 8
+  },
+  "edge_count": 2,
+  "equation": "x^4 + y^4 + z^4 - 1",
+  "error": null,
+  "face_count": 2,
+  "fixture_name": "quartic_superellipsoid",
+  "mesh_triangle_count": 320,
+  "mesh_vertex_count": 204,
+  "notes": "Surface-level analog of the squircle_quartic curve finding (same v_type distribution: 0 Critical, 2 Singular, 4 Artificial) -- and worse here: the 2 genuine critical points at (+-1,0,0) are found essentially exactly (residual ~1e-15) but classified Singular (augmented-system Jacobian rank-deficient from x^4's f_x=4x^3 higher-order zero, same mechanism as squircle), and orphaned from the top-level edge graph entirely; the 4 Artificial :endpoint_fallback vertices used as actual edge endpoints instead have residual ~1.0 (e.g. (-1,1,0): |f|=1+1+0-1=1), nowhere near the surface. CORRECTION after visually inspecting renders/quartic_superellipsoid.png: the rendered mesh DOES show a visible wedge-shaped notch/gouge cut into the surface near one pole (contrast with sphere.png and hyperboloid_one_sheet.png, both fully closed/smooth from the same pipeline) -- the mesh IS visibly affected, not merely the top-level vertices/edges bookkeeping as first assessed from the JSON counts alone. See errors_log.md.",
+  "outcome": "success_with_caveats",
+  "residuals": {
+    "max": 1.3784077609041784e-6,
+    "mean": 1.2859448497752788e-7,
+    "median": 5.2565868768894575e-8,
+    "n_points": 204,
+    "p90": 1.2931799237003716e-7,
+    "p99": 1.3784077425455323e-6
+  },
+  "vertex_counts": {
+    "Artificial": 4,
+    "Boundary": 0,
+    "Critical": 0,
+    "Singular": 2
+  },
+  "wall_time_seconds": 24.105454921722412
+}

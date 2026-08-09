@@ -1,0 +1,31 @@
+{
+  "category": "surface",
+  "config": {
+    "edge_sample_density": 6,
+    "midslice_sample_density": 8
+  },
+  "edge_count": 2,
+  "equation": "x^2 + y^2 + z^2 - 1",
+  "error": null,
+  "face_count": 2,
+  "fixture_name": "sphere",
+  "mesh_triangle_count": 300,
+  "mesh_vertex_count": 152,
+  "notes": "",
+  "outcome": "clean_success",
+  "residuals": {
+    "max": 5.6102749113051686e-8,
+    "mean": 2.3136423880544326e-8,
+    "median": 2.136178967049318e-8,
+    "n_points": 152,
+    "p90": 4.917763227751947e-8,
+    "p99": 5.6102749113051686e-8
+  },
+  "vertex_counts": {
+    "Artificial": 0,
+    "Boundary": 0,
+    "Critical": 2,
+    "Singular": 0
+  },
+  "wall_time_seconds": 22.98243808746338
+}

@@ -448,6 +448,7 @@ function verify_isosingular_dimension(
         result = solve(
             Faug, [x0_c];
             start_parameters = start_par, target_parameters = target_par, show_progress = false,
+            compile = :none,
         )
         pr = only(path_results(result))
 

@@ -338,6 +338,47 @@ Hauenstein-Wampler ground-truth tests (Whitney umbrella, node, cusp —
 Compile mode is not guaranteed numerically inert in general; this hasn't been
 checked for this call site specifically.
 
+### Scheduled CI's `test-slow` job has hung twice in `test_isosingular_deflation.jl`'s Historical curves testset — reproducible, cause unconfirmed (2026-08-10)
+
+Confirmed via raw GitHub Actions logs, not inferred from run status alone.
+`.github/workflows/CI.yml`'s `test-slow` job (`HOMOTOPYGETSREAL_RUN_SLOW_TESTS=1`,
+`timeout-minutes: 90`, gated to the Monday-06:00-UTC `schedule` and manual
+`workflow_dispatch`) has hung twice: run `30802661928` (2026-08-03) and run
+`31366825250` (2026-08-10). Both times, the last output before the job goes
+silent is the `@info` line at `test/test_isosingular_deflation.jl:134`,
+inside the "Historical curves (N=2)" testset's (`:99-139`) loop, for its
+final iteration `("Curve 3 (bbox=(-8,8))", F3, cfg_wide)` (`:124`) — then
+~29-30 minutes of zero output, then GitHub Actions force-cancels the job at
+the 90-minute wall-clock cap. Exact gap: 2026-08-10, `08:40:47Z` →
+`09:10:48Z` (30m01s); 2026-08-03, `10:44:55Z` → `11:14:15Z` (29m20s). Not a
+one-off.
+
+**Explicitly distinct from the display-sleep GLMakie segfault** documented
+above ("Follow-up, 2026-08-06" under "Full-suite test timing and the
+536-vs-537 assertion-count variance"): that failure mode is tied to the
+*physical display* going to sleep while the OS stays awake, on a local
+machine. This is a headless `ubuntu-latest` GitHub Actions runner with no
+physical display to sleep — a different mechanism, even though both land in
+the same slow full-suite run.
+
+**Flagged hypothesis, not confirmed**: plausibly connected to the
+`compile=:mixed`-not-`compile=:none` lead directly above. `Curve 3` already
+needs "up to 5 real deflation rounds with genuine hyperplane-tracking verify
+attempts per round" at its default bbox (`:103-104`'s own comment); the
+enlarged `bbox=(-8,8)` variant is the one immediately preceding the hang in
+both occurrences. If this specific curve/bbox combination pushes
+`verify_isosingular_dimension` into many retries against a
+poorly-conditioned point, and each retry's `solve()` call pays
+`compile=:mixed`'s cost rather than `compile=:none`'s, that could compound
+into a near-total stall for this one case specifically. Not profiled, not
+verified — logged as the natural next hypothesis to test whenever this gets
+picked up, not something to chase now.
+
+**Practical note**: does not block anything currently. v0.2.1's registration
+succeeded (`JuliaRegistries/General#163932`, merged 2026-08-09); every
+`push`-triggered `CI`/`Documentation` run is green. Only the weekly
+scheduled full-suite run and manual `workflow_dispatch` are affected.
+
 ### Capability survey (2026-08-06): new gaps found across a 24-fixture survey
 
 *(Six distinct findings from `dev/scratch/capability_survey/` — a

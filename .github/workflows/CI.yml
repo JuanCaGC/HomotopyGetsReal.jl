@@ -53,7 +53,9 @@ jobs:
 
   test-slow:
     name: Julia ${{ matrix.version }} - ${{ matrix.os }} - slow
-    # Full suite (515 tests, ~480s / ~8 min local as of 2026-07): only on schedule or manual dispatch.
+    # Full suite (537 assertions, ~30-34 min locally as of 2026-08; has hung
+    # to the 90 min timeout in CI at least twice -- see docs/DESIGN_NOTES.md's
+    # isosingular-deflation CI-hang entry): only on schedule or manual dispatch.
     if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
     runs-on: ${{ matrix.os }}
     timeout-minutes: 90

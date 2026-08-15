@@ -379,6 +379,40 @@ succeeded (`JuliaRegistries/General#163932`, merged 2026-08-09); every
 `push`-triggered `CI`/`Documentation` run is green. Only the weekly
 scheduled full-suite run and manual `workflow_dispatch` are affected.
 
+**Follow-up, 2026-08-14: the `compile=:mixed` hypothesis tested directly,
+confirmed, and fixed — but NOT confirmed to be the CI hang itself.** Ran
+this exact failing case standalone and locally, with temporary per-attempt
+timing instrumentation around `verify_isosingular_dimension`'s retry loop
+(not committed). Result: 118.55s of the case's 141.21s total came from 4
+plateaued deflation rounds (`corank_seq` stuck at 2), each one exhausting
+the full `cfg.isosingular_verify_retries=20` budget with every single
+attempt returning `NotTerminal` — 80 `solve()` calls total, every one
+completing (no single stuck call: max 2.37s), but stacking, with per-call
+cost climbing 1.12s → 2.37s as `Faug`'s equation count grew across rounds
+(3 → 9 → 27 → 83) — exactly `compile=:mixed`'s construction-cost signature,
+not the separate combinatorial-minor risk (`deflate_once` itself stayed
+negligible here; `minor_size` never exceeded 1 for this candidate). Fixed
+by adding `compile = :none` to that one `solve()` call
+(`verify_isosingular_dimension`, `:448-452`), matching `FaceTracking.jl`'s
+existing `build_tracker` precedent exactly. Re-validated against all four
+Hauenstein-Wampler ground-truth cases (node/cusp/tip/handle) with zero
+behavior change — identical verdicts and corank sequences
+(`test_solver.jl`, 85/85). Before/after timing on the profiled case:
+141.21s → 29.41s, ~4.8x, identical structural output (61 verts, 56 edges).
+The `reviewer` subagent's own independent full-suite run after this change
+landed at 7m51s (537/537) — well under the previously-documented ~30-34
+min local baseline, a real, freshly-measured, corroborating data point,
+though a single run isn't a controlled benchmark.
+
+**The honest caveat, stated plainly**: this case was never actually
+observed to hang *locally*, even before the fix — every local run,
+before and after, completed in under 2.5 minutes. So this closes a large,
+real, precisely-diagnosed inefficiency in the exact code path that was
+executing when CI went silent — it is not a confirmed fix for the CI hang
+itself. Whether it's sufficient to prevent the 90-minute timeout in the
+real CI environment remains to be seen on the next scheduled run (Monday
+2026-08-17).
+
 ### Capability survey (2026-08-06): new gaps found across a 24-fixture survey
 
 *(Six distinct findings from `dev/scratch/capability_survey/` — a

@@ -84,3 +84,7 @@ Historical validation scripts from the Phases 1–6 rebuild live under `dev/scra
 | `test/` | Formal `Test.jl` suite |
 | `dev/scratch/` | Archived scratch-phase validation scripts |
 | `docs/` | Documenter.jl site (`docs/make.jl`) |
+
+## AI-assisted development
+
+Portions of this package's implementation, testing, and documentation were developed with the assistance of AI coding tools (Claude and Cursor), used under direct human supervision for code generation, refactoring, and independent review and auditing of the author's own design decisions. Commits with substantial AI-assisted content carry a `Co-Authored-By` trailer in the git history. All core design decisions were made by the author, and every correctness claim in this repository is backed by the verification methods described in `docs/DESIGN_NOTES.md` (residual checks, cross-validation against published ground-truth examples, and the package's own test suite) -- not by the AI tools' own output alone.

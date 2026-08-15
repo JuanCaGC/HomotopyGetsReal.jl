@@ -13,8 +13,9 @@ surfaces into vertices/edges (1D) or vertices/edges/faces/mesh (2D surfaces
 in 3-space), built on
 [HomotopyContinuation.jl](https://github.com/JuliaHomotopyContinuation/HomotopyContinuation.jl).
 
-- **Version**: `0.2.0`, registered in Julia's General registry (confirmed
-  live against the registry as of this writing).
+- **Version**: `0.2.1`, registered in Julia's General registry (confirmed
+  live against the registry as of this writing — `Versions.toml` for this
+  package in `JuliaRegistries/General` lists `0.1.0`, `0.2.0`, and `0.2.1`).
 - **License**: MIT, copyright Juan Camilo Gonzalez, 2026.
 - **Author**: Juan Camilo Gonzalez, sole author. `git shortlog -sne --all`
   shows only `JuanCaGC` (two personal emails) plus the `Documenter.jl` CI

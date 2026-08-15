@@ -9,7 +9,7 @@ Full documentation: [https://JuanCaGC.github.io/HomotopyGetsReal.jl](https://Jua
 
 ## Install
 
-Registered in Julia's General registry as v0.2.0, including the full feature set described below (isosingular deflation, generic projection support, incidence-based mesh welding).
+Registered in Julia's General registry as v0.2.1, including the full feature set described below (isosingular deflation, generic projection support, incidence-based mesh welding).
 
 ```julia
 using Pkg

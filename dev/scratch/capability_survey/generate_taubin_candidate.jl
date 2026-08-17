@@ -1,10 +1,10 @@
-# Candidate replacement for paper_artifacts/figures/taubin_singular_structure.pdf
+# Candidate replacement for paper_artifacts/figures/paper/surfaces/taubin_singular_structure.pdf
 # at the recommended intermediate density (edge_sample_density=20,
 # midslice_sample_density=25), mirroring
-# paper_artifacts/taubin_singular_structure_example.jl's own Part 1 logic
+# paper_artifacts/scripts/taubin_singular_structure_example.jl's own Part 1 logic
 # (same camera pin, same vertex-type overlay, same composition) EXACTLY,
 # except: (1) the new density, (2) output path is a new CANDIDATE file,
-# never overwriting the original, (3) does NOT touch paper_artifacts/results.json
+# never overwriting the original, (3) does NOT touch paper_artifacts/data/results.json
 # -- this is a candidate for review, not a finalized regeneration.
 
 using HomotopyContinuation
@@ -12,7 +12,7 @@ using HomotopyGetsReal
 using GeometryBasics
 using CairoMakie
 
-const FIGURES_DIR = "/Users/juancagc/HomotopyGetsReal/paper_artifacts/figures"
+const FIGURES_DIR = "/Users/juancagc/HomotopyGetsReal/paper_artifacts/figures/archive"
 
 function vertex_type_counts(vertices)
     counts = Dict{String,Int}("Critical" => 0, "Boundary" => 0, "Singular" => 0, "Artificial" => 0)
@@ -69,6 +69,6 @@ CairoMakie.save(png1, fig1; px_per_unit = 2)
 pdf_bytes = filesize(path1)
 println("  wrote $path1 ($(round(pdf_bytes/1024/1024, digits=3)) MB, $pdf_bytes bytes)")
 println("  wrote $png1")
-println("NOTE: paper_artifacts/results.json was NOT touched. The original")
+println("NOTE: paper_artifacts/data/results.json was NOT touched. The original")
 println("taubin_singular_structure.pdf was NOT overwritten.")
 println("ALL DONE")

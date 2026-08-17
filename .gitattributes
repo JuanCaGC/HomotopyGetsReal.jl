@@ -1,0 +1,9 @@
+# Omit non-package trees from `git archive` / Registrator / Pkg.add tarballs.
+# Files remain in this git repo (except paths that are gitignored).
+/dev export-ignore
+/paper export-ignore
+/paper_artifacts export-ignore
+/notes export-ignore
+/referencias_academicas export-ignore
+/prototipo_viejo_julia export-ignore
+/codigo_cplusplus export-ignore

@@ -34,7 +34,7 @@ the third, in the adjacent repo it deliberately lives in).
    `|x²+4y²+9z²-1|` at every welded ellipsoid mesh vertex and asserts
    `all(<=(1e-4), ell_residuals)`. The same pattern (`mean`/`p90`/`p99`
    residual stats per fixture) is computed for the paper figures in
-   `paper_artifacts/results.json` (e.g. torus: mean `2.2e-6`, p99 `1.0e-5`).
+   `paper_artifacts/data/results.json` (e.g. torus: mean `2.2e-6`, p99 `1.0e-5`).
 
 2. **Cross-validation against Hauenstein–Wampler's published isosingular
    deflation sequences.** `src/Solver.jl`'s deflation code

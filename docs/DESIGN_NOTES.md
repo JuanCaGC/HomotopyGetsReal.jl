@@ -1389,3 +1389,18 @@ Found via the Phase 6 "02b" investigation: a mathematically-exact-1.0
 quantity's Float32 round-off, ~6e-8 relative, auto-scaled a colorbar
 into full-spectrum speckle — confirmed via `radial_fn`'s printed
 min/max on the unit sphere: literally `0.99999994` to `1.0`.
+
+## Figures layout (2026-08-17)
+
+`paper_artifacts/figures/` was a flat mix of paper renders, talk sources,
+compiled PDFs, and dated superseded variants. Reorganized into
+`paper/`, `talk/`, `src/`, `exports/`, and `archive/` under `figures/`.
+The live map is `figures_organization.md` at the repo root. A follow-up
+the same day moved the manuscript to `paper/` at the repo root, talk-prep
+notes to `notes/`, and generation scripts / measured numbers / logs to
+`paper_artifacts/{scripts,data,logs}/` — see `REPO_ORGANIZATION.md`. Historical citations in this
+file that use the old flat paths (e.g. `paper_artifacts/figures/taubin_singular_structure.pdf`
+in the Taubin density/ladder-artifact entries above) are left as written;
+they record what was true at the time. The current files are
+`paper_artifacts/figures/paper/surfaces/taubin_singular_structure.pdf` and
+`paper_artifacts/figures/talk/taubin_talk_hook.pdf`.

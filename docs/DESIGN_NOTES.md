@@ -413,6 +413,41 @@ itself. Whether it's sufficient to prevent the 90-minute timeout in the
 real CI environment remains to be seen on the next scheduled run (Monday
 2026-08-17).
 
+**Follow-up, 2026-08-15: real-CI confirmation, obtained early via manual
+`workflow_dispatch` rather than waiting for Monday's cron.** Triggered
+`.github/workflows/CI.yml` directly (`gh workflow run CI.yml --ref main`,
+run `31864450864`) against the pushed `compile=:none` fix. Result:
+**`test-slow` completed successfully — no hang, no cancellation.** This is
+the first successful completion of this specific workload observed
+anywhere in this investigation; both prior attempts (2026-08-03,
+2026-08-10) were force-cancelled at the 90-minute timeout without a single
+partial success. Job wall-clock: 45m43s (`04:42:24Z` → `05:28:07Z`, queued
+~15 min behind a concurrent push-triggered `CI` run sharing the same
+`ci-CI-main` concurrency group before it started). Julia's own reported
+test-execution time (the `Test Summary` line, excluding checkout/xvfb/
+Julia-setup/precompile overhead): 21m48.5s. Result: 538/538 (within the
+documented ±1 assertion-count variance band).
+
+Real CI hardware is measurably slower than local for this workload —
+21m48.5s vs. the local post-fix figure of 7m51s (`reviewer` subagent) is
+~2.8x slower — consistent with the working theory that CI's per-`solve()`
+cost is higher than local, which is also the most likely reason this
+exact case never reproduced a hang locally even before the fix (same
+mechanism, smaller multiplier). **No direct CI before/after speedup
+figure exists** — both pre-fix CI attempts hung rather than completing, so
+there is no "CI, pre-fix, successful" baseline to compute a ratio against.
+What changed, precisely: 0 of 2 pre-fix scheduled/dispatched full-suite CI
+runs completed; 1 of 1 post-fix run completed, cleanly, well inside the
+90-minute cap.
+
+**Still not "permanently fixed," stated with the same discipline as
+above**: this is `n=1` for the post-fix CI condition. A single clean run
+is real, meaningful evidence — not a guarantee against future flakiness
+(cross-process HC.jl jitter is already documented elsewhere in this file
+as a real, load-bearing source of run-to-run variance for this codebase).
+Monday 2026-08-17's regular scheduled run will be the first unprompted,
+non-manually-triggered data point.
+
 ### Capability survey (2026-08-06): new gaps found across a 24-fixture survey
 
 *(Six distinct findings from `dev/scratch/capability_survey/` — a

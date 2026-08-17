@@ -90,7 +90,7 @@
 #     residuals over every mesh point: mean 7.4e-7, median 2.93e-8, p90
 #     6.3e-8, max 2.0e-4. Correct baseline for comparison is this
 #     project's own production-density ellipsoid entry
-#     (paper_artifacts/results.json, "ellipsoid"->"default", same
+#     (paper_artifacts/data/results.json, "ellipsoid"->"default", same
 #     HomotopyConfig{Float64}() defaults used here): mean 2.70e-7,
 #     median 2.79e-8, p90 5.85e-8, max 1.12e-4. Median and p90 both
 #     match closely (2.93e-8 vs 2.79e-8; 6.3e-8 vs 5.85e-8) -- this is

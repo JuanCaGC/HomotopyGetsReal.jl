@@ -1209,6 +1209,76 @@ sampling-density artifact (smooths out almost completely at default
 density), not the naked-edge/stitching mechanism above — a different
 fixture, a different cause, do not conflate the two.
 
+**Follow-up, 2026-08-16: a second, DIFFERENT defect found in the (c)
+intermediate-density regeneration, investigated, and the density change
+reverted.** Cowork's own differential review of the regenerated
+`taubin_talk_hook.pdf`/`taubin_singular_structure.pdf` (edge=20/mid=25,
+per (c) above) found a new "ladder" artifact: a vertical column of small
+horizontal notches on the front-left flank, roughly `z=0.3` to `z=1.0` —
+distinct from the top-lobe seam (c) already documents as still present,
+separately, near the saddle between the lobes.
+
+Investigated before deciding what to do about it:
+- **Reproduced fresh** from a clean process (`decompose_3d_surface`
+  re-run, direct CairoMakie PNG render, no PDF round-trip) — rules out
+  file corruption/transfer damage. The pattern is identical every time.
+- **Degenerate/sliver triangles**: none found (`area < 1e-8` threshold;
+  actual minimum triangle area `1.49e-7`) — not a triangulation-topology
+  bug of that kind.
+- **Naked-edge count and location**: 45 at this density vs 34 at paper
+  density (edge=8/mid=8) — consistent with (b) above (naked-edge count
+  rises with density), and the 34 figure itself lines up with (c)'s own
+  "~30-31" for this config, cross-validating the measurement. But the
+  naked-edge midpoints do **not** spatially overlap the ladder region —
+  they cluster near the top-lobe saddle and the bottom cusp, same as the
+  re-anchor events below.
+- **Leading hypothesis tested directly, not assumed**: adaptive
+  re-anchoring rate (`FaceTracking.jl`'s `_sweep_hop!`, "Face tracking
+  (Phase 5)" / "Adaptive re-anchoring" above) scaling with
+  `midslice_sample_density`. Temporary instrumentation (counter +
+  coordinates on every re-anchor event, reverted after use — not part of
+  any commit) confirmed the mechanism itself: 671 events at edge=20/mid=25
+  vs 206 at edge=8/mid=8, a 3.26x ratio almost exactly matching the
+  3.125x density ratio (25/8) — more z-targets per direction genuinely
+  does mean proportionally more per-hop transversality checks firing.
+  **But a spatial overlay (re-anchor coordinates plotted on the same
+  mesh/camera) disconfirmed it as the cause of THIS artifact**: events
+  cluster near the top-lobe saddle (z≈1.0–1.3) and the bottom cusp
+  (z≈-1.0) — matching and plausibly explaining why the already-known
+  top-lobe seam gets worse at this density — not in the z≈0.3–1.0
+  flank band where the ladder pattern actually sits. Re-anchoring got
+  more frequent at this density, exactly as hypothesized, but it isn't
+  what's causing the new defect.
+
+**Decision, given the Albatross timeline (<3 weeks at time of writing)**:
+reverted. `paper_artifacts/figures/taubin_singular_structure.pdf` and
+`taubin_talk_hook.pdf` are restored to the original `edge=8`/`midslice=8`
+content (byte-identical to `*_PRE_DENSITY_FIX_2026-08-01.*`); the
+ladder-artifact versions are preserved, not deleted, as
+`*_LADDER_ARTIFACT_2026-08-06.*`.
+`paper_artifacts/taubin_singular_structure_example.jl`'s own config was
+reverted to `edge_sample_density=8, midslice_sample_density=8` so a future
+re-run reproduces the same (known-good, known-limited) content, not the
+ladder artifact. The critical vertex-count invariant (14 Critical / 4
+Artificial / 2 Singular / 20 total combined overlay) was re-verified after
+reverting, not assumed unchanged. This is a reversal of the (c) decision,
+not an erasure of what (c) or this follow-up found — both investigation
+trails stay documented above, in full, including (c)'s own reasoning for
+why edge=20/mid=25 was chosen over full production defaults in the first
+place.
+
+**Open question, explicitly not resolved**: what actually causes the
+ladder artifact at higher density, if not re-anchoring rate. The most
+plausible remaining candidate — unconfirmed, not chased further this
+round — is cross-process HC.jl solver jitter (already documented
+elsewhere in this file as a real, load-bearing source of run-to-run
+variance for this codebase) accumulating differently across the many
+more, finer sweep-hops `weld_mesh`/the loft-triangulation stage has to
+stitch together at this density, rather than at the coarser paper
+density where the same underlying jitter has fewer, larger segments to
+hide in. Logged as a genuinely open lead for whenever there's time to
+pick it back up.
+
 ### Known limitation: generic projections over singular curves — `decompose_3d_surface`
 
 Measured (rotated Taubin heart, seed 1, 2026-07): median world-`|f|`

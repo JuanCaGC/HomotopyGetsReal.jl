@@ -76,14 +76,20 @@ HOMOTOPYGETSREAL_RUN_SLOW_TESTS=1 julia --project -e 'using Pkg; Pkg.test()'
 
 Historical validation scripts from the Phases 1–6 rebuild live under `dev/scratch/` (superseded by `test/`).
 
+See `REPO_ORGANIZATION.md` at the repository root for the full layout and
+compile commands.
+
 ## Layout
 
 | Path | Purpose |
 |------|---------|
 | `src/` | Package source (flat module) |
 | `test/` | Formal `Test.jl` suite |
+| `docs/` | Documenter.jl site (`docs/make.jl`) plus `DESIGN_NOTES.md` |
+| `paper/` | Current manuscript (markdown) |
+| `notes/` | Talk/exam prep notes |
+| `paper_artifacts/` | Gitignored figure generators, measured numbers, and compiled decks |
 | `dev/scratch/` | Archived scratch-phase validation scripts |
-| `docs/` | Documenter.jl site (`docs/make.jl`) |
 
 ## AI-assisted development
 

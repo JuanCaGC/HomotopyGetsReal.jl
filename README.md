@@ -68,7 +68,7 @@ using Pkg
 Pkg.test("HomotopyGetsReal")
 ```
 
-**Full suite** (adds `test_taubin.jl` and other slow-gated tests; 537 tests total, may vary by ±1 run-to-run (see `docs/DESIGN_NOTES.md`), ~30-34 min in this environment as of 2026-08):
+**Full suite** (adds `test_taubin.jl` and other slow-gated tests; 538 tests total, may vary by ±1 run-to-run (see `docs/DESIGN_NOTES.md`), ~30-34 min in this environment as of 2026-08):
 
 ```bash
 HOMOTOPYGETSREAL_RUN_SLOW_TESTS=1 julia --project -e 'using Pkg; Pkg.test()'

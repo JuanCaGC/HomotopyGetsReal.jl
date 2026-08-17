@@ -72,12 +72,21 @@ the third, in the adjacent repo it deliberately lives in).
    the astroid (`test/test_isosingular_deflation.jl:127-131`, every flagged
    `Singular` vertex's deflation `verdict == Resolved`).
 
-   **Test suite: 537/537** (fast subset: 477/477 in ~3.5 min via default
+   **Test suite: 538/538** (fast subset: 478/478 in ~3.5 min via default
    `Pkg.test()`; full suite via `HOMOTOPYGETSREAL_RUN_SLOW_TESTS=1`:
-   537/537 in ~30-34 min — `README.md`'s Testing section is kept in sync
-   with this figure). A ±1 count variance (536 vs 537) is
-   expected, not a bug: the astroid fixture's isosingular-deflation test
-   loop fires a variable number of assertions depending on live solver
+   538/538 in ~30-34 min — `README.md`'s Testing section is kept in sync
+   with this figure). The baseline moved from 537 to 538 permanently at
+   commit `a53b6c4` (`plot_surface_decomposition` empty-mesh fix) — a
+   fresh worktree-isolated rerun of the fast subset gave 477/477 (×3) at
+   `a53b6c4~1` and 478/478 (×3) at `a53b6c4` itself, so the shift is
+   reproducible and commit-aligned, not per-process RNG jitter. The exact
+   code path from that fix to the count is not identified (no test file
+   in `test/` exercises the empty-mesh branch it added); the full-suite
+   538 figure carries this same +1 by inference and was not independently
+   rerun this pass (~30-34 min). Separately, on top of that baseline, a ±1
+   count variance (537 vs 538) is still expected, not a bug: the astroid
+   fixture's isosingular-deflation test loop fires a variable number of
+   assertions depending on live solver
    output (see paper §5.3, and `docs/DESIGN_NOTES.md`'s 2026-08-04 entry
    for the full trace). The full suite has occasionally errored outright
    (1 of 3 live attempts this session); root cause unconfirmed — check the

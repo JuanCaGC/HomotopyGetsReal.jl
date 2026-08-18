@@ -11,7 +11,11 @@ repository-code: "https://github.com/JuanCaGC/HomotopyGetsReal.jl"
 # plot_surface_decomposition empty-mesh crash fix -- see CHANGELOG.md's
 # [0.2.1] entry for the full description. 0.2.1 is itself registered:
 # JuliaRegistries/General#163932, merged 2026-08-09.
+# 0.2.2 bumps from 0.2.1 for the verify_isosingular_dimension
+# compile=:none fix and the examples/oscar_integration.jl addition --
+# see CHANGELOG.md's [0.2.2] entry. Pending registration as of this
+# commit (2026-08-17); PR number/merge date TODO once it merges.
 # Also the version currently in this repo's own Project.toml. Do not
 # bump this without also bumping Project.toml, and only on an explicit
 # decision.
-version: "0.2.1"
+version: "0.2.2"

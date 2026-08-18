@@ -2,6 +2,24 @@
 
 ## [Unreleased]
 
+## [0.2.2] - 2026-08-17
+
+### Fixed
+- `verify_isosingular_dimension` now uses `compile=:none` instead of
+  `compile=:mixed`, matching the existing `FaceTracking.jl` precedent
+  for fresh, single-use systems. Resolves a severe performance
+  regression that caused the scheduled full-suite CI run to hang and
+  be force-cancelled at the 90-minute timeout (confirmed via a live
+  workflow_dispatch run post-fix: 538/538 tests, 21m48.5s, no hang).
+
+### Added
+- `examples/oscar_integration.jl`: a corrective wrapper around
+  Tobias Boege's OscarHomotopyContinuation.jl bridge
+  (github.com/taboege/OscarHomotopyContinuation), fixing a variable-
+  ordering bug in the bridge's own `System(::MPolyIdeal)` constructor
+  (silent reordering/dropping of variables not explicitly declared as
+  `variables=`). Verified end-to-end on the ellipsoid fixture.
+
 ## [0.2.1] - 2026-08-08
 
 ### Fixed

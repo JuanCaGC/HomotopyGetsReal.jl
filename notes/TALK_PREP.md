@@ -53,7 +53,7 @@ The one table to have memorized. `Xy` in "Math" means ∂f/∂y throughout.
 | **1D curve decomposition** | The load-bearing theorem: between consecutive critical values c₁<c₂ the real fiber π⁻¹(c) is topologically constant, so a *single* witness fiber at the midpoint determines the whole open interval. | `decompose_1d_curve` `src/Topology.jl:359`; `compute_midslice` `:61`; `connect_the_dots!` `:177`; `sample_edge` `:290`. | **Astroid** `(x²+y²−1)³+27x²y²` — 4 cusps, 4 edges; the paper's worked Bertini_real comparison (§6). |
 | **Path tracking** | Parameter homotopy in a *real geometric* parameter (the slice coordinate), not an artificial t. Predictor–corrector with bisection on failure. Deliberately **not** gated on HC.jl's own success flag — paths legitimately die near branch points. | `build_tracker` `src/PathTracking.jl:84`; bisection core `_track_path_segment!` `:139`; `track_bidirectional` `:228`. | **Nodal cubic** (`test/test_pathtracking.jl`) — lands on `Critical`, `Singular`, and `Boundary` targets. |
 | **3D surface sweeping** | Slice along z at critical values plus box bounds → slabs. In each slab decompose one 2D curve, then sweep each of its edges in z, keeping the track on the surface with a local linear **patch** `a(x−x₀)+b(y−y₀)=0`, `(a,b)=(f_y,−f_x)`, re-anchored when the gradient direction rotates too far. | `decompose_3d_surface` `src/SurfaceDecomposition.jl:1798`; `compute_critical_z_slices` `:48`; `slice_at_z` `:92`; `_robust_slice_at_z` `:286`; `build_patch_system` `src/FaceTracking.jl:95`; `track_face` `:574`. | **Ellipsoid** `x²+4y²+9z²−1` — asymmetric so it can't hide a swapped variable role; critical z at ±1/3; **every** mesh vertex residual ≤1e-4 asserted (`test/test_surfacedecomposition.jl:263`). |
-| **Mesh welding** | Faces are tracked independently, so they carry no shared orientation. Pool and cluster vertices under `vertex_match_tol`, remap triangles, then fix winding so the geometric normal (p₂−p₁)×(p₃−p₁) agrees with ∇f. | `weld_mesh` `src/SurfaceDecomposition.jl:1581`; winding at `:1658-1664`. | **Sphere** — every welded normal outward, asserted `dot(n, centroid) ≥ 0` (`test/test_surfacedecomposition.jl:196-203`). **Taubin heart** is the honest one: 188 naked edges bare, 31–35 after stitching. |
+| **Mesh welding** | Faces are tracked independently, so they carry no shared orientation. Pool and cluster vertices under `vertex_match_tol`, remap triangles, then fix winding so the geometric normal (p₂−p₁)×(p₃−p₁) agrees with ∇f. | `weld_mesh` `src/SurfaceDecomposition.jl:1581`; winding at `:1658-1664`. | **Sphere** — every welded normal outward, asserted `dot(n, centroid) ≥ 0` (`test/test_surfacedecomposition.jl:196-203`). **Taubin heart** is the honest one: 188 naked edges bare, 32–37 after stitching (measured across 28 trials, median/mode 34). |
 | **Isosingular deflation** | At a singular point, append minors of the Jacobian to force the point to become regular in a larger system. `minor_size = expected_rank − corank + 1`. Iterate; the **corank sequence** either reaches 0 (isolated under deflation, isosingular dimension 0) or plateaus at k>0 (the point lies on a k-dimensional isosingular set). | `estimate_corank` `src/Solver.jl:119`; `deflate_once` `:209`; `_corank_plateau_hint` `:162`; `verify_isosingular_dimension` `:419`; `resolve_isosingular_dimension` `:597`. | **Whitney umbrella** `x²−y²z` — reproduces Hauenstein–Wampler exactly: tip (0,0,0) → `[3,2,0]`; handle (0,0,1) → `[3,1,1]`. Raw asserts at `test/test_isosingular_deflation.jl:82` and `:92`. |
 | **Generic projection** | A random rotation Q ∈ SO(3) makes the *coordinate-alignment* degeneracies measure-zero. Implemented as pure change of coordinates: rotate the system, run the unchanged pipeline in the chart, map back. SO(3) not O(3), because a reflection would flip the welding convention. | `random_orthogonal_matrix` `src/Projection.jl:41`; `_rotate_system` `:115`; `_verify_projection_ok` `:172`; `_map_to_world` `:212`. Called from `src/SurfaceDecomposition.jl:1818-1830`. | **Torus** `(x²+y²+z²+3)²−16(x²+y²)` — the fixture that *only* works this way. Fixed-axis gives residuals ~1e⁸; `projection=:random` gives max ~2e-5. |
 
@@ -67,6 +67,56 @@ The one table to have memorized. `Xy` in "Math" means ∂f/∂y throughout.
 | **Torus** | Positive-dimensional critical locus | needs `projection=:random`; mean 2.2e-6, p99 1.0e-5 |
 | **Whitney umbrella** | Deflation ground truth vs published literature | `[3,2,0]` tip, `[3,1,1]` handle |
 | **Astroid** | Coordinate-verified Bertini_real comparison | HGR 4 edges vs BR 6; reconciled, not a gap |
+
+### Pipeline steps in full — curves, exact I/O types
+
+Driver: `decompose_1d_curve(F::System, cfg::HomotopyConfig{T}; deflate::Bool=false) where {T<:AbstractFloat}` → `(Vector{NativeVertex{T}}, Vector{Edge{T}})`, `src/Topology.jl:359-401`. Its own inline comment states the real execution order — and it does **not** match the 1-2-3-4-5-6 numbering below: both merge operations (step 5) run *before* midslice/tracking (steps 3-4), front-loading dedup rather than cleaning up after. Numbering below is the conventional "six-step framework" naming (`src/Topology.jl:1-19`), not literal call order.
+
+| Step | Function(s) — file:line | Input → Output | Mechanism |
+|---|---|---|---|
+| **1. Critical points** | `compute_critical_points`, `src/Solver.jl:733-791` | `(F::System, cfg::HomotopyConfig{T}; deflate::Bool=false, F_original=nothing)` → `Vector{NativeVertex{T}}` | Auto-augments a raw 3-var surface with `∂f/∂x, ∂f/∂y`; caller pre-augments a curve. HC `solve`, keeps near-real roots (`critical_point_tol`), Newton-polishes to `T`, classifies `Critical`/`Singular`, dedups via `cluster_vertices`. Finer-grained version of the table above's "Critical points" row — same function, now with the exact type signature. |
+| **2. Boundary intersection** | `intersect_bounding_object`, `src/Solver.jl:825-922` | `(F::System, cfg::HomotopyConfig{T}; deflate=false, F_original=nothing)` → `Vector{NativeVertex{T}}` | Fixes each variable at each `bbox_x`/`bbox_y`/`bbox_z` face; Float64-casts before `solve` (HC's polyhedral start system can't take `Complex{BigFloat}` coefficients — `Solver.jl:856-872`); filters/polishes/classifies `Boundary`/`Singular`; dedups. |
+| **3. Midslice** | `compute_midslice`, `src/Topology.jl:61-89` | `(F::System, x_left::T, x_right::T, cfg::HomotopyConfig{T})` → `Vector{Complex{T}}` | `F` must be a raw plane curve. Solves the 1-var fiber at `x_mid = (x_left+x_right)/2`, keeps near-real roots. This is the witness point everything else tracks from — never a critical/singular vertex directly. |
+| **4. Connect the dots** | `connect_the_dots!`, `src/Topology.jl:177-232`; engine in `src/PathTracking.jl` — `build_tracker` `:84-92`, `track_bidirectional` `:228-259`, bisection core `_track_path_segment!` `:139-178` | `(F, x_left, x_mid, x_right, y_mid, edge_id, vertices [mutated], cfg)` → `Edge{T}` | Builds a `ParameterHomotopy`/`Tracker` with `x` as the parameter, tracks bidirectionally from the witness point. Poor accuracy or near-singular (rank/smallest-SV test) triggers adaptive bisection of the `x`-interval, not a discard — a bad landing only surfaces later as a vertex-match-tolerance miss. Landings resolve against the existing vertex list or append a new `Artificial` fallback vertex (`vertices` is mutated in place). |
+| **5. Merge** | **Not one function.** `cluster_vertices`, `src/Clustering.jl:40-76`; `cluster_scalars`, `src/Clustering.jl:196-220` | `cluster_vertices(vertices::Vector{NativeVertex{T}}, tol::T)` → `Vector{NativeVertex{T}}`. `cluster_scalars(xs::Vector{T}, tol::T)` → `Vector{T}` | `cluster_vertices`: union-find over Euclidean distance ≤ `tol`, `Singular`-wins type merge, integer fields merged by minimum, floats by mean. `cluster_scalars`: sorts and merges consecutive x-values within `tol` before the per-interval midslice/tracking loop runs. The file's own "six-step framework" header (`Topology.jl:8-10`) names this step "Merge / GetMergeCandidates" — the two-function split is the code's actual shape, not an omission. |
+| **6. Sample** | `sample_edge`, `src/Topology.jl:290-341` | `(F::System, edge::Edge{T}, cfg::HomotopyConfig{T})` → `Edge{T}` | Arc-length-equidistant resampling of `edge.sampled_points`, then re-projects every interpolated point back onto `f=0` via a capped-50-iteration Gauss-Newton correction (`_project_to_curve`, `:248-263`) — a 2026-07 fix, since raw chord interpolation was measured to land off-curve by residuals up to 0.28 on the Taubin heart. |
+
+Supporting types: `NativeVertex{T}` — `id::Int, coordinates::Vector{Complex{T}}, v_type::VertexType, metadata::Dict{Symbol,Any}` (`src/Types.jl:48-55`). `VertexType` — `@enum Critical | Boundary | Singular | Artificial` (`src/Types.jl:26-31`). `Edge{T}` — `id::Int, left_vertex_id::Int, right_vertex_id::Int, sampled_points::Vector{Vector{T}}, is_singular::Bool` (`src/Types.jl:121-129`).
+
+### Pipeline steps in full — surfaces, exact I/O types
+
+Driver: `decompose_3d_surface(F::System, cfg::HomotopyConfig{T}; projection=nothing, rng=Random.default_rng(), incidence::Bool=false, deflate::Bool=false) where {T<:AbstractFloat}`, `src/SurfaceDecomposition.jl:1798-2042` → `(vertices, edges, faces, mesh)`, or with a 5th `incidence::SurfaceIncidence{T}` element when `incidence=true`.
+
+| Step | Function(s) — file:line | Input → Output | Mechanism |
+|---|---|---|---|
+| **1. Critical z-values / slab boundaries** | `compute_critical_z_slices`, `:48-60`; `_slab_bounds`, `:411-423` | `(F::System [1 eq, 3 vars], cfg)` → sorted `Vector{T}` (both) | Reuses `compute_critical_points`'s 3-var auto-augmentation (`Solver.jl:748-753`) — no separate critical-point machinery in this file. `_slab_bounds` merges `bbox_z` endpoints with in-range critical z's, collapsing any closer than `min_slab_width` via `cluster_scalars` so no sliver slabs form. |
+| **2. Robust midslice + retry** | `_robust_slice_at_z`, `:286-392`; underlying `slice_at_z`, `:92-126` | `_robust_slice_at_z(F, patch::NamedTuple, z_bottom::T, z_top::T, cfg; deflate=false)` → `(vertices_3d, edges_3d, z_mid::T)`. `slice_at_z(F, z_val::T, cfg; deflate=false)` → `(vertices_3d, edges_3d)` | `slice_at_z` substitutes `z`, runs `Topology.decompose_1d_curve` on the resulting 2-var curve, lifts back to 3D. Retry fires on two independent gates: a **topology gate** (an `Artificial`/`:endpoint_fallback` vertex co-occurs with a `Singular` one, but the slab's own quarter-point reference slices are *not* themselves singular) or a **gradient gate** (min anchor gradient falls below `z_mid_gradient_ratio_tol` × reference max). Retry perturbs the z-value only — never resampling density — stepping `+1,-1,+2,-2,...` frac-multiples of slab width off the midpoint, capped within 45% of the bounds; throws `ErrorException` if every attempt stays suspect rather than silently returning a bad slice. |
+| **3. Critical-slice decomposition** | `_decompose_crit_slice`, `:559-577`; `_surface_critical_vertices`, `:597-598` | `(F, z_c::T, j::Int, cfg, vertex_registry::VertexRegistry{T}, e_offset::Int; deflate=false)` → `CritSlice{T}` (`boundary_index, z, vertices, edges, is_degenerate`) | Calls `slice_at_z` directly at the exact critical z — no perturbation, since the value is pinned by definition, not chosen. `is_degenerate = isempty(edges)` — flags fold/point-type boundaries (sphere/ellipsoid extremes: empty; cusps/tips: isolated `Singular` vertex, no edges). Only computed for interior slab boundaries, and only when `incidence=true`. |
+| **4. Face sweep** | `build_patch_system` `FaceTracking.jl:95-116`; `patch_direction` `:245-250`; `build_face_tracker` `:263-272`; `sweep_face_bidirectional` `:524-552`; `track_face` `:574-645` | `track_face(F, patch, edge::Edge{T}, z_mid::T, z_bottom::T, z_top::T, face_id::Int, cfg)` → `Face{T}` (`id, mid_slice_z, boundary_edges, mesh_vertices::Matrix{T}, mesh_topology::Matrix{Int}`) | `patch_direction` gives a gradient-based transversal line `(a,b)=(f_y,-f_x)` — not radial. For each curve-arclength column of `edge`, sweeps bidirectionally in z and assembles a row-major `(n_z × n_curve)` grid, triangulating per quad. Winding is explicitly **not** normalized here — deferred to `weld_mesh` (docstring note, `FaceTracking.jl:569`). |
+| **5. Mesh welding** | `weld_mesh`, `:1581-1676` | `(faces::Vector{Face{T}}, patch::NamedTuple, cfg; incidence=nothing)` → `GeometryBasics.Mesh` | Flattens all faces' `mesh_vertices`, clusters coincident points across faces at full `T`-precision via `cluster_points_indexed` (`Clustering.jl:232`), remaps triangles (dropping pinched ones), then per-triangle winding fix: flips to `(g1,g3,g2)` whenever `dot(normal, ∇f) < 0`, forcing every triangle's outward normal to agree with `+∇f` — since `track_face` emits no orientation guarantee of its own. |
+| **6. Incidence-based stitching** | keyword confirmed: `incidence::Bool = false` on `decompose_3d_surface` (`:1798-1805`), forwarded to `weld_mesh`'s own `incidence::Union{Nothing,SurfaceIncidence{T}}=nothing` — **off by default in both places** | helpers: `_snap_boundary_points!` `:1032`, `_identify_edge_runs` `:1210`, `_reprojected_edge_targets` `:1000`, `_append_loft_triangles!` `:1373`, `_chained_edge_polylines` `:1464`, `_split_t_junctions` `:1141` | Snaps confident column landings onto shared crit-slice targets before clustering, builds ribbon/loft triangulation bridging face-boundary runs to crit-slice edges, then repairs T-junctions the loft introduces. Result per `_naked_mesh_edges`'s own docstring (`:1679-1707`): closes fold/point-type boundaries **completely**, reduces but does not fully close multi-face edge-type boundaries — exactly the Taubin heart's 188→32–37 naked-edge figure already in the table above (row "Mesh welding"), not a new number, just its mechanism spelled out. |
+| **7. Visualization** | `plot_surface_decomposition(mesh::GeometryBasics.Mesh; ...)` `Visuals.jl:249-318`; `plot_surface_decomposition(faces::Vector{Face{T}}; ...)` `:338-384`; `interactive_3d_viewer` `:394-416` | mesh-method: welded `GeometryBasics.Mesh` → `Makie.Figure`. faces-method: pre-weld `Vector{Face{T}}` → `Makie.Figure` | Mesh-method: smooth per-vertex `:x`/`:y`/`:z` shading, no-ops gracefully on an empty mesh. Faces-method: flat per-face categorical coloring, explicitly does **not** apply `weld_mesh`'s winding correction (one-time `@warn`) — this is the exact function/code-path whose `n_faces=1` categorical-bin defect was root-caused and fixed earlier this session; not new information, just documented here for completeness. |
+
+### How this codebase actually calls HomotopyContinuation.jl
+
+One `using HomotopyContinuation` (`src/HomotopyGetsReal.jl:41`, bare, brings every export into scope). One deliberate fully-qualified exception: `HomotopyContinuation.evaluate(...)` at `Solver.jl:456` (elsewhere `evaluate` is called unqualified — stylistic disambiguation at that one site, not a structural difference). No `import` form anywhere.
+
+| HC.jl function | Call sites | kwargs | Purpose | Role |
+|---|---|---|---|---|
+| `solve` | `Topology.jl:79` (midslice fiber); `Solver.jl:763` (`compute_critical_points`); `Solver.jl:874` (`intersect_bounding_object`) | `show_progress = false` at all three | Zero-dimensional solves feeding vertex classification | **(a) vertex solve** |
+| `solve` | `Solver.jl:448`, inside `verify_isosingular_dimension` | `start_parameters=`, `target_parameters=`, `show_progress=false`, `compile=:none` | Walks one known point `x0_c` along a random-hyperplane-offset parameter homotopy to verify a single flagged `Singular` vertex's isosingular dimension | **hybrid — see Appendix flag** |
+| `track` (via `Tracker`/`ParameterHomotopy`) | `PathTracking.jl:156`, built at `:88-90` | `compile` defaults `:all`, caller-overridable `:none`; `min_step_size = path_tracker_precision` | Per-step edge/face tracking, driven by `start_parameters!`/`target_parameters!` | **(b) edge/face tracking** |
+| `certify` | **zero call sites**, confirmed by direct grep including comments | — | — | — |
+| `@var` | **zero call sites** | — | Library never mints its own top-level variables; `System.variables` is always threaded through from caller-supplied systems | — |
+| `Variable.(...)` | `Solver.jl:438` only | broadcast form | Names the `d` slack/hyperplane-offset parameters for the isosingular-verification homotopy above — the only site in `src/` that mints new symbolic variables | — |
+| `solutions` | `Topology.jl:80`, `Solver.jl:764`, `Solver.jl:875` | `only_nonsingular = false` at all three, deliberately | Keeps singular solutions in-band; `Singular` vs. `Critical`/`Boundary` is decided downstream by this codebase's own rank test, not HC's flag | — |
+| `path_results` | `Solver.jl:453` | — | `only(path_results(result))` — asserts the isosingular-verification homotopy produces exactly one result | — |
+| `real_solutions`, `nonsingular` | **zero call sites** | — | — | — |
+| `jacobian` | `Solver.jl:52, 230, 669` (symbolic); `PathTracking.jl:65` (numeric) | — | Feeds rank/SV-based vertex classification and the tracking bisection trigger | — |
+| `differentiate` | 7 sites: `Projection.jl:175`; `FaceTracking.jl:107-109`; `Topology.jl:297,298,369`; `Solver.jl:753` | — | Builds Jacobian-augmentation equations for critical-point systems | — |
+| `subs` | 7 sites: `Projection.jl:118`; `Topology.jl:77,137`; `Solver.jl:866,871`; `SurfaceDecomposition.jl:100` | — | The repeated "Float64-cast before `solve`" pattern — HC's polyhedral start system has no `Complex{BigFloat}` method, so any higher-precision `T` must be down-cast, then Newton-polished back up afterward | — |
+
+**Discrepancy flagged against the paper** (`section3_background.tex`): the paper's clean two-role framing — zero-dim solve for vertices vs. parameter homotopy for positive-dimensional edges/faces — holds for 3 of the 4 `solve`/`track` call sites, and its augmented-system/rank-test description matches the code exactly down to the `{f, ∂_y f}` example. But `Solver.jl:448` doesn't fit either stated role cleanly: it's a `solve()` call carrying `start_parameters`/`target_parameters` (mechanically role (b)'s machinery) whose actual purpose is verifying a single already-flagged **vertex** (role (a)'s domain) — 0-dimensional in outcome (`only(path_results(...))`), never tracking a positive-dimensional object. The paper's §3 framing gives no reader a way to anticipate this call site exists. Not a contradiction of anything the code does — a real gap in the paper's description, flagged rather than smoothed over. See Appendix for the matching entry; not fixed here, same boundary as the naked-edges flag below.
 
 ---
 
@@ -447,6 +497,12 @@ takes an OSCAR `MPolyIdeal` straight to an HC.jl `System`, verified end-to-end o
 the ellipsoid (mean 7.4e-7, median 2.93e-8 against the baseline's 2.70e-7 /
 2.79e-8). This is the most promising collaboration to offer from the stage.
 
+**Note (no longer on a public slide, keep in mind for Q&A):** Rémi Prébet —
+plenary speaker and tutorial instructor at this workshop — is a listed
+maintainer of `AlgebraicSolving.jl`. He is not a RAGlib author (verified
+against RAGlib's own source). Don't misspeak about which project he's
+connected to if this comes up live.
+
 ### Q2. "How do you know your numerical results are actually correct, with no certification step?"
 
 Concede the premise immediately: **there is no certification step, and "correct" is
@@ -469,7 +525,7 @@ evidence, which is not the same as a proof.
    1-manifold, different partition. And a *third* independent confirmation:
    Amethyst–Hauenstein–Wampler report "four singular points connected by four
    edges" for this curve.
-4. **A test suite that encodes topology, not just "it ran."** 537 assertions,
+4. **A test suite that encodes topology, not just "it ran."** 538 assertions,
    including exact vertex-type counts and coordinates.
 
 Now the part that makes this answer land. **HC.jl ships a certifier** — `certify`,
@@ -499,8 +555,9 @@ Four live-confirmed instances:
   **zero solutions**. Both paths report `excess_solution`; neither converges to the
   double root at the origin.
 - **Astroid cusps** (multiplicity 2): 12 raw paths collapse to 4 physical points.
-  Across 5 independent runs, **2 runs lost 1 or 2 cusps entirely** — replaced by
-  `Artificial` fallback vertices. Not coordinate jitter; missing features.
+  Measured properly across 130 trials, cusps were lost in 34 (~26%, roughly
+  1 in 4) — replaced by `Artificial` fallback vertices. Not coordinate jitter;
+  missing features.
 - **Cone**: `compute_critical_z_slices` returns `Float64[]` despite a
   mathematically genuine apex. Default call yields a **completely empty
   decomposition — 0 vertices, 0 faces, and no exception.** As the notes put it,
@@ -570,11 +627,11 @@ ten-variable Burmester surface, blocked by the size of the symbolic determinant 
 the critical-curve computation. So the *architecture* has a ceiling too, not just
 this implementation.
 
-### Q5. "Your test suite has 537 assertions and you say the count varies. Doesn't that mean your tests are nondeterministic?"
+### Q5. "Your test suite has 538 assertions and you say the count varies. Doesn't that mean your tests are nondeterministic?"
 
 Yes, in a specific and understood way, and it's worth separating two things.
 
-The ±1 variance (536 vs 537) is real and traced: the astroid isosingular-deflation
+The ±1 variance (537 vs 538) is real and traced: the astroid isosingular-deflation
 loop fires a variable number of `@test` invocations depending on how many `Singular`
 vertices the live solver produces that run (`test/test_isosingular_deflation.jl:126-137`).
 So the *assertion count* varies because the *loop trip count* varies. No assertion
@@ -585,7 +642,8 @@ is real throughout, with an identified cause. HC.jl's polyhedral start-system
 construction draws its random lifting from Julia's global `default_rng()`, seeded
 from OS entropy per process, with no seeding path exposed through `solve`. So:
 torus mesh counts vary by tenths of a percent; naked-edge counts on the Taubin
-heart range 31–35 across runs; and on `folium_descartes`, **1 of 3 identical runs
+heart range 32–37 across runs (measured across 28 trials, median/mode 34); and
+on `folium_descartes`, **1 of 3 identical runs
 orphaned an on-curve `Boundary` vertex referenced by zero edges, with no error**.
 
 The fix is known and one line — `Random.seed!` before the call makes output
@@ -643,8 +701,9 @@ something the residual number itself resolves.
 It isn't watertight, and I'd rather give the numbers than the adjective.
 
 Instrumented naked-edge counts on the Taubin heart: **188** with plain
-`weld_mesh`; **58** with incidence snapping; **31–35** with the loft stage — and
-that range is itself not reproducible run to run. Enabling incidence stitching
+`weld_mesh`; **58** with incidence snapping; **32–37** with the loft stage
+(measured across 28 trials, median/mode 34) — and that range is itself not
+reproducible run to run. Enabling incidence stitching
 closes the fold- and point-type singular features (the two tips) **completely**;
 what survives is at boundaries where **more than two faces meet along a shared
 edge** — the singular notch and a saddle pair.
@@ -913,7 +972,7 @@ nondeterminism paragraph are genuinely exemplary scientific writing.
 
 The one adjustment I'd make for a *talk*, as opposed to a paper: the paper's
 honesty is distributed across nine sections, so no single limitation dominates. In
-a 20-minute talk with live questions, that distribution collapses — an audience
+a 30-minute talk with live questions, that distribution collapses — an audience
 member who finds one gap will probe it and it becomes the whole conversation. The
 defense is not to hide anything; it's to **pre-empt with the strongest one
 yourself**. Specifically: say early, unprompted, that the critical-point solve is
@@ -928,14 +987,15 @@ to be delivered that way.
 
 | Quantity | Value | Source |
 |---|---|---|
-| Test suite | 537/537 full; 477/477 fast (~3.5 min); full ~30–34 min | `CLAUDE.md`; paper §5.3 |
+| Test suite | 538/538 full; 478/478 fast (~3.5 min); full ~30–34 min | `CLAUDE.md`; paper §5.3 |
 | Sphere residual (production, n=19,504) | mean 2.85e-8, p99 7.05e-8 | `paper_artifacts/data/results.json` |
 | Ellipsoid residual (production) | mean 2.70e-7, **max 1.12e-4** | paper Table 3 |
 | Taubin residual (n=1,638) | mean 1.03e-7, max 2.42e-6 | paper Table 3 |
 | Torus residual | mean 2.21e-6, p99 1.008e-5 | `results.json` |
 | Taubin critical z | ≈ {−1.0, 1.0, 1.0648, 1.2367} | paper §4.2 |
 | Taubin degenerate slab | naive z_mid=0 rejected; z=0.06 accepted after 5 retries | paper §5.2 |
-| Taubin naked edges | 188 bare → 58 snapped → 31–35 lofted | paper §3.9 |
+| Taubin naked edges | 188 bare → 58 snapped → 32–37 lofted (28 trials, median/mode 34) | re-measured live this session, 28 trials; paper §3.9 still says 31–35, not yet updated to match |
+| HC.jl `solve()` role coverage | `Solver.jl:448` uses parameter-homotopy `solve(...; start_parameters=, target_parameters=)` to verify one flagged vertex's isosingular dimension — doesn't fit either of the paper's stated two roles | flagged live this session; paper §3 (`section3_background.tex`)'s two-role framing (zero-dim vertex solve vs. parameter-homotopy edge/face tracking) has no slot for this hybrid call; paper not updated to match |
 | Whitney corank sequences | tip `[3,2,0]`; handle `[3,1,1]` (2-round cap) | `test/test_isosingular_deflation.jl:82,92` |
 | Whitney round-5 cost | ~5.3×10⁹ minors, never terminates | same file, `:86-90` |
 | Astroid | HGR 4 edges vs BR 6 (2 extra = BR projection artifacts) | paper §6 |
@@ -947,8 +1007,9 @@ to be delivered that way.
 **Three sentences to have memorized, in case of a hostile question:**
 
 1. "The critical-point solve is the weakest link in this pipeline: it fails
-   silently on multiplicity ≥ 2, I've measured it losing astroid cusps in 2 of 5
-   runs, and it's exactly the subproblem your tools solve better than mine."
+   silently on multiplicity ≥ 2, I've measured it losing astroid cusps in
+   34 of 130 runs (~26%, roughly 1 in 4), and it's exactly the subproblem
+   your tools solve better than mine."
 2. "I don't certify anything — HomotopyContinuation.jl ships a Krawczyk-based
    certifier and I don't call it. It would certify the critical-point solve, but
    not the path-tracked faces and not the singular points, so it would strengthen

@@ -19,6 +19,10 @@ paper_artifacts/figures/exports/
 # treatment as paper_artifacts/.
 notes/
 
+# Claude Code project instructions -- internal working document,
+# not meant for public visibility; kept locally only.
+CLAUDE.md
+
 # Compiled PDFs anywhere except the author-owned source paper, which is
 # tracked under referencias_academicas/. paper_artifacts/ PDFs are already
 # covered above; this stops stray talk.pdf / main.pdf at the repo root.

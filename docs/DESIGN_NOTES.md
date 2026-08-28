@@ -239,9 +239,8 @@ zero-context review (via Cursor) synthesized three separate audits
 full 8-phase long-term roadmap toward making HGR "the definitive
 pure-Julia BertiniReal-class library." Source documents live external
 to this repo (`/tmp/HGR_MASTER_CONTEXT_AND_ROADMAP.md` and its two
-source audits, on the machine Cursor ran on — ask Juan for the actual
-file locations before referencing them precisely; not transferred
-here).
+source audits, on the machine Cursor ran on; exact file locations were
+not recorded and are not transferred here).
 
 No new active-bug findings — its value here is as independent
 cross-validation: it substantially corroborates this project's own
@@ -1229,8 +1228,8 @@ and `paper_artifacts/taubin_singular_structure_example.jl`'s own density
 defaults were updated to match — this is now the reproducible default
 for both figures, not a one-off scratch render. As of this writing, the
 regenerated files still need to be manually uploaded into the paper's
-and talk's Cowork sessions by Juan — this repo-local change doesn't
-propagate there automatically.
+and talk's Cowork sessions — this repo-local change doesn't propagate
+there automatically.
 
 (d) **Methodological note, useful beyond this survey**: raw
 `_naked_mesh_edges` counts are not comparable across fixture types

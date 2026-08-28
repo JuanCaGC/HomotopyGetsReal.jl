@@ -14,6 +14,11 @@ paper_artifacts/data/
 paper_artifacts/logs/
 paper_artifacts/figures/exports/
 
+# Internal working/prep notes (talk rehearsal, manuscript review, repo
+# audits) -- not meant for public visibility; kept locally only, same
+# treatment as paper_artifacts/.
+notes/
+
 # Compiled PDFs anywhere except the author-owned source paper, which is
 # tracked under referencias_academicas/. paper_artifacts/ PDFs are already
 # covered above; this stops stray talk.pdf / main.pdf at the repo root.
